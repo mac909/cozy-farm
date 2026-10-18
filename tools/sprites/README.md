@@ -14,6 +14,7 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | `soil.ts` | Tilled soil, dry and watered, as a 16-tile autotile set |
 | `beach.ts` | Shells, sea glass, starfish |
 | `crate.ts` | The shipping crate, closed and open |
+| `seedStand.ts` | The seed stand: a market stall with seed sacks |
 | `sand.ts` | Beach sand: recolours of the pack's floor and water autotiles |
 | `emotes.ts` | Emote bubbles: the pack's heart, and our wave in the pack's bubble |
 | `ui.ts` | HUD icons the pack lacks: music on and off |

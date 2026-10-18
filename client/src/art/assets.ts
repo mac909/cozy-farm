@@ -18,6 +18,8 @@ export const EMOTES_KEY = "emotes";
 export const UI_ICONS_KEY = "ui-icons";
 export const UI_ICON = { musicOn: 0, musicOff: 1 } as const;
 export const SHIPPING_CRATE_KEY = "shipping-crate";
+/** Our seed stand, 32×32, drawn at the map's seedStand spot. */
+export const SEED_STAND_KEY = "seed-stand";
 export const RIPPLES_KEY = "ripples";
 export const RIPPLE_ANIM = "ripple";
 /** The clock card's sun and moon. */
@@ -80,6 +82,7 @@ export function loadArt(scene: Phaser.Scene): void {
   load.spritesheet(EMOTES_KEY, `${CUSTOM}emotes.png`, { frameWidth: 14, frameHeight: 13 });
   load.spritesheet(UI_ICONS_KEY, `${CUSTOM}ui-icons.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(SHIPPING_CRATE_KEY, `${CUSTOM}shipping-crate.png`, { frameWidth: 32, frameHeight: 32 });
+  load.image(SEED_STAND_KEY, `${CUSTOM}seed-stand.png`);
   load.spritesheet(RIPPLES_KEY, encodeURI(`${PACK}Backgrounds/Animated/Water Ripples/SpriteSheet16x16.png`), {
     frameWidth: 16,
     frameHeight: 16,

@@ -1,0 +1,111 @@
+/* The seed stand (client/src/ui/ShopPanel.ts). */
+
+.shop {
+  width: min(100%, 380px);
+}
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shop-row {
+  border-radius: 12px;
+}
+
+.shop-row.open {
+  background: #efe2c4;
+}
+
+.shop-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.shop-line .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-line small {
+  display: block;
+  color: #8a7556;
+  font-size: 12px;
+}
+
+.shop-price {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.shop-buy {
+  padding: 0 8px 10px;
+}
+
+.shop-buy .panel-button {
+  margin-top: 8px;
+}
+
+.shop-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-step,
+.shop-quick {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: #e4d3ad;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.shop-step {
+  width: 44px;
+  font-size: 22px;
+}
+
+.shop-quick {
+  min-width: 44px;
+  padding: 0 10px;
+  font-size: 15px;
+}
+
+.shop-step:active,
+.shop-quick:active {
+  transform: scale(0.95);
+}
+
+.shop-count {
+  min-width: 36px;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.shop-quick.push {
+  margin-left: auto;
+}

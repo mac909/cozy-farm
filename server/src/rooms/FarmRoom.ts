@@ -27,6 +27,7 @@ import { registerCrate } from "./crate";
 import { registerDevCommands } from "./dev";
 import { registerFarming } from "./farming";
 import { Bedtime } from "./night";
+import { registerShop } from "./shop";
 
 const WORLD_WIDTH = VILLAGE_MAP.width * TILE_SIZE;
 const WORLD_HEIGHT = VILLAGE_MAP.height * TILE_SIZE;
@@ -58,6 +59,7 @@ export class FarmRoom extends Room<FarmState> {
     registerFarming(this);
     registerBag(this);
     registerCrate(this);
+    registerShop(this);
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);

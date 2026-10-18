@@ -108,6 +108,14 @@
     },
     "note": "Two tiles wide. The box sits on the bottom of the frame."
   },
+  "seed-stand": {
+    "file": "seed-stand.png",
+    "width": 32,
+    "height": 32,
+    "frameWidth": 32,
+    "frameHeight": 32,
+    "note": "Two tiles wide and two tall: a market stall with seed sacks. The counter sits on the bottom of the frame."
+  },
   "sand-grass": {
     "file": "sand-grass.png",
     "width": 176,

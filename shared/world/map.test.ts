@@ -149,6 +149,12 @@ describe("the village map", () => {
     }
   });
 
+  it("blocks the shipping crate's bottom row, so nobody walks through it", () => {
+    const { x, y, width, height } = map.shippingCrate;
+    const last = tileAt(x + width - 1, y + height - 1);
+    for (let col = tileAt(x, y).col; col <= last.col; col++) expect(map.blocked[last.row][col], `${col},${last.row}`).toBe(true);
+  });
+
   it("wakes you up just in front of the tent", () => {
     const { x, y, width, height } = map.tent;
     const door = tileAt(x + width / 2, y + height);
@@ -163,9 +169,8 @@ describe("the village map", () => {
       for (let row = first.row; row <= last.row; row++)
         for (let col = first.col; col <= last.col; col++) {
           expect(map.farmland[row][col]).toBe(false);
-          // The tent is drawn, so its bottom row (where its feet would be) is blocked; you can walk behind its top.
-          const isTentBottom = spot === map.tent && row === last.row;
-          expect(map.blocked[row][col], `${col},${row}`).toBe(isTentBottom);
+          // Both are drawn, so their bottom row (where their feet would be) is blocked; you can walk behind their tops.
+          expect(map.blocked[row][col], `${col},${row}`).toBe(row === last.row);
         }
       const overlapsCrate =
         spot.x < crate.x + crate.width && crate.x < spot.x + spot.width && spot.y < crate.y + crate.height && crate.y < spot.y + spot.height;

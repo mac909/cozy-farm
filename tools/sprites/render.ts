@@ -13,6 +13,7 @@ import { CROP_ART, CROP_LEGEND, PACKET, PACKET_PICTURE, SEEDS } from "./crops";
 import { PACK_EMOTES, emoteFrames } from "./emotes";
 import { Img, fromGrid, outline, packRows } from "./lib/image";
 import { MARKERS } from "./markers";
+import { seedStand } from "./seedStand";
 import { SAND_GRASS, SAND_WATER, recolourBlock } from "./sand";
 import { soilTile } from "./soil";
 import { UI_ICONS } from "./ui";
@@ -91,6 +92,14 @@ function renderCrate(): void {
   });
 }
 
+function renderSeedStand(): void {
+  save("seed-stand", outline(seedStand()), {
+    frameWidth: 32,
+    frameHeight: 32,
+    note: "Two tiles wide and two tall: a market stall with seed sacks. The counter sits on the bottom of the frame.",
+  });
+}
+
 function renderSand(): void {
   const blocks: Img[] = [];
   for (const [name, r] of [
@@ -150,6 +159,7 @@ renderCrops();
 renderSoil();
 renderBeachItems();
 renderCrate();
+renderSeedStand();
 renderSand();
 renderMarkers();
 renderEmotes();

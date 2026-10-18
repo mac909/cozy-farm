@@ -25,6 +25,7 @@ Every milestone ends with something playable. Tick items off as they land.
 
 - [x] Hoe, seeds, watering can; touch-friendly hotbar and inventory (the bag screen)
 - [x] Shipping crate on the dock and the shared wallet (moved up from Milestone 3, so the radishes have somewhere to go)
+- [x] A seed stand for buying seeds with the coins (also moved up from Milestone 3)
 - [x] Day clock (only while playing); sleeping in the shared tent ends the day, with a morning card
 - [x] Crops grow day by day; harvest
 - [x] World saved to SQLite (versioned) and restored after restarts

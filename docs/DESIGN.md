@@ -92,7 +92,8 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 - One shared wallet, starting at 500 coins, shown under the time on the clock card.
 - Each player has their own bag of 24 slots; the first 8 are the hotbar. Everyone starts with a hoe, a watering can and 10 radish seeds.
 - A shipping crate on the dock, shared by both of you: whatever's in it sells overnight, at that night's prices, and the morning card says what sold. It has no size limit, and you can take things back out before night. Walk up to it and Action says **Crate**: the card shows what's in it (from both of you) and what it sells for tonight, with your bag underneath. Tap a stack in your bag to put the whole stack in (split it in the bag first to keep some); tap a line in the crate to take it back. Tools can't be sold, so they're faded. The crate's lid stands open while something's waiting to sell.
-- A general store for seeds, tools, and furniture. Seeds and furniture sell back for about half price, so a mistake isn't a total loss. Tools can't be sold.
+- A seed stand at the top of the sandy path down to the beach, on the way back from the crate. Walk up and Action says **Seeds**: its card lists the six seeds with how long each takes to ripen, whether it regrows, what the crop sells for, and the packet's price. Tap one to open it, pick how many with − and + (or 5 and 10; it starts at 5, or as many as the coins cover), and **Buy 5 for 100**. The button says why when you can't: "Need 20 more coins", "Your bag is full". Seeds only: tools never get lost, and furniture has nowhere to go until the houses.
+- Later, a general store for furniture (Milestone 3), which can take over the seeds. Seeds and furniture sell back for about half price, so a mistake isn't a total loss. Tools can't be sold.
 - All prices and amounts live in `shared/content/items.ts` and `shared/content/crops.ts`. They're first guesses, to be tuned by playing.
 
 ## Decorating

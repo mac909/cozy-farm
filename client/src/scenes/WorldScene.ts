@@ -7,6 +7,7 @@ import { ITEMS, type ItemId } from "../../../shared/content/items";
 import { isHint } from "../../../shared/farming/actions";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type {
+  BuyMessage,
   EmoteEvent,
   EmoteMessage,
   JoinOptions,
@@ -36,6 +37,7 @@ import {
   COIN_KEY,
   RIPPLE_ANIM,
   RIPPLES_KEY,
+  SEED_STAND_KEY,
   SHIPPING_CRATE_KEY,
   tilesetKey,
   VILLAGE_KEY,
@@ -52,6 +54,7 @@ import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
 import { BagPanel } from "../ui/BagPanel";
 import { CratePanel } from "../ui/CratePanel";
+import { ShopPanel } from "../ui/ShopPanel";
 import { Bedtime } from "../world/Bedtime";
 import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
@@ -175,7 +178,7 @@ export class WorldScene extends Phaser.Scene {
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
       busy: () => this.bedtime.asleep || this.panel?.isOpen === true,
-      places: { tent: () => this.bedtime.sleep(), crate: () => this.openCrate() },
+      places: { tent: () => this.bedtime.sleep(), crate: () => this.openCrate(), seedStand: () => this.openShop() },
     });
     this.ui.events.on("action", () => this.farming.act());
 
@@ -238,6 +241,11 @@ export class WorldScene extends Phaser.Scene {
       .image(crate.x, crate.y, SHIPPING_CRATE_KEY, 0)
       .setOrigin(0, 0)
       .setDepth(crate.y + crate.height);
+    const stand = VILLAGE_MAP.seedStand;
+    this.add
+      .image(stand.x, stand.y, SEED_STAND_KEY)
+      .setOrigin(0, 0)
+      .setDepth(stand.y + stand.height);
 
     // Ripples sit on the water, just above the ground layer.
     for (const ripple of map.getObjectLayer(OBJECTS_LAYER)?.objects ?? []) {
@@ -464,10 +472,26 @@ export class WorldScene extends Phaser.Scene {
     return crate;
   }
 
+  /** Next to the seed stand: opens its card. */
+  private openShop() {
+    const shop = this.openPanel(
+      (onClose) =>
+        new ShopPanel({
+          icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+          coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
+          buy: (itemId, count) => this.room?.send("buy", { itemId, count } satisfies BuyMessage),
+          onClose,
+        }),
+    );
+    this.refreshPanel();
+    return shop;
+  }
+
   /** Keeps an open panel up to date with the bag, the crate and the coins. */
   private refreshPanel() {
     const bag = this.registry.get("bag") as Inventory | null;
-    if (this.panel instanceof BagPanel) this.panel.update(bag, this.registry.get("coins"));
+    const coins = this.registry.get("coins") as number | null;
+    if (this.panel instanceof BagPanel || this.panel instanceof ShopPanel) this.panel.update(bag, coins);
     if (this.panel instanceof CratePanel) this.panel.update(bag, this.crate);
   }
 
