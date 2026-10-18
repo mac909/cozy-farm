@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { ITEMS } from "../../../shared/content/items";
 import { HOTBAR_SLOTS, type Inventory, type Slot } from "../../../shared/inventory/inventory";
-import { itemIcon } from "../art/itemIcons";
+import { iconScale, itemIcon } from "../art/itemIcons";
 
 const SELECTED_KEY = "cozy-farm.hotbarSlot";
 
@@ -64,8 +64,8 @@ class SlotView extends Phaser.GameObjects.Container {
       this.countText.setText("");
       return;
     }
-    const { key, frame } = itemIcon(slot.itemId);
-    this.icon.setTexture(key, frame).setVisible(true);
+    const icon = itemIcon(slot.itemId);
+    this.icon.setTexture(icon.key, icon.frame).setScale(iconScale(icon, 32)).setVisible(true);
     this.countText.setText(slot.count > 1 ? String(slot.count) : "");
   }
 

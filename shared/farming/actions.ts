@@ -16,6 +16,7 @@ export type Action =
   | { kind: "sleep" }
   | { kind: "crate" }
   | { kind: "seeds" }
+  | { kind: "shop" }
   | { kind: "harvest"; cropId: CropId }
   | { kind: "till" }
   | { kind: "plant"; cropId: CropId }
@@ -29,6 +30,7 @@ const PLACE_ACTION: Record<PlaceId, Action> = {
   tent: { kind: "sleep" },
   crate: { kind: "crate" },
   seedStand: { kind: "seeds" },
+  store: { kind: "shop" },
 };
 
 /** The item that digs. */
@@ -45,7 +47,7 @@ export function seedCrop(itemId: ItemId | null): CropId | null {
 
 /**
  * What the Action button does, checked in this order:
- * next to a place (tent, crate, seed stand) → that place;
+ * next to a place (tent, crate, seed stand, store) → that place;
  * a ripe crop in front → pick it, whatever you're holding;
  * the hoe on farmland grass → dig;
  * seeds on bare dug soil → plant;
@@ -74,6 +76,7 @@ const ACTION_WORD: Record<Action["kind"], string | null> = {
   sleep: "Sleep",
   crate: "Crate",
   seeds: "Seeds",
+  shop: "Shop",
   harvest: "Pick",
   till: "Dig",
   plant: "Plant",
@@ -110,6 +113,7 @@ export type HintReason =
   | "not-near-stand"
   | "not-enough-coins"
   | "not-for-sale"
+  | "not-near-store"
   | "coming-soon";
 
 /** A hint, with the details some of them need. */
@@ -142,7 +146,8 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "crate-bag-full": "Your bag is full, so some stayed in the crate.",
   "not-near-stand": "Walk up to the seed stand first.",
   "not-enough-coins": "Not enough coins for that.",
-  "not-for-sale": "The stand doesn't sell that.",
+  "not-for-sale": "That isn't sold here.",
+  "not-near-store": "Walk up to the store first.",
   "coming-soon": "Coming soon!",
 };
 

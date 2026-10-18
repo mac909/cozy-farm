@@ -100,17 +100,18 @@ describe("beach finds", () => {
 describe("furniture", () => {
   const furniture = inCategory("furniture");
 
-  it("has 4–6 starter pieces, all for sale", () => {
-    expect(furniture.length).toBeGreaterThanOrEqual(4);
-    expect(furniture.length).toBeLessThanOrEqual(6);
-    for (const piece of furniture) expect(piece.buyPrice).toBeDefined();
+  it("is all for sale, and sells back for less", () => {
+    expect(furniture.length).toBeGreaterThanOrEqual(10);
+    for (const piece of furniture) {
+      expect(piece.buyPrice).toBeDefined();
+      expect(piece.sellPrice).toBeDefined();
+    }
   });
 
-  it("covers at least one whole tile", () => {
+  it("names the piece it is", () => {
     for (const piece of furniture) {
       if (piece.category !== "furniture") throw new Error("filtered by category");
-      expect(isWholeAbove(piece.footprint.width, 1)).toBe(true);
-      expect(isWholeAbove(piece.footprint.height, 1)).toBe(true);
+      expect(piece.furnitureId).toBe(piece.id);
     }
   });
 });

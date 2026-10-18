@@ -1,9 +1,11 @@
 import Phaser from "phaser";
 import { CHARACTERS, type CharacterId } from "../../../shared/content/characters";
 import { EMOTES, type EmoteId } from "../../../shared/content/emotes";
+import { FURNITURE_IDS, type FurnitureId } from "../../../shared/content/furniture";
 import type { Facing } from "../../../shared/movement";
 import { tilesetImageUrl } from "../../../shared/world/tiledMap";
 import { VILLAGE_TILED } from "../../../shared/world/villageMap";
+import { allPieceArt, FURNITURE_ART, FURNITURE_SHEETS, pieceFrame, type SheetId } from "./furnitureArt";
 
 /** Art lives in client/public/assets/: the Ninja Adventure pack, plus our own sprites in custom/. */
 const PACK = "/assets/ninja-adventure/";
@@ -46,6 +48,19 @@ export const COIN_KEY = "coin";
 export const BEACH_ITEMS_KEY = "beach-items";
 /** A small white dot for dirt puffs and splashes, drawn in code at boot. */
 export const PARTICLE_KEY = "particle";
+/** The general store: the pack's green-roofed shop, a named frame on the house tileset. */
+export const STORE_FRAME = "store";
+/** Furniture icons for the hotbar, the bag and the store: 32×32, made at boot from each piece's picture. */
+export const furnitureIconKey = (id: FurnitureId) => `icon-${id}`;
+
+/** The texture a furniture sheet is loaded as: the map's own tileset texture, or its own. */
+export function sheetKey(sheet: SheetId): string {
+  const { mapTileset } = FURNITURE_SHEETS[sheet];
+  return mapTileset ? tilesetKey(mapTileset) : `furniture-${sheet}`;
+}
+
+/** The house tileset (the store and the cottages are cut from it). */
+export const HOUSE_SHEET_KEY = tilesetKey("TilesetHouse");
 
 /** The pose rows of a character sheet after the walk cycle: row 4 swings a tool. */
 const SWING_ROW = 4;
@@ -99,7 +114,13 @@ export function loadArt(scene: Phaser.Scene): void {
   load.image(BAG_KEY, `${PACK}Items/Object/Bag.png`);
   load.image(FISH_KEY, `${PACK}Items/Food/Fish.png`);
   load.image(COIN_KEY, `${PACK}Items/Treasure/GoldCoin.png`);
+  for (const [sheet, { url }] of Object.entries(FURNITURE_SHEETS)) {
+    if (url) load.image(sheetKey(sheet as SheetId), encodeURI(url));
+  }
 }
+
+/** Where the store is on the pack's house tileset: the green-roofed shop, 4 × 3 tiles. */
+const STORE_ON_SHEET = { x: 304, y: 0, width: 64, height: 48 };
 
 /** Where the tent is on the pack's camp sheet: the plain one, 3 × 3 tiles. */
 const TENT_ON_SHEET = { x: 64, y: 0, width: 48, height: 48 };
@@ -121,6 +142,34 @@ function createTextures(scene: Phaser.Scene): void {
   dot.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 2);
   dot.generateTexture(PARTICLE_KEY, 2, 2);
   dot.destroy();
+
+  scene.textures.get(HOUSE_SHEET_KEY).add(STORE_FRAME, 0, STORE_ON_SHEET.x, STORE_ON_SHEET.y, STORE_ON_SHEET.width, STORE_ON_SHEET.height);
+  for (const { id, turn, art } of allPieceArt()) {
+    scene.textures.get(sheetKey(art.sheet)).add(pieceFrame(id, turn), 0, art.x, art.y, art.w, art.h);
+  }
+  for (const id of FURNITURE_IDS) furnitureIcon(scene, id);
+}
+
+/**
+ * A 32×32 icon of a piece, drawn from its first picture: doubled if it's one tile, as it is if it
+ * fits, otherwise shrunk to fit. Centred, standing on the bottom.
+ */
+function furnitureIcon(scene: Phaser.Scene, id: FurnitureId) {
+  const art = FURNITURE_ART[id][0];
+  const source = scene.textures.get(sheetKey(art.sheet)).getSourceImage() as HTMLImageElement;
+  const canvas = scene.textures.createCanvas(furnitureIconKey(id), 32, 32);
+  if (!canvas) return;
+  const scale = art.w <= 16 && art.h <= 16 ? 2 : Math.min(1, 32 / Math.max(art.w, art.h));
+  const w = Math.round(art.w * scale);
+  const h = Math.round(art.h * scale);
+  const ctx = canvas.context;
+  ctx.imageSmoothingEnabled = false;
+  if (art.flipX) {
+    ctx.translate(32, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(source, art.x, art.y, art.w, art.h, Math.floor((32 - w) / 2), 32 - h - Math.floor((32 - h) / 4), w, h);
+  canvas.refresh();
 }
 
 /** Sets up the animations and extra frames, once the art has loaded. */

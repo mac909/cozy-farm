@@ -4,14 +4,14 @@ import { type Rect, tileAt, type TilePos, type WorldMap } from "./map";
 
 /**
  * Where things are in the village: which tile is under your feet and in front of you, what you can
- * reach, and which place (tent, crate, seed stand) you're standing next to.
+ * reach, and which place (tent, crate, seed stand, store) you're standing next to.
  */
 
 /** The places that take over the Action button when you're next to them. */
-export type PlaceId = "tent" | "crate" | "seedStand";
+export type PlaceId = "tent" | "crate" | "seedStand" | "store";
 
 /** Every place, in the order the Action button checks them. */
-export const PLACES: readonly PlaceId[] = ["tent", "crate", "seedStand"];
+export const PLACES: readonly PlaceId[] = ["tent", "crate", "seedStand", "store"];
 
 /** The Action button switches to a place this close to it, in tiles. */
 export const CLIENT_NEAR_TILES = 1.5;
@@ -71,14 +71,18 @@ export function nearPlace(point: Point, rect: Rect, tiles: number): boolean {
 }
 
 /**
- * The part of a place you walk up to. For the tent that's its bottom row, where the door is, so
- * farming the field's bottom row on the other side of the fence doesn't turn the button into Sleep.
- * The crate and stand count all over.
+ * The part of a place you walk up to. For the tent and the store that's their bottom row, where the
+ * door is, so farming the field's bottom row on the other side of the fence doesn't turn the button
+ * into Sleep, and walking past the store's roof doesn't open it. The crate and stand count all over.
  */
 export function placeArea(map: WorldMap, place: PlaceId): Rect {
   switch (place) {
     case "tent": {
       const { x, y, width, height } = map.tent;
+      return { x, y: y + height - TILE_SIZE, width, height: TILE_SIZE };
+    }
+    case "store": {
+      const { x, y, width, height } = map.store;
       return { x, y: y + height - TILE_SIZE, width, height: TILE_SIZE };
     }
     case "crate":

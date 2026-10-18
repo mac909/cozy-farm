@@ -1,12 +1,19 @@
 import type Phaser from "phaser";
 import { ITEMS, type ItemId } from "../../../shared/content/items";
-import { BAG_KEY, BEACH_ITEMS_KEY, CROPS_KEY, FISH_KEY, HOE_KEY, WATERING_CAN_KEY } from "./assets";
+import { BEACH_ITEMS_KEY, CROPS_KEY, FISH_KEY, furnitureIconKey, HOE_KEY, WATERING_CAN_KEY } from "./assets";
 import { cropItemFrame, seedPacketFrame } from "./cropFrames";
 
-/** A 16×16 picture: a texture key, and its frame if the texture is a sheet. */
+/** A picture: a texture key, its frame if the texture is a sheet, and its size (16 unless it says). */
 export interface Icon {
   key: string;
   frame?: number;
+  /** Width and height in pixels: 16 for most items, 32 for furniture. */
+  size?: number;
+}
+
+/** How much to scale an icon so it shows `pixels` across. */
+export function iconScale(icon: Icon, pixels: number): number {
+  return pixels / (icon.size ?? 16);
 }
 
 /** Frames in beach-items.png for the beach finds in items.ts. */
@@ -49,7 +56,6 @@ export function itemIcon(itemId: ItemId): Icon {
     case "fish":
       return { key: FISH_KEY };
     case "furniture":
-      // No furniture art yet (Milestone 4).
-      return { key: BAG_KEY };
+      return { key: furnitureIconKey(item.furnitureId), size: 32 };
   }
 }

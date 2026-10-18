@@ -40,6 +40,7 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Shop in Milestone 2 | The shipping crate and a seed stand came into Milestone 2, so the radishes have somewhere to go and the coins something to buy. Milestone 3 becomes the general store with furniture. | 2026-10-18 |
 | First-day tips | Four one-time tips per device (dig; plant and water; the tent ends the day; the crate), on top of the Action button's hints. | 2026-10-18 |
 | Digging up crops | Left out of Milestone 2. Crops never die, so a wrong one just ripens. Add it if she asks. | 2026-10-18 |
+| General store | A little green-roofed shop (the pack's) just above the sandy path, two steps left of the seed stand, so the two make a small market. It sells furniture and farm decorations; the seed stand keeps the seeds. Same card as the seed stand, in two shelves ("For your house", "For the farm"), starting at 1 with quick buttons 1 and 10. Decided by Claude (Milestone 3). | 2026-10-18 |
 
 ## Controls
 
@@ -107,7 +108,8 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 - Each player has their own bag of 24 slots; the first 8 are the hotbar. Everyone starts with a hoe, a watering can and 10 radish seeds.
 - A shipping crate on the dock, shared by both of you: whatever's in it sells overnight, at that night's prices, and the morning card says what sold. It has no size limit, and you can take things back out before night. Walk up to it and Action says **Crate**: the card shows what's in it (from both of you) and what it sells for tonight, with your bag underneath. Tap a stack in your bag to put the whole stack in (split it in the bag first to keep some); tap a line in the crate to take it back. Tools can't be sold, so they're faded. The crate's lid stands open while something's waiting to sell.
 - A seed stand at the top of the sandy path down to the beach, on the way back from the crate. Walk up and Action says **Seeds**: its card lists the six seeds with how long each takes to ripen, whether it regrows, what the crop sells for, and the packet's price. Tap one to open it, pick how many with − and + (or 5 and 10; it starts at 5, or as many as the coins cover), and **Buy 5 for 100**. The button says why when you can't: "Need 20 more coins", "Your bag is full". Seeds only: tools never get lost, and furniture has nowhere to go until the houses.
-- Later, a general store for furniture (Milestone 3), which can take over the seeds. Seeds and furniture sell back for about half price, so a mistake isn't a total loss. Tools can't be sold.
+- The **general store**, a small green-roofed shop just above the sandy path, left of the seed stand. Walk up to its door and Action says **Shop**: the same kind of card as the seed stand, with two shelves, **For your house** (beds, a sofa, chairs, tables, shelves, lamps, plants, rugs) and **For the farm** (fences, stepping stones, flowers, flower tubs, barrels, a scarecrow, a washing line, a fishing net, banners). Each line says where it goes, how many tiles it takes and anything special ("sleep in it", "walk over it", "turns"). It starts at 1, with quick buttons for 1 and 10. Seeds stay at the seed stand. The list is `shared/content/generalStore.ts`; the pieces and prices are `shared/content/furniture.ts`.
+- Seeds and furniture sell back in the crate for half price, so a mistake isn't a total loss. Tools can't be sold.
 - All prices and amounts live in `shared/content/items.ts` and `shared/content/crops.ts`. They're first guesses, to be tuned by playing.
 
 ## Decorating

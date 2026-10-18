@@ -18,6 +18,8 @@ export interface WorldMap {
   tent: Rect;
   /** Where the seed stand goes (Milestone 2), at the top of the path down to the beach. */
   seedStand: Rect;
+  /** The general store (Milestone 3), by the path just left of the seed stand. Its door is on its bottom row. */
+  store: Rect;
 }
 
 /** An area in world pixels: top left corner and size. */

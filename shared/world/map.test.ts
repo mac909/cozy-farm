@@ -29,6 +29,7 @@ function smallMap(): TiledMapJson {
           { name: "shippingCrate", x: 0, y: 16, width: 32, height: 16 },
           { name: "tent", x: 32, y: 0, width: 16, height: 16 },
           { name: "seedStand", x: 32, y: 16, width: 16, height: 16 },
+          { name: "store", x: 16, y: 0, width: 16, height: 16 },
         ],
       },
     ],
@@ -50,6 +51,7 @@ describe("parseTiledMap", () => {
     expect(map.shippingCrate).toEqual({ x: 0, y: 16, width: 32, height: 16 });
     expect(map.tent).toEqual({ x: 32, y: 0, width: 16, height: 16 });
     expect(map.seedStand).toEqual({ x: 32, y: 16, width: 16, height: 16 });
+    expect(map.store).toEqual({ x: 16, y: 0, width: 16, height: 16 });
   });
 
   it("requires exactly one spawn point", () => {
@@ -133,7 +135,7 @@ describe("the village map", () => {
     }
   });
 
-  it("lets you walk up to the shipping crate, the tent and the seed stand", () => {
+  it("lets you walk up to the shipping crate, the tent, the seed stand and the store", () => {
     const walk = reachable(map, map.spawn);
     /** The tiles in and around an area. */
     const around = ({ x, y, width, height }: Rect) => {
@@ -144,7 +146,7 @@ describe("the village map", () => {
         for (let col = first.col - 1; col <= last.col + 1; col++) tiles.push(`${col},${row}`);
       return tiles;
     };
-    for (const spot of ["shippingCrate", "tent", "seedStand"] as const) {
+    for (const spot of ["shippingCrate", "tent", "seedStand", "store"] as const) {
       expect(around(map[spot]).some((tile) => walk.has(tile)), spot).toBe(true);
     }
   });
@@ -161,9 +163,9 @@ describe("the village map", () => {
     expect(map.spawn).toEqual(door);
   });
 
-  it("keeps the tent and seed stand off the farm field and the shipping crate", () => {
+  it("keeps the tent, seed stand and store off the farm field and the shipping crate", () => {
     const crate = map.shippingCrate;
-    for (const spot of [map.tent, map.seedStand]) {
+    for (const spot of [map.tent, map.seedStand, map.store]) {
       const first = tileAt(spot.x, spot.y);
       const last = tileAt(spot.x + spot.width - 1, spot.y + spot.height - 1);
       for (let row = first.row; row <= last.row; row++)

@@ -1,4 +1,4 @@
-# Roadmap
+﻿# Roadmap
 
 Every milestone ends with something playable. Tick items off as they land.
 
@@ -35,7 +35,7 @@ Every milestone ends with something playable. Tick items off as they land.
 
 ## Milestone 3: Shop
 
-- [ ] General store: furniture (and the seeds, taking over from the seed stand)
+- [x] General store: furniture and farm decorations (the seed stand keeps the seeds)
 
 ## Milestone 4: Decorating
 

@@ -26,7 +26,7 @@ import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { tileKey, type TileKey } from "../../../shared/world/world";
 import { TILE_SIZE } from "../../../shared/constants";
 import { CAMP_KEY, SHIPPING_CRATE_KEY, TENT_FRAME } from "../art/assets";
-import { itemIcon } from "../art/itemIcons";
+import { iconScale, itemIcon } from "../art/itemIcons";
 import { playSound, type SoundId } from "../audio/sounds";
 import type { ActionView } from "../ui/ActionButton";
 import type { Character } from "./Character";
@@ -188,7 +188,7 @@ export class Farming {
       this.hint(hintFor(aim.tile, aim.farmland, aim.held) ?? { reason: "empty-hand" });
       return;
     }
-    if (action.kind === "sleep" || action.kind === "crate" || action.kind === "seeds") {
+    if (action.kind === "sleep" || action.kind === "crate" || action.kind === "seeds" || action.kind === "shop") {
       if (place) this.options.places[place]?.();
       return;
     }
@@ -266,15 +266,24 @@ export class Farming {
         return { icon: { key: SHIPPING_CRATE_KEY, frame: 0 }, iconScale: 1, word, faded: false };
       case "seeds":
         return { icon: itemIcon("carrot_seeds"), iconScale: 3, word, faded: false };
+      case "shop":
+        return { ...this.heldView("potted_fern"), word, faded: false };
       case "harvest":
         return { icon: itemIcon(cropItemId(action.cropId)), iconScale: 3, word, faded: false };
       case "plant":
         return { icon: itemIcon(held ?? "radish_seeds"), iconScale: 3, word, faded: false };
       case "till":
       case "water":
-        return { icon: held ? itemIcon(held) : null, iconScale: 3, word, faded: false };
+        return { ...this.heldView(held), word, faded: false };
       case "none":
-        return { icon: held ? itemIcon(held) : null, iconScale: 3, word: null, faded: true };
+        return { ...this.heldView(held), word: null, faded: true };
     }
+  }
+
+  /** An item's picture on the Action button, 48 pixels across. */
+  private heldView(itemId: ItemId | null): Pick<ActionView, "icon" | "iconScale"> {
+    if (!itemId) return { icon: null, iconScale: 3 };
+    const icon = itemIcon(itemId);
+    return { icon, iconScale: iconScale(icon, 48) };
   }
 }

@@ -1,21 +1,17 @@
 import { CROPS, type CropId } from "./crops";
 import { FISH, FISH_IDS, type FishId } from "./fish";
+import { FURNITURE, FURNITURE_IDS, FURNITURE_SELL_FRACTION, type FurnitureId } from "./furniture";
 
 /**
  * Everything a player can carry. Every number here is a first guess, meant to be tuned by playing.
  *
- * Seeds and harvested crops are built from CROPS, and fish from FISH, so their prices live there.
+ * Seeds and harvested crops are built from CROPS, fish from FISH, and furniture from FURNITURE, so
+ * their prices live there.
  * An item's `buyPrice` is what the general store charges (no `buyPrice`: the
  * store doesn't sell it); its `sellPrice` is what the shipping crate pays
  * (no `sellPrice`: it can't be sold).
  */
 export type ItemCategory = "seed" | "crop" | "tool" | "beach" | "fish" | "furniture";
-
-/** The floor tiles a piece of furniture covers, before it's rotated. */
-export interface Footprint {
-  width: number;
-  height: number;
-}
 
 interface BaseItemDef {
   /** Same as its key in ITEMS. Saves hold these, so renaming one needs a save migration. */
@@ -58,7 +54,8 @@ export interface FishItemDef extends BaseItemDef {
 
 export interface FurnitureItemDef extends BaseItemDef {
   category: "furniture";
-  footprint: Footprint;
+  /** The piece this is: where it goes, how it turns, the tiles it covers. */
+  furnitureId: FurnitureId;
 }
 
 export type ItemDef =
@@ -85,6 +82,13 @@ export function seedItemId(cropId: CropId): SeedItemId {
 /** The item a harvest of `cropId` gives. Harvested crops share their crop's id. */
 export function cropItemId(cropId: CropId): CropId {
   return cropId;
+}
+
+/** The furniture an item is, or null if it isn't furniture. */
+export function furnitureOf(itemId: string | null | undefined): FurnitureId | null {
+  if (!isItemId(itemId)) return null;
+  const item = ITEMS[itemId];
+  return item.category === "furniture" ? item.furnitureId : null;
 }
 
 /** The item a caught `fishId` gives. Fish items share their fish's id. */
@@ -185,63 +189,24 @@ const fishItems = Object.fromEntries(
   }),
 ) as Record<FishId, FishItemDef>;
 
-/** Starter furniture for decorating. Each ships back for about half its price. */
-const furnitureData = {
-  wooden_chair: {
-    id: "wooden_chair",
-    name: "Wooden Chair",
-    category: "furniture",
-    footprint: { width: 1, height: 1 },
-    maxStack: STACK,
-    buyPrice: 80,
-    sellPrice: 40,
-  },
-  wooden_table: {
-    id: "wooden_table",
-    name: "Wooden Table",
-    category: "furniture",
-    footprint: { width: 2, height: 1 },
-    maxStack: STACK,
-    buyPrice: 150,
-    sellPrice: 75,
-  },
-  striped_rug: {
-    id: "striped_rug",
-    name: "Striped Rug",
-    category: "furniture",
-    footprint: { width: 3, height: 2 },
-    maxStack: STACK,
-    buyPrice: 120,
-    sellPrice: 60,
-  },
-  floor_lamp: {
-    id: "floor_lamp",
-    name: "Floor Lamp",
-    category: "furniture",
-    footprint: { width: 1, height: 1 },
-    maxStack: STACK,
-    buyPrice: 100,
-    sellPrice: 50,
-  },
-  potted_fern: {
-    id: "potted_fern",
-    name: "Potted Fern",
-    category: "furniture",
-    footprint: { width: 1, height: 1 },
-    maxStack: STACK,
-    buyPrice: 60,
-    sellPrice: 30,
-  },
-  bookshelf: {
-    id: "bookshelf",
-    name: "Bookshelf",
-    category: "furniture",
-    footprint: { width: 2, height: 1 },
-    maxStack: STACK,
-    buyPrice: 200,
-    sellPrice: 100,
-  },
-} satisfies Record<string, FurnitureItemDef>;
+/** Bought at the general store, put down in your house or on the farm. They ship back for about half. */
+const furnitureItems = Object.fromEntries(
+  FURNITURE_IDS.map((furnitureId): [FurnitureId, FurnitureItemDef] => {
+    const piece = FURNITURE[furnitureId];
+    return [
+      furnitureId,
+      {
+        id: furnitureId,
+        name: piece.name,
+        category: "furniture",
+        furnitureId,
+        maxStack: STACK,
+        buyPrice: piece.price,
+        sellPrice: Math.floor(piece.price * FURNITURE_SELL_FRACTION),
+      },
+    ];
+  }),
+) as Record<FurnitureId, FurnitureItemDef>;
 
 export type ItemId =
   | SeedItemId
@@ -249,7 +214,7 @@ export type ItemId =
   | keyof typeof toolData
   | keyof typeof beachData
   | FishId
-  | keyof typeof furnitureData;
+  | FurnitureId;
 
 /** Every item, grouped seeds, crops, tools, beach finds, fish, furniture. Shop and bag listings follow this order. */
 export const ITEMS: Readonly<Record<ItemId, ItemDef>> = {
@@ -258,7 +223,7 @@ export const ITEMS: Readonly<Record<ItemId, ItemDef>> = {
   ...toolData,
   ...beachData,
   ...fishItems,
-  ...furnitureData,
+  ...furnitureItems,
 };
 
 /** True if `id` names an item in ITEMS. Use it to check item ids that arrive in client messages. */

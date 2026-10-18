@@ -3,7 +3,7 @@ import { CROPS } from "../content/crops";
 import { ITEMS } from "../content/items";
 import { INVENTORY_SLOTS, type Inventory } from "../inventory/inventory";
 import { addFarmer, newWorld, setFarmerBag, type World } from "../world/world";
-import { buyAtStand, crateValue, shipToCrate, takeBackFromCrate } from "./trade";
+import { buyAtStand, buyAtStore, crateValue, shipToCrate, takeBackFromCrate } from "./trade";
 
 const look = { name: "Pip", character: "woman" as const };
 
@@ -98,5 +98,27 @@ describe("the seed stand", () => {
     expect(buyAtStand(world, "pip", "radish_seeds", 100).ok).toBe(false);
     expect(buyAtStand(world, "pip", "radish_seeds", 1.5).ok).toBe(false);
     expect(buyAtStand(world, "pip", "radish_seeds", 99).ok).toBe(true);
+  });
+});
+
+describe("the general store", () => {
+  it("sells furniture into your bag with the shared coins", () => {
+    const world = withBag([]);
+    const result = buyAtStore(world, "pip", "sofa", 2);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.world.coins).toBe(world.coins - 2 * ITEMS.sofa.buyPrice!);
+    expect(bagOf(result.world)[0]).toEqual({ itemId: "sofa", count: 2 });
+  });
+
+  it("doesn't sell seeds (the seed stand does) or anything not on its shelves", () => {
+    const world = withBag([]);
+    expect(buyAtStore(world, "pip", "radish_seeds", 1)).toEqual({ ok: false, hint: { reason: "not-for-sale" } });
+    expect(buyAtStore(world, "pip", "hoe", 1)).toEqual({ ok: false, hint: { reason: "not-for-sale" } });
+  });
+
+  it("says when the coins don't cover it", () => {
+    const world = { ...withBag([]), coins: 10 };
+    expect(buyAtStore(world, "pip", "big_bed", 1)).toEqual({ ok: false, hint: { reason: "not-enough-coins" } });
   });
 });

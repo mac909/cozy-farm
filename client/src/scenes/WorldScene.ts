@@ -37,8 +37,10 @@ import {
   COIN_KEY,
   RIPPLE_ANIM,
   RIPPLES_KEY,
+  HOUSE_SHEET_KEY,
   SEED_STAND_KEY,
   SHIPPING_CRATE_KEY,
+  STORE_FRAME,
   tilesetKey,
   VILLAGE_KEY,
   walkFrames,
@@ -55,6 +57,7 @@ import { loadLook, saveLook } from "../ui/lookStorage";
 import { BagPanel } from "../ui/BagPanel";
 import { CratePanel } from "../ui/CratePanel";
 import { ShopPanel } from "../ui/ShopPanel";
+import { generalStoreCatalog, seedStandCatalog, type ShopCatalog } from "../ui/shopText";
 import { Tips } from "../ui/Tips";
 import { EVENING_MINUTE } from "../ui/ClockCard";
 import { playSound } from "../audio/sounds";
@@ -184,7 +187,12 @@ export class WorldScene extends Phaser.Scene {
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
       busy: () => this.bedtime.asleep || this.panel?.isOpen === true,
-      places: { tent: () => this.bedtime.sleep(), crate: () => this.openCrate(), seedStand: () => this.openShop() },
+      places: {
+        tent: () => this.bedtime.sleep(),
+        crate: () => this.openCrate(),
+        seedStand: () => this.openShop(seedStandCatalog(), "seedStand"),
+        store: () => this.openShop(generalStoreCatalog(), "store"),
+      },
       holding: () => this.ui.actionHeld(),
       acted: (kind) => {
         if (kind === "till") this.tips.event("dug");
@@ -273,6 +281,11 @@ export class WorldScene extends Phaser.Scene {
       .image(stand.x, stand.y, SEED_STAND_KEY)
       .setOrigin(0, 0)
       .setDepth(stand.y + stand.height);
+    const store = VILLAGE_MAP.store;
+    this.add
+      .image(store.x, store.y, HOUSE_SHEET_KEY, STORE_FRAME)
+      .setOrigin(0, 0)
+      .setDepth(store.y + store.height);
 
     // Ripples sit on the water, just above the ground layer.
     for (const ripple of map.getObjectLayer(OBJECTS_LAYER)?.objects ?? []) {
@@ -518,16 +531,17 @@ export class WorldScene extends Phaser.Scene {
     return crate;
   }
 
-  /** Next to the seed stand: opens its card. */
-  private openShop() {
+  /** Next to the seed stand or the general store: opens its card. */
+  private openShop(catalog: ShopCatalog, at: "seedStand" | "store") {
     const shop = this.openPanel(
       (onClose) =>
         new ShopPanel({
+          catalog,
           icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
           coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
           buy: (itemId, count) => {
             playSound(this, "coin");
-            this.room?.send("buy", { itemId, count } satisfies BuyMessage);
+            this.room?.send("buy", { itemId, count, at } satisfies BuyMessage);
           },
           onClose,
         }),

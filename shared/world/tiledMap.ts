@@ -10,7 +10,7 @@ import { type Rect, tileAt, type WorldMap } from "./map";
 /** Hidden tile layers: any tile painted on them counts, whatever it looks like. */
 export const COLLISION_LAYER = "Collision";
 export const FARMLAND_LAYER = "Farmland";
-/** The object layer with the spawn point and the spots for the shipping crate, tent and seed stand. */
+/** The object layer with the spawn point and the spots for the shipping crate, tent, seed stand and store. */
 export const OBJECTS_LAYER = "Objects";
 /** Tile layers with this bool property set draw over the characters (tree tops). */
 export const ABOVE_CHARACTERS_PROPERTY = "aboveCharacters";
@@ -105,6 +105,7 @@ export function parseTiledMap(input: unknown): WorldMap {
     shippingCrate: area("shippingCrate"),
     tent: area("tent"),
     seedStand: area("seedStand"),
+    store: area("store"),
   };
 }
 

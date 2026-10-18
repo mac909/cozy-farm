@@ -145,10 +145,14 @@ export interface UnshipMessage {
   count: number;
 }
 
-// ---------- The seed stand ----------
+// ---------- The seed stand and the general store ----------
 
-/** Client → server ("buy"), next to the seed stand: buy `count` (1–99) of `itemId` with the shared coins. */
+/**
+ * Client → server ("buy"), next to the seed stand or the general store (`at`, the seed stand if
+ * left out): buy `count` (1–99) of `itemId` with the shared coins.
+ */
 export interface BuyMessage {
   itemId: string;
   count: number;
+  at?: "seedStand" | "store";
 }

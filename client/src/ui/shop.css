@@ -109,3 +109,17 @@
 .shop-quick.push {
   margin-left: auto;
 }
+
+/* The general store's shelf headings. */
+.shop-shelf {
+  margin: 12px 8px 2px;
+}
+
+.shop-list .shop-shelf:first-child {
+  margin-top: 0;
+}
+
+/* Furniture pictures are 32 pixels already; seeds are 16, shown at 2×. */
+.shop-line .panel-icon {
+  object-fit: contain;
+}
