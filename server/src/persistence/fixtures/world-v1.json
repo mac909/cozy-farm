@@ -1,0 +1,208 @@
+{
+  "version": 1,
+  "clock": {
+    "day": 6,
+    "minute": 1012.5
+  },
+  "coins": 735,
+  "crate": [
+    {
+      "itemId": "radish",
+      "count": 6
+    },
+    {
+      "itemId": "strawberry",
+      "count": 2
+    },
+    {
+      "itemId": "carrot_seeds",
+      "count": 1
+    }
+  ],
+  "farm": [
+    {
+      "col": 5,
+      "row": 5,
+      "kind": "tilled",
+      "watered": false
+    },
+    {
+      "col": 6,
+      "row": 5,
+      "kind": "tilled",
+      "watered": true
+    },
+    {
+      "col": 7,
+      "row": 5,
+      "kind": "planted",
+      "watered": false,
+      "cropId": "radish",
+      "stage": 3,
+      "daysInStage": 0
+    },
+    {
+      "col": 8,
+      "row": 5,
+      "kind": "planted",
+      "watered": true,
+      "cropId": "carrot",
+      "stage": 2,
+      "daysInStage": 0
+    },
+    {
+      "col": 9,
+      "row": 6,
+      "kind": "planted",
+      "watered": false,
+      "cropId": "strawberry",
+      "stage": 2,
+      "daysInStage": 1
+    },
+    {
+      "col": 10,
+      "row": 6,
+      "kind": "planted",
+      "watered": true,
+      "cropId": "potato",
+      "stage": 1,
+      "daysInStage": 1
+    },
+    {
+      "col": 12,
+      "row": 7,
+      "kind": "planted",
+      "watered": false,
+      "cropId": "samphire",
+      "stage": 2,
+      "daysInStage": 0
+    },
+    {
+      "col": 14,
+      "row": 8,
+      "kind": "planted",
+      "watered": true,
+      "cropId": "pumpkin",
+      "stage": 0,
+      "daysInStage": 0
+    }
+  ],
+  "farmers": {
+    "3f2c8a1e-6b4d-4c7a-9e21-5d8f0a6b7c31": {
+      "name": "Pip",
+      "character": "woman",
+      "bag": [
+        {
+          "itemId": "hoe",
+          "count": 1
+        },
+        {
+          "itemId": "watering_can",
+          "count": 1
+        },
+        {
+          "itemId": "radish_seeds",
+          "count": 7
+        },
+        {
+          "itemId": "strawberry_seeds",
+          "count": 4
+        },
+        {
+          "itemId": "radish",
+          "count": 3
+        },
+        null,
+        null,
+        null,
+        {
+          "itemId": "carrot",
+          "count": 2
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "b71e09d4-2a5f-4e83-8c6d-0f4a9b2e1d57": {
+      "name": "Juno 🌻",
+      "character": "boy",
+      "bag": [
+        {
+          "itemId": "watering_can",
+          "count": 1
+        },
+        {
+          "itemId": "hoe",
+          "count": 1
+        },
+        {
+          "itemId": "carrot_seeds",
+          "count": 5
+        },
+        null,
+        {
+          "itemId": "pumpkin_seeds",
+          "count": 1
+        },
+        null,
+        null,
+        {
+          "itemId": "samphire",
+          "count": 2
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "lastMorning": {
+    "day": 6,
+    "grew": 5,
+    "ready": 2,
+    "sale": {
+      "lines": [
+        {
+          "itemId": "radish",
+          "count": 4,
+          "priceEach": 35,
+          "total": 140
+        },
+        {
+          "itemId": "carrot",
+          "count": 2,
+          "priceEach": 60,
+          "total": 120
+        }
+      ],
+      "total": 260
+    },
+    "coins": 735
+  }
+}
