@@ -27,6 +27,8 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Setting | Seaside village | 2026-10-17 |
 | Look | A name (up to 12 characters) and one of six preset shirt colors, picked on first join and remembered on that device. Change it any time from the button in the top right. | 2026-10-17 |
 | Emotes | Wave and heart, as buttons in the bottom right (keys 1 and 2). A bubble shows above your head for 2 seconds, for everyone. | 2026-10-17 |
+| Farming rules | Crops never die; six starter crops, two of which regrow; the day ends when everyone online is in bed. Details under Time and Farming. | 2026-10-17 |
+| Art | Ninja Adventure (pixel-boy, CC0) as the base, plus our own matching sprites for crops, beach and shells. | 2026-10-17 |
 
 ## Setting
 
@@ -40,15 +42,19 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ## Time
 
-- The clock runs only while someone is connected. **(proposed)**
-- A day runs 6am to midnight and lasts about 15 real minutes. **(proposed)**
-- The day ends when everyone online has gone to bed. Still up at midnight? You're sent home, with no penalty. **(proposed)**
+- The clock runs only while someone is connected.
+- A day runs 6am to midnight and lasts about 15 real minutes.
+- The day ends when everyone online has gone to bed, so one player playing alone can end it. If nobody is online, the day never ends on its own.
+- Still up at midnight? You're sent home, with no penalty.
 
 ## Farming
 
 - Till soil, plant seeds, water, harvest.
-- Crops grow one stage per watered day. Unwatered crops just wait and never die. **(proposed)**
+- Overnight, watered crops grow; unwatered crops just wait and never die. The soil dries out each night.
 - Either player can water or harvest anything on the shared farm.
+- Starter crops: radish, carrot, sea samphire, potato, strawberry, pumpkin. Samphire and strawberry regrow after harvest: the plant drops back one stage and ripens again.
+- Growth times and prices live in `shared/content/crops.ts`. They're first guesses, to be tuned by playing.
+- Not decided yet: digging up a crop you don't want.
 
 ## Money and shops
 
@@ -82,7 +88,6 @@ Seasons, weather, day/night lighting, cooking, animals (chickens, our own pets),
 
 ## Open questions
 
-- Can one player end the day alone if the other isn't online?
 - Characters: beyond a name and shirt color, presets or a simple character creator? (Depends on the art pack.)
 - Our names and pets, if we want them in the game.
 - What's the game called?
