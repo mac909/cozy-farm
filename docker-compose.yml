@@ -1,0 +1,15 @@
+# The real farm. Start or update it with `npm run farm:up`,
+# then open http://<this PC's IP>:8080 on each laptop or phone.
+services:
+  farm:
+    build: .
+    container_name: cozy-farm
+    ports:
+      - "8080:2567"
+    volumes:
+      # Saves live here from Milestone 2 on. Never delete this volume.
+      - farm-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  farm-data:

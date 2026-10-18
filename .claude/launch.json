@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "powershell.exe",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'); npm.cmd run dev"
+      ],
+      "port": 5173
+    }
+  ]
+}
