@@ -21,3 +21,6 @@ export const FARM_ROOM = "farm";
 
 /** How long an emote bubble stays above a character's head, in milliseconds. */
 export const EMOTE_SHOW_MS = 2000;
+
+/** The close code a device gets when the same farmer joins on another device. It must not reconnect by itself after it. */
+export const REPLACED_CLOSE_CODE = 4001;

@@ -1,33 +1,50 @@
 import Phaser from "phaser";
 
 interface RoundButtonOptions {
-  /** Diameter in screen pixels. */
+  /** Diameter (or width, when square) in screen pixels. */
   size: number;
   icon: string;
   iconFrame?: number;
   /** Whole numbers keep pixel art crisp. */
   iconScale: number;
-  /** A small key hint in the corner, for keyboards (e.g. "1"). */
+  /** A small key hint in the corner, for keyboards (e.g. "Z"). */
   hint?: string;
+  /** A rounded square instead of a circle. */
+  square?: boolean;
   onPress: () => void;
 }
 
-/** A big, thumb-sized round button with a pixel-art icon. It fires as soon as it's touched. */
+/** A big, thumb-sized button with a pixel-art icon. It fires as soon as it's touched. */
 export class RoundButton extends Phaser.GameObjects.Container {
   private readonly icon: Phaser.GameObjects.Image;
 
-  constructor(scene: Phaser.Scene, { size, icon, iconFrame, iconScale, hint, onPress }: RoundButtonOptions) {
+  constructor(scene: Phaser.Scene, { size, icon, iconFrame, iconScale, hint, square, onPress }: RoundButtonOptions) {
     super(scene);
     const radius = size / 2;
-    const disc = scene.add
-      .circle(0, 0, radius, 0x1d2f3b, 0.55)
-      .setStrokeStyle(2, 0xffffff, 0.6)
-      .setInteractive({ useHandCursor: true });
+    let touch: Phaser.GameObjects.GameObject;
+    if (square) {
+      const tile = scene.add.graphics();
+      tile
+        .fillStyle(0x1d2f3b, 0.62)
+        .fillRoundedRect(-radius, -radius, size, size, 14)
+        .lineStyle(2, 0xffffff, 0.6)
+        .strokeRoundedRect(-radius, -radius, size, size, 14);
+      const zone = scene.add.zone(0, 0, size, size).setInteractive({ useHandCursor: true });
+      this.add([tile, zone]);
+      touch = zone;
+    } else {
+      const disc = scene.add
+        .circle(0, 0, radius, 0x1d2f3b, 0.55)
+        .setStrokeStyle(2, 0xffffff, 0.6)
+        .setInteractive({ useHandCursor: true });
+      this.add(disc);
+      touch = disc;
+    }
     this.icon = scene.add.image(0, 0, icon, iconFrame).setScale(iconScale);
-    this.add([disc, this.icon]);
+    this.add(this.icon);
     if (hint) {
       const label = scene.add
-        .text(radius * 0.7, radius * 0.7, hint, {
+        .text(radius * 0.7, -radius * 0.7, hint, {
           fontFamily: "system-ui, sans-serif",
           fontSize: "11px",
           fontStyle: "bold",
@@ -40,18 +57,24 @@ export class RoundButton extends Phaser.GameObjects.Container {
       this.add(label);
     }
 
-    disc.on(Phaser.Input.Events.POINTER_DOWN, () => {
-      this.setScale(0.9);
+    touch.on(Phaser.Input.Events.POINTER_DOWN, () => {
+      this.press();
       onPress();
     });
     const release = () => this.setScale(1);
-    disc.on(Phaser.Input.Events.POINTER_UP, release);
-    disc.on(Phaser.Input.Events.POINTER_OUT, release);
+    touch.on(Phaser.Input.Events.POINTER_UP, release);
+    touch.on(Phaser.Input.Events.POINTER_OUT, release);
     scene.add.existing(this);
   }
 
   setIcon(key: string, frame?: number) {
     this.icon.setTexture(key, frame);
     return this;
+  }
+
+  /** Shows a quick press, as if tapped (for its keyboard shortcut). */
+  press() {
+    this.setScale(0.9);
+    this.scene.time.delayedCall(120, () => this.setScale(1));
   }
 }

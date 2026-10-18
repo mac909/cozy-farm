@@ -1,4 +1,7 @@
-import type { Clock } from "./schema";
+import type { ArraySchema } from "@colyseus/schema";
+import { isItemId } from "./content/items";
+import type { Inventory, Slot } from "./inventory/inventory";
+import { BagSlot, type Clock } from "./schema";
 import { HUD_MINUTE_STEP, type GameClock } from "./time/clock";
 
 /**
@@ -24,4 +27,25 @@ export function writeClock(target: Clock, clock: GameClock): boolean {
 
 export function readClock(source: Clock): GameClock {
   return { day: source.day, minute: source.minute };
+}
+
+/** Copies a bag in, slot by slot, writing only the slots that changed. */
+export function writeBag(target: ArraySchema<BagSlot>, bag: Inventory): void {
+  while (target.length > bag.length) target.pop();
+  bag.forEach((slot, i) => {
+    let cell = target[i];
+    if (!cell) {
+      cell = new BagSlot();
+      target.push(cell);
+    }
+    const itemId = slot?.itemId ?? "";
+    const count = slot?.count ?? 0;
+    if (cell.itemId !== itemId) cell.itemId = itemId;
+    if (cell.count !== count) cell.count = count;
+  });
+}
+
+/** A bag as the rules see it. Slots that don't make sense (an unknown item, no count) read as empty. */
+export function readBag(source: Iterable<BagSlot>): Inventory {
+  return Array.from(source, (cell): Slot => (isItemId(cell.itemId) && cell.count > 0 ? { itemId: cell.itemId, count: cell.count } : null));
 }

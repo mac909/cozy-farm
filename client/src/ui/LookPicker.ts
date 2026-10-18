@@ -4,6 +4,8 @@ import { cleanName, type Look, NAME_MAX_LENGTH } from "../../../shared/player";
 interface PickerOptions {
   /** The current look when changing it, or null the first time. */
   current: Look | null;
+  /** The first time: a look to start from (one this device used before), if any. */
+  initial?: Look | null;
   /** An image URL of one frame of a character's sheet. */
   frame: (character: CharacterId, frame: number) => string;
   /** The frames of walking towards the camera, for the preview at the top. */
@@ -18,7 +20,7 @@ const PREVIEW_STEP_MS = 160;
  * index.html). A real text field brings up the phone's own keyboard. Resolves to the
  * new look, or null if they cancelled (only possible when changing an existing look).
  */
-export function pickLook({ current, frame, walkFrames }: PickerOptions): Promise<Look | null> {
+export function pickLook({ current, initial, frame, walkFrames }: PickerOptions): Promise<Look | null> {
   const form = document.getElementById("look-picker") as HTMLFormElement;
   const title = form.querySelector<HTMLElement>(".picker-title")!;
   const image = form.querySelector<HTMLImageElement>(".picker-preview")!;
@@ -27,12 +29,12 @@ export function pickLook({ current, frame, walkFrames }: PickerOptions): Promise
   const cancel = form.querySelector<HTMLButtonElement>(".picker-cancel")!;
   const submit = form.querySelector<HTMLButtonElement>(".picker-go")!;
 
-  let character = current?.character ?? DEFAULT_CHARACTER;
+  let character = current?.character ?? initial?.character ?? DEFAULT_CHARACTER;
   title.textContent = current ? "Your look" : "Welcome to the farm!";
   submit.textContent = current ? "Save" : "Let's go";
   cancel.hidden = !current;
   input.maxLength = NAME_MAX_LENGTH;
-  input.value = current?.name ?? "";
+  input.value = current?.name ?? initial?.name ?? "";
 
   choices.replaceChildren(
     ...CHARACTERS.map(({ id, label }) => {

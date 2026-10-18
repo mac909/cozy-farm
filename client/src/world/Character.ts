@@ -11,6 +11,9 @@ const OVERHEAD_DEPTH = 1_000_000;
 /** Name tag text size in screen pixels, whatever the camera zoom. */
 const NAME_FONT_PX = 12;
 
+/** How long a hint's speech bubble stays, in milliseconds. */
+const HINT_SHOW_MS = 2500;
+
 /**
  * A character's sprite plus what floats over its head: a name tag and,
  * for a moment after an emote, a speech bubble. Used for every player, you included.
@@ -19,6 +22,9 @@ export class Character {
   private readonly nameTag: Phaser.GameObjects.Text;
   private bubble?: Phaser.GameObjects.Image;
   private bubbleTween?: Phaser.Tweens.TweenChain;
+  private hint?: Phaser.GameObjects.Container;
+  private hintTween?: Phaser.Tweens.TweenChain;
+  private zoom = 1;
   private look: Look;
   private facing: Facing = "down";
   private moving = false;
@@ -64,7 +70,75 @@ export class Character {
 
   /** The world is zoomed in, so shrink the name tag by the same amount to keep it a steady, crisp size on screen. */
   setZoom(zoom: number) {
+    this.zoom = zoom;
     this.nameTag.setScale(1 / zoom);
+    this.hint?.setScale(1 / zoom);
+  }
+
+  /**
+   * A speech bubble with a few words over the character's head for a couple of seconds: the
+   * hints that teach the game. A new hint replaces the old one.
+   */
+  showHint(text: string) {
+    this.hintTween?.stop();
+    this.hint?.destroy();
+    const label = this.scene.add
+      .text(0, 0, text, {
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+        fontSize: "13px",
+        fontStyle: "bold",
+        color: "#3a3024",
+        align: "center",
+        wordWrap: { width: 220 },
+        resolution: window.devicePixelRatio,
+      })
+      .setOrigin(0.5, 1);
+    const width = label.width + 18;
+    const height = label.height + 8;
+    const box = this.scene.add.graphics();
+    box.fillStyle(0xffffff, 1).lineStyle(2, 0x3a3024, 1);
+    box.fillRoundedRect(-width / 2, -height - 6, width, height, 9).strokeRoundedRect(-width / 2, -height - 6, width, height, 9);
+    box.fillTriangle(-6, -7, 6, -7, 0, 0).lineBetween(-6, -6, 0, 0).lineBetween(6, -6, 0, 0);
+    label.setPosition(0, -10);
+    const hint = this.scene.add.container(0, 0, [box, label]).setDepth(OVERHEAD_DEPTH + 2).setScale(1 / this.zoom);
+    this.hint = hint;
+    this.followSprite();
+    this.hintTween = this.scene.tweens.chain({
+      targets: hint,
+      tweens: [
+        { alpha: { from: 0, to: 1 }, duration: 120 },
+        { alpha: 0, delay: HINT_SHOW_MS - 120 - 250, duration: 250 },
+      ],
+      onComplete: () => {
+        hint.destroy();
+        if (this.hint === hint) this.hint = undefined;
+      },
+    });
+  }
+
+  /** Words that rise from the character's head and fade, like "+1 Radish". */
+  floatText(text: string) {
+    const label = this.scene.add
+      .text(Math.round(this.sprite.x), Math.round(this.sprite.y) - this.sprite.displayHeight, text, {
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+        fontSize: "13px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        stroke: "#2b2b2b",
+        strokeThickness: 3,
+        resolution: window.devicePixelRatio,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(OVERHEAD_DEPTH + 3)
+      .setScale(1 / this.zoom);
+    this.scene.tweens.add({
+      targets: label,
+      y: label.y - 14,
+      alpha: { from: 1, to: 0 },
+      delay: 400,
+      duration: 700,
+      onComplete: () => label.destroy(),
+    });
   }
 
   /** Pops up a bubble over the character's head for a couple of seconds. A new emote replaces the old one. */
@@ -97,11 +171,14 @@ export class Character {
     const headTop = Math.round(y) - this.sprite.displayHeight / 2;
     this.nameTag.setPosition(Math.round(x), headTop);
     this.bubble?.setPosition(Math.round(x), headTop - Math.ceil(this.nameTag.displayHeight));
+    this.hint?.setPosition(Math.round(x), headTop - Math.ceil(this.nameTag.displayHeight));
   }
 
   destroy() {
     this.bubbleTween?.stop();
     this.bubble?.destroy();
+    this.hintTween?.stop();
+    this.hint?.destroy();
     this.nameTag.destroy();
     this.sprite.destroy();
   }

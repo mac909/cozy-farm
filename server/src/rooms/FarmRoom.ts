@@ -1,14 +1,23 @@
+import { randomUUID } from "node:crypto";
 import { type Client, Room } from "colyseus";
-import { TILE_SIZE } from "../../../shared/constants";
-import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage } from "../../../shared/messages";
+import { REPLACED_CLOSE_CODE, TILE_SIZE } from "../../../shared/constants";
+import type {
+  EmoteEvent,
+  EmoteMessage,
+  JoinOptions,
+  LookMessage,
+  MoveMessage,
+  ReplacedMessage,
+  YouMessage,
+} from "../../../shared/messages";
 import { isFacing } from "../../../shared/movement";
-import { isEmote, lookFrom } from "../../../shared/player";
+import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import { FarmState, Player } from "../../../shared/schema";
-import { steppedMinute, writeClock } from "../../../shared/stateSync";
+import { steppedMinute, writeBag, writeClock } from "../../../shared/stateSync";
 import { tickClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
-import type { World } from "../../../shared/world/world";
+import { addFarmer, farmerOf, isFarmerId, listFarmers, setFarmerLook, type FarmerId, type World } from "../../../shared/world/world";
 import { liveWorld } from "../world/liveWorld";
 import { registerDevCommands } from "./dev";
 
@@ -42,15 +51,56 @@ export class FarmRoom extends Room<FarmState> {
   }
 
   onJoin(client: Client, options?: Partial<JoinOptions>) {
+    const look = lookFrom(options);
+    const { farmerId, tellDevice } = this.whoIsJoining(options, look);
+    const known = farmerOf(this.world, farmerId) !== undefined;
+    this.change(known ? setFarmerLook(this.world, farmerId, look) : addFarmer(this.world, farmerId, look));
+
     const player = new Player();
     const spawn = tileCenter(VILLAGE_MAP.spawn.col, VILLAGE_MAP.spawn.row);
     player.x = spawn.x;
     player.y = spawn.y;
     // Someone rejoining after a dropped connection carries on from where they were.
     this.place(player, options ?? {});
-    this.dress(player, options);
+    player.name = look.name;
+    player.character = look.character;
+    player.farmerId = farmerId;
     this.state.players.set(client.sessionId, player);
-    console.log(`${player.name} (${client.sessionId}) joined (${this.state.players.size} online)`);
+    this.syncWorld();
+    console.log(`${player.name} (${client.sessionId}) joined${known ? "" : " as someone new"} (${this.state.players.size} online)`);
+
+    if (tellDevice) client.send("you", { farmerId } satisfies YouMessage);
+    this.replaceOlderDevices(client, farmerId);
+  }
+
+  /**
+   * Which farmer is joining. A device that knows its farmer id says so; one whose id the server
+   * doesn't know (a dev save that was wiped, an older backup) gets a farmer made for it. Someone
+   * new gets an id from the server (plain http:// pages can't make good ones). A page loaded before
+   * farmers existed gets the farmer with its name and character, or a new one.
+   */
+  private whoIsJoining(options: Partial<JoinOptions> | undefined, look: Look): { farmerId: FarmerId; tellDevice: boolean } {
+    if (isFarmerId(options?.farmerId)) return { farmerId: options.farmerId, tellDevice: false };
+    if (options?.newFarmer !== true) {
+      const same = listFarmers(this.world).find((f) => f.name === look.name && f.character === look.character);
+      if (same) return { farmerId: same.id, tellDevice: true };
+    }
+    return { farmerId: randomUUID(), tellDevice: true };
+  }
+
+  /** The same farmer on two devices: the newest one wins, and the older one is told why it was let go. */
+  private replaceOlderDevices(newest: Client, farmerId: FarmerId) {
+    for (const other of this.clients) {
+      if (other === newest || this.state.players.get(other.sessionId)?.farmerId !== farmerId) continue;
+      console.log(`${other.sessionId} replaced by ${newest.sessionId} (same farmer on another device)`);
+      other.send("replaced", {} satisfies ReplacedMessage);
+      other.leave(REPLACED_CLOSE_CODE);
+    }
+  }
+
+  /** The farmer a connected player is, if they're still here. */
+  farmerIdOf(client: Client): FarmerId | undefined {
+    return this.state.players.get(client.sessionId)?.farmerId || undefined;
   }
 
   onLeave(client: Client) {
@@ -77,6 +127,10 @@ export class FarmRoom extends Room<FarmState> {
     const world = this.world;
     writeClock(this.state.clock, world.clock);
     if (this.state.coins !== world.coins) this.state.coins = world.coins;
+    this.state.players.forEach((player) => {
+      const farmer = farmerOf(world, player.farmerId);
+      if (farmer) writeBag(player.bag, farmer.bag);
+    });
   }
 
   /** Time passes only while someone's here. The network clock (and the save) only change every 10 game minutes. */
@@ -104,15 +158,14 @@ export class FarmRoom extends Room<FarmState> {
     if (Number.isFinite(at.sentAt)) player.sentAt = at.sentAt as number;
   }
 
+  /** A new name or character: for the player on screen, and for their farmer (whose bag stays). */
   private changeLook(client: Client, message: LookMessage) {
     const player = this.state.players.get(client.sessionId);
-    if (player) this.dress(player, message);
-  }
-
-  private dress(player: Player, look: unknown) {
-    const { name, character } = lookFrom(look);
-    player.name = name;
-    player.character = character;
+    if (!player) return;
+    const look = lookFrom(message);
+    player.name = look.name;
+    player.character = look.character;
+    this.change(setFarmerLook(this.world, player.farmerId, look));
   }
 
   private emote(client: Client, message: EmoteMessage) {

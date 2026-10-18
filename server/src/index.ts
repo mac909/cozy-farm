@@ -5,7 +5,8 @@ import { WebSocketTransport } from "@colyseus/ws-transport";
 import { Server, matchMaker } from "colyseus";
 import express from "express";
 import { FARM_ROOM, SERVER_PORT } from "../../shared/constants";
-import { newWorld } from "../../shared/world/world";
+import type { FarmerSummary } from "../../shared/messages";
+import { listFarmers, newWorld } from "../../shared/world/world";
 import { resolveDataDir } from "./persistence/dataDir";
 import { SaveLoadError } from "./persistence/errors";
 import { SaveStore } from "./persistence/saveStore";
@@ -50,6 +51,10 @@ setLiveWorld(live);
 const app = express();
 app.get("/health", (_req, res) => {
   res.send("ok");
+});
+// Everyone who has played, for the Who's playing screen on a new device. In dev, Vite passes /api on to here.
+app.get("/api/farmers", (_req, res) => {
+  res.set("Cache-Control", "no-store").json(listFarmers(live.world) satisfies FarmerSummary[]);
 });
 // The built game. In dev, Vite serves it instead and this folder may not exist.
 app.use(express.static(clientDir));

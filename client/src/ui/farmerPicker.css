@@ -1,0 +1,89 @@
+/* Who's playing, and "You're playing on another device" (client/src/ui/FarmerPicker.ts). */
+
+.who {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 36, 48, 0.55);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #4a3b2a;
+  z-index: 10;
+}
+
+.who-card {
+  width: min(100%, 340px);
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 20px;
+  border-radius: 18px;
+  background: #fff8e7;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.who-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.who-text {
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: #8a7556;
+}
+
+.who-farmer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 14px;
+  background: #efe2c4;
+  color: inherit;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.who-farmer:active {
+  transform: scale(0.98);
+}
+
+.who-farmer img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: #f8efd8;
+  image-rendering: pixelated;
+}
+
+.who-button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 14px;
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.who-button.go {
+  background: #ef7d6d;
+  color: #ffffff;
+}
+
+.who-button.soft {
+  background: #e4d3ad;
+  color: inherit;
+}

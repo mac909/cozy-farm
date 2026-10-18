@@ -21,6 +21,7 @@ const STATUS_TEXT: Record<NetStatus, string> = {
   connecting: "Connecting…",
   connected: "",
   reconnecting: "○ Reconnecting…",
+  replaced: "○ Playing on another device",
 };
 
 export interface ClockCardView {

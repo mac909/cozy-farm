@@ -7,6 +7,7 @@ import {
   farmTileAt,
   farmerOf,
   isFarmerId,
+  listFarmers,
   newWorld,
   parseTileKey,
   setFarmTile,
@@ -82,5 +83,16 @@ describe("farmers", () => {
     expect(isFarmerId("3b241101-e2bb-4255-8caf-4136c566a962")).toBe(true);
     expect(isFarmerId("a")).toBe(true);
     for (const bad of ["", "__proto__", "-x", "a b", "x".repeat(65), 7, null, undefined]) expect(isFarmerId(bad)).toBe(false);
+  });
+});
+
+describe("listFarmers", () => {
+  it("lists everyone in the order they first joined, without their bags", () => {
+    let world = addFarmer(newWorld(), "b2", { name: "Pip", character: "woman" });
+    world = addFarmer(world, "a1", { name: "Juno", character: "boy" });
+    expect(listFarmers(world)).toEqual([
+      { id: "b2", name: "Pip", character: "woman" },
+      { id: "a1", name: "Juno", character: "boy" },
+    ]);
   });
 });

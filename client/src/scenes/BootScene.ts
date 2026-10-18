@@ -16,6 +16,8 @@ export class BootScene extends Phaser.Scene {
     // Set before any scene listens, so later updates arrive as "changedata" events.
     this.registry.set("netStatus", "connecting");
     this.registry.set("clock", null);
+    this.registry.set("bag", null);
+    this.registry.set("selectedSlot", 0);
     this.scene.start("world");
   }
 }

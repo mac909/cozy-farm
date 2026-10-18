@@ -1,5 +1,6 @@
 // Every message between client and server. Each feature has its own section, so features built side by side only meet in small additions.
 
+import type { CharacterId } from "./content/characters";
 import type { EmoteId } from "./content/emotes";
 import type { Facing } from "./movement";
 import type { Look } from "./player";
@@ -9,6 +10,15 @@ import type { Look } from "./player";
  * after a dropped connection (so I don't pop back to the spawn point).
  */
 export interface JoinOptions extends Look {
+  /** The farmer this device plays, if it knows. */
+  farmerId?: string;
+  /**
+   * True when this device just picked Someone new: the server makes a new farmer and says so in
+   * "you". A join with neither this nor a farmerId comes from a page loaded before farmers existed;
+   * the server gives it the farmer with the same name and character, so its reconnects don't each
+   * make another farmer.
+   */
+  newFarmer?: boolean;
   x?: number;
   y?: number;
   facing?: Facing;
@@ -47,3 +57,23 @@ export interface DevMessage {
   command: DevCommand;
   value?: number;
 }
+
+// ---------- Who's playing ----------
+
+/** GET /api/farmers: everyone who has played, for the Who's playing screen. */
+export interface FarmerSummary {
+  id: string;
+  name: string;
+  character: CharacterId;
+}
+
+/** Server → client ("you"), after joining as someone new: the farmer id to remember on this device. */
+export interface YouMessage {
+  farmerId: string;
+}
+
+/**
+ * Server → client ("replaced"): the same farmer just joined on another device, so this one is
+ * being disconnected (with close code REPLACED_CLOSE_CODE) and mustn't reconnect by itself.
+ */
+export type ReplacedMessage = Record<string, never>;

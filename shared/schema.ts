@@ -1,4 +1,4 @@
-import { MapSchema, Schema, type } from "@colyseus/schema";
+import { ArraySchema, MapSchema, Schema, type } from "@colyseus/schema";
 
 /**
  * The network copy of the world that Colyseus keeps in sync with every player. The server's
@@ -13,6 +13,13 @@ export class Clock extends Schema {
   @type("uint16") minute = 360;
 }
 
+/** One slot of a bag. */
+export class BagSlot extends Schema {
+  /** An ItemId, or "" for an empty slot (ArraySchema can't hold null well). */
+  @type("string") itemId = "";
+  @type("uint16") count = 0;
+}
+
 /** One person in the world. Positions are in world pixels. */
 export class Player extends Schema {
   @type("number") x = 0;
@@ -23,6 +30,10 @@ export class Player extends Schema {
   @type("string") name = "";
   /** A CharacterId. */
   @type("string") character = "";
+  /** Which farmer this is: whose bag they carry. */
+  @type("string") farmerId = "";
+  /** The farmer's bag: INVENTORY_SLOTS slots, the first HOTBAR_SLOTS of them the hotbar. */
+  @type([BagSlot]) bag = new ArraySchema<BagSlot>();
 }
 
 /** Everything the server keeps in sync with every player. */

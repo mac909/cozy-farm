@@ -1,10 +1,10 @@
 import { Client, type Room } from "colyseus.js";
-import { FARM_ROOM, SERVER_PORT } from "../../../shared/constants";
+import { FARM_ROOM, REPLACED_CLOSE_CODE, SERVER_PORT } from "../../../shared/constants";
 import type { JoinOptions } from "../../../shared/messages";
 import type { FarmState } from "../../../shared/schema";
 import { retryDelay } from "./retry";
 
-export type NetStatus = "connecting" | "connected" | "reconnecting";
+export type NetStatus = "connecting" | "connected" | "reconnecting" | "replaced";
 
 export interface ConnectionEvents {
   status(status: NetStatus): void;
@@ -12,6 +12,11 @@ export interface ConnectionEvents {
   joined(room: Room<FarmState>): void;
   /** The connection dropped. Everything from the old room is stale. */
   lost(): void;
+  /**
+   * The same farmer joined on another device, so the server let this one go. It doesn't reconnect
+   * by itself (or two devices would knock each other off forever); call resume() to play here again.
+   */
+  replaced(): void;
 }
 
 /**
@@ -52,6 +57,14 @@ export class FarmConnection {
     void this.join();
   }
 
+  /** After being replaced by another device: join again, which in turn replaces that one. */
+  resume() {
+    if (this.room || this.stopped) return;
+    this.attempt = 0;
+    this.events.status("connecting");
+    void this.join();
+  }
+
   /** Leaves for good (no reconnecting). */
   stop() {
     this.stopped = true;
@@ -80,11 +93,16 @@ export class FarmConnection {
     this.attempt = 0;
     // Colyseus closes with the same code whether we left or the server shut down,
     // so reconnect unless we asked to stop.
-    room.onLeave(() => {
+    room.onLeave((code) => {
       if (this.room !== room) return;
       this.room = null;
       this.events.lost();
-      if (!this.stopped) this.retryLater();
+      if (code === REPLACED_CLOSE_CODE) {
+        this.events.status("replaced");
+        this.events.replaced();
+      } else if (!this.stopped) {
+        this.retryLater();
+      }
     });
     room.onError((code, message) => console.warn(`Room error ${code}:`, message));
     this.events.status("connected");

@@ -118,3 +118,8 @@ export function setFarmerBag(world: World, id: FarmerId, bag: Inventory): World 
   if (!farmer) return world;
   return { ...world, farmers: { ...world.farmers, [id]: { ...farmer, bag } } };
 }
+
+/** Everyone who has played, in the order they first joined: for the Who's playing screen. */
+export function listFarmers(world: World): { id: FarmerId; name: string; character: CharacterId }[] {
+  return Object.entries(world.farmers).map(([id, { name, character }]) => ({ id, name, character }));
+}

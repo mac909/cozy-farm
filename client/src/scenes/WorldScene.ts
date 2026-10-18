@@ -4,15 +4,17 @@ import { POSITION_SEND_MS, TILE_SIZE, WALK_SPEED } from "../../../shared/constan
 import { DEFAULT_CHARACTER } from "../../../shared/content/characters";
 import type { EmoteId } from "../../../shared/content/emotes";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
-import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage } from "../../../shared/messages";
+import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage, YouMessage } from "../../../shared/messages";
 import { clampMove, type Facing, facingFor, isFacing, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
-import { readClock } from "../../../shared/stateSync";
+import type { Inventory } from "../../../shared/inventory/inventory";
+import { readBag, readClock } from "../../../shared/stateSync";
 import type { GameClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { COLLISION_LAYER, FARMLAND_LAYER, isAboveCharacters, OBJECTS_LAYER } from "../../../shared/world/tiledMap";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
+import { isFarmerId, type FarmerId } from "../../../shared/world/world";
 import {
   characterKey,
   RIPPLE_ANIM,
@@ -25,6 +27,9 @@ import {
 import { startMusic } from "../audio/music";
 import { installDevCommands } from "../net/devCommands";
 import { FarmConnection } from "../net/connection";
+import { fetchFarmers } from "../net/farmers";
+import { pickFarmer, showOtherDevice } from "../ui/FarmerPicker";
+import { loadFarmerId, saveFarmerId } from "../ui/farmerStorage";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
 import { Character } from "../world/Character";
@@ -55,6 +60,8 @@ export class WorldScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private me!: Character;
   private look!: Look;
+  /** The farmer this device plays, once known. Null until picked, or for someone new until the server says. */
+  private farmerId: FarmerId | null = null;
   private remotes = new Map<string, RemotePlayer>();
   private keys!: Record<Direction, Phaser.Input.Keyboard.Key[]>;
   private ui!: UIScene;
@@ -73,6 +80,7 @@ export class WorldScene extends Phaser.Scene {
     const collision = this.buildMap(map);
 
     const savedLook = loadLook();
+    this.farmerId = loadFarmerId();
     this.look = savedLook ?? { name: "", character: DEFAULT_CHARACTER };
     this.registry.set("look", this.look);
 
@@ -106,6 +114,8 @@ export class WorldScene extends Phaser.Scene {
     this.ui = this.scene.get("ui") as UIScene;
     this.ui.events.on("emote", (emote: EmoteId) => this.emote(emote));
     this.ui.events.on("editLook", () => void this.changeLook());
+    // The bag screen comes in the next step; until then the button says so.
+    this.ui.events.on("bag", () => this.me.showHint("The bag screen is coming soon!"));
     startMusic(this);
     installDevCommands((message) => this.room?.send("dev", message));
 
@@ -113,10 +123,12 @@ export class WorldScene extends Phaser.Scene {
       status: (status) => this.registry.set("netStatus", status),
       joined: (room) => this.onJoined(room),
       lost: () => this.onLost(),
+      replaced: () => void showOtherDevice(this.look.name).then(() => this.connection.resume()),
     });
-    // First time on this device: pick a name and character before joining, so the other player sees who arrived.
-    if (savedLook) this.connection.start();
-    else void this.changeLook(true).then(() => this.connection.start());
+    // First time on this device: who's playing (and for someone new, their name and character) before
+    // joining, so the other player sees who arrived and everyone gets their own bag.
+    if (savedLook && this.farmerId) this.connection.start();
+    else void this.chooseFarmer(savedLook).then(() => this.connection.start());
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.fitZoom, this);
@@ -202,7 +214,14 @@ export class WorldScene extends Phaser.Scene {
 
   /** Who we are and where we're standing, so rejoining after a dropped connection carries on in place. */
   private joinOptions(): JoinOptions {
-    return { ...this.look, x: Math.round(this.player.x), y: Math.round(this.player.y), facing: this.facing };
+    return {
+      ...this.look,
+      farmerId: this.farmerId ?? undefined,
+      newFarmer: this.farmerId === null,
+      x: Math.round(this.player.x),
+      y: Math.round(this.player.y),
+      facing: this.facing,
+    };
   }
 
   private onJoined(room: Room<FarmState>) {
@@ -219,6 +238,13 @@ export class WorldScene extends Phaser.Scene {
     });
     $(room.state).players.onRemove((_player, sessionId) => this.removeRemote(sessionId));
     room.onStateChange((state) => this.readState(state));
+    room.onMessage("you", (message: YouMessage) => {
+      if (!isFarmerId(message?.farmerId)) return;
+      this.farmerId = message.farmerId;
+      saveFarmerId(message.farmerId);
+    });
+    // The connection handles being replaced (by its close code); this just keeps Colyseus from warning.
+    room.onMessage("replaced", () => {});
     room.onMessage("emote", (event: EmoteEvent) => {
       if (isEmote(event?.emote)) this.remotes.get(event.sessionId)?.character.showEmote(event.emote);
     });
@@ -229,6 +255,10 @@ export class WorldScene extends Phaser.Scene {
     const clock = readClock(state.clock);
     const shown = this.registry.get("clock") as GameClock | null;
     if (!shown || shown.day !== clock.day || shown.minute !== clock.minute) this.registry.set("clock", clock);
+
+    const me = this.room ? state.players.get(this.room.sessionId) : undefined;
+    const bag = me ? readBag(me.bag) : null;
+    if (JSON.stringify(bag) !== JSON.stringify(this.registry.get("bag") as Inventory | null)) this.registry.set("bag", bag);
   }
 
   /** The connection dropped: other players will come back when we rejoin (with new session ids). */
@@ -268,21 +298,47 @@ export class WorldScene extends Phaser.Scene {
     this.room?.send("emote", message);
   }
 
+  /**
+   * Who's playing? Asks the server who has played, and lets them tap their name (getting their own
+   * bag back) or start as someone new (picking a name and character). Nobody yet: straight to
+   * someone new. Remembers the choice on this device.
+   */
+  private async chooseFarmer(savedLook: Look | null) {
+    const farmers = await fetchFarmers();
+    if (farmers.length > 0) {
+      const choice = await pickFarmer({ farmers, face: (character) => this.textures.getBase64(characterKey(character), 0) });
+      if (choice.kind === "farmer") {
+        this.farmerId = choice.farmer.id;
+        saveFarmerId(choice.farmer.id);
+        this.setLook({ name: choice.farmer.name, character: choice.farmer.character });
+        return;
+      }
+    }
+    this.farmerId = null;
+    saveFarmerId(null);
+    await this.changeLook(true, savedLook);
+  }
+
   /** Opens the name and character picker, then remembers the choice on this device and tells the server. */
-  private async changeLook(firstTime = false) {
+  private async changeLook(firstTime = false, initial: Look | null = null) {
     this.input.keyboard?.resetKeys();
     const look = await pickLook({
       current: firstTime ? null : this.look,
+      initial,
       frame: (character, frame) => this.textures.getBase64(characterKey(character), frame),
       walkFrames: walkFrames("down"),
     });
     if (!look) return;
+    this.setLook(look);
+    const message: LookMessage = look;
+    this.room?.send("look", message);
+  }
+
+  private setLook(look: Look) {
     this.look = look;
     saveLook(look);
     this.registry.set("look", look);
     this.me.setLook(look);
-    const message: LookMessage = look;
-    this.room?.send("look", message);
   }
 
   private fitZoom() {
