@@ -253,3 +253,130 @@ After `npm run farm:up`, on both phones with Tailscale on:
   `shared/content/furniture.ts`, its picture in `client/src/art/furnitureArt.ts` (our own sprites go in
   `tools/sprites/seaside.ts`), a line in `shared/content/generalStore.ts`.
 - **Selling fish and finds** already works: the crate takes anything with a `sellPrice`.
+
+## Milestone 5: Fishing, beachcombing, butterflies and the collection book
+
+Built on 2026-10-18 by Claude, working on its own (the plan is `docs/plans/milestone-5.md`; every decision is in
+`docs/DESIGN.md`). Nothing has been put on the real farm: it still runs what it ran until you run `npm run farm:up`.
+
+### Your save is safe
+
+- The save is now **version 3**. The one migration (version 2 → 3) adds four things and changes nothing else:
+  the world's own random number (made from the farmers' ids, so the same save always gets the same beach), an
+  empty beach, an empty collection book, and a **fishing rod in each farmer's first empty bag slot**. A farmer
+  whose bag is completely full gets the rod the next time they join with a free slot. The last morning's card
+  just gets an empty "washed up" list.
+- `server/src/persistence/fixtures/world-v3.json` joins v1 and v2. `oldSaves.test.ts` checks that v1 and v2 come
+  through with every bag, crop, coin, house and decoration as they were, plus the rod in the right slot, an empty
+  beach and book, and that a second rod is never given; and that v3 keeps its beach, book, records, fish, finds
+  and bugs.
+- I also loaded the v2 fixture into a scratch dev server and played it as its Pip: 735 coins, the houses and the
+  bag were all there with the rod in slot 6, the first tide had brought five finds, and I caught a sardine at the
+  dock and picked up a starfish (both went into the book). The scratch save was thrown away afterwards.
+- Your own dev save was upgraded the same way at the start (a copy from before is
+  `data-dev/saves.before-milestone-5.sqlite`), and it's the one in `data-dev/` now, with my testing in it.
+
+### What's new for players
+
+- **Fishing.** Everyone has a fishing rod. Hold it, face the water from the dock, the beach or the end of the dock,
+  and the big button says **Fish**. Wait while the bobber bobs; when it dips and a red "!" pops up over your head,
+  tap; then hold to reel it in, and let go while the fish pulls (the bar at the top turns red). On a phone a touch
+  **anywhere** on the screen works, as well as the big button; on a laptop, Space. A strip at the top says what to
+  do. **Stop** (where the bag button was) or Esc reels in. A miss is just "It got away. Cast again!".
+- **Twelve fish** by spot and time of day, from sardines all day to the moonfish off the end of the dock late at
+  night. A catch leaps into your hands with its size ("A Sea Bream! 34 cm") and goes in your bag. You can see each
+  other's rod and line.
+- **Beachcombing.** Every morning 2–5 shells, bits of sea glass or the odd starfish wash up on the beach (at most 10
+  lying about). They glint now and then. Face one and the button says **Pick up**; hold it to sweep a row. The
+  morning card says "Something washed up on the beach!" with a little picture of each.
+- **Butterflies and fireflies.** A few flutter over the meadow's grass, a new lot every two game hours: cabbage
+  whites and yellow brimstones in the morning, red admirals and common blues by day, fireflies (softly glowing)
+  after 6 pm and the rare luna moth after 8 pm. Walk up close and the button says **Catch**.
+- **The collection book.** The book button at the top right (or C, or **Book** in the bag) opens one shared book with
+  three pages: Fish, Beach and Bugs, 23 things in all. Found ones show in colour with how many, who found the
+  first and when, and the biggest fish and who caught it; the rest are silhouettes with a hint of where to look.
+- **Celebrations.** Something new in the book puts a card at the top of **both** screens ("New in the collection
+  book! Common Blue, caught by Juno"), with the success jingle, confetti and a heart over whoever found it. A
+  bigger fish than ever gets a smaller card. Tap a card to open the book.
+- Fish, finds and bugs all **sell in the crate** at their own prices. The general store has a **fish tank** for your
+  house. New one-time tips explain fishing, the beach, bugs and the book.
+
+### Decisions I made (all in DESIGN.md)
+
+- **The rod comes with the save upgrade** rather than being bought: nobody has to find or buy anything first.
+- **Your phone plays the minigame; the server picks the fish.** When you cast, the server chooses the fish from the
+  spot and the time with its own random number and sends the line; your device plays the bite and the reel and
+  says when it's landed, and the server checks there was a cast, enough time passed and the size fits. Holding
+  through a pull needs an instant response, and a round trip through Tailscale's relay (50–150 ms) would make it
+  feel sticky. (You two are trusted players, as CLAUDE.md says.)
+- **One button for fishing**, and the whole screen counts as that button, so it's one thumb with the biggest
+  possible target. The joystick is off while fishing; walking off with the keys reels in.
+- **Three fishing spots**: the dock's sides, the shore, and the deep water off the dock's end (a new `deepWater`
+  rectangle in Tiled), so all 12 merged fish can be caught. Where the water, beach and meadow are is read from the
+  map's Ground terrain, so painting new beach in Tiled just works.
+- **The fishing strip sits at the top of the screen**: at the dock the camera stops at the map's edge, so you stand
+  low on the screen, and a strip above the hotbar covered you.
+- **No bug net**: Catch with whatever you're holding, like picking a ripe crop. Bugs aren't saved; they come and go
+  like weather.
+- **Our own fish pictures**: the pack has three small fish, all one shape, and the book needs twelve that look
+  different. Three of the butterflies are recolours of the pack's.
+- **The first tide comes when the server first starts after the update**, so the beach isn't empty on the first day.
+
+### Try it on a phone (no programming needed)
+
+After `npm run farm:up`, on both phones with Tailscale on:
+
+1. **Open the game.** Your bag has a new fishing rod in it (look along the bottom; if it isn't there, open the bag
+   and move it up into the top row).
+2. **Fish off the dock:** walk down the sandy path onto the wooden dock and face the water at its side. Tap the
+   rod's slot; the big button says **Fish**. Tap it. Wait. When the bobber dips and a red "!" shows over your
+   head, tap anywhere. Then keep your thumb down to reel it in, and lift it while the bar is red. The fish jumps
+   into your hands.
+3. **The celebration:** the first time either of you catches a kind of fish, a card pops up at the top of both
+   phones. Tap it to open the collection book.
+4. **Try other spots and times:** the very end of the dock, facing out to sea, has different fish (big ones in the
+   early morning and late at night); so does the beach at the water's edge. The book says where each fish you've
+   found bites, and when.
+5. **The beach:** walk along the sand. Shells and sea glass glint; face one and tap **Pick up** (hold the button
+   and walk to pick up a row).
+6. **Butterflies:** walk up into the meadow above the farm. When a butterfly is right next to you, the button says
+   **Catch**. After 6 pm look for fireflies.
+7. **The book:** tap the book at the top right (next to the music button), or **Book** in the bag. Tap the three
+   pages; tap an entry to read about it.
+8. **Sell some:** put a fish or a shell in the shipping crate, go to bed, and the morning card lists it, along with
+   what washed up on the beach overnight.
+9. **Buy a fish tank** at the green shop and put it in your house.
+10. Things to tell me: is the bite too quick to tap in time? Is holding and letting go easy with one thumb? Is the
+    strip at the top in the way? Are the butterflies too easy, too hard, or in the wrong places? Is the "!" easy to
+    see?
+
+### Known rough edges
+
+- **Not tried on a real iPhone.** Checked in the browser pane at phone size with simulated touches (cast with the
+  button, hook and reel with a thumb anywhere), and with two players on a laptop layout: fishing at the dock,
+  shore and end of the dock at 10 am, 1 pm, 2:30 pm and 9 pm, a night in the tent with a sale and a tide, picking
+  up, catching butterflies, celebrations on both screens, and a server restart (the beach and the book came back).
+- **The bite window is short** (1.1–1.5 seconds, from the merged rules). If it's hard on a phone, tune `REEL_FEEL`
+  in `shared/fishing/fishing.ts`.
+- **Places win over butterflies.** A butterfly fluttering right by the seed stand or a door can't be caught from
+  where the button says Seeds or Home; step round it. They keep off the doorsteps and paths themselves.
+- **Bugs aren't saved:** after a server restart the current two-hour lot comes back, caught ones included.
+- **Each screen draws the flutter from its own clock**, so if the two phones' clocks differ by a few seconds a
+  butterfly may be in a slightly different place on each. Catching is generous on the server.
+- **The butterflies are the pack's full 16-pixel size**, as big as a character's head. The fireflies glow softly
+  under the evening tint.
+- **The bobber lands right beside the dock** on its left side by the boat (the boat takes the tile further out).
+- **A decoration can be put down on top of a beach find**, hiding it; it can still be picked up facing that tile.
+- **If a phone locks mid-cast**, the fish usually gets away when it wakes (nothing is lost).
+- **The fish tank is just a decoration**: it doesn't show the fish you've caught (a museum is a later idea).
+- My fish pictures are a first pass (the moray eel is a bit of a caterpillar). They're grids in
+  `tools/sprites/fish.ts`; `npm run sprites` re-renders them.
+
+### For later milestones
+
+- **A museum or aquarium that shows what you've found** would read `world.book` (`shared/collection/collection.ts`).
+- **Seasons or weather** can change what bites and what's out: the fish and bug lists carry their times in
+  `shared/content/fish.ts` and `bugs.ts`, and `cast` and `meadowBugs` pick from them.
+- **New fishing spots** (a river, tide pools) are a `FishingSpot` in `fish.ts`, a rule in `shared/fishing/spots.ts`
+  (or a rectangle in Tiled like `deepWater`), and fish that bite there.
+- **The save** is version 3; the next format change is `migrations[2]` (3 → 4) and a `world-v4.json` fixture.
