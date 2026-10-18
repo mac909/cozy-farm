@@ -1,0 +1,114 @@
+import type { BookSection, CollectionBook } from "../../../shared/collection/collection";
+import type { ItemId } from "../../../shared/content/items";
+import "./book.css";
+import { BOOK_TABS, bookEntries, completionWords, type BookEntryView } from "./bookText";
+import { button, el, openPanel, panelHead, picture, type Panel } from "./panel";
+
+const TAB_KEY = "cozy-farm.bookTab";
+
+function loadTab(): BookSection {
+  try {
+    const saved = localStorage.getItem(TAB_KEY);
+    return BOOK_TABS.some((tab) => tab.section === saved) ? (saved as BookSection) : "fish";
+  } catch {
+    return "fish";
+  }
+}
+
+function saveTab(section: BookSection): void {
+  try {
+    localStorage.setItem(TAB_KEY, section);
+  } catch {
+    // Not remembered: it opens on the fish next time.
+  }
+}
+
+export interface BookPanelOptions {
+  icon(itemId: ItemId): string;
+  onClose(): void;
+}
+
+/**
+ * The shared collection book: three pages (fish, beach finds, bugs), each a grid of everything
+ * there is. Found things show in colour with their name; the rest are silhouettes. Tap one to read
+ * about it in the strip underneath: how many, who found the first, the biggest fish, where and when.
+ * The count at the top is the whole book. It stays up to date while it's open.
+ */
+export class BookPanel {
+  private readonly panel: Panel;
+  private readonly count: HTMLSpanElement;
+  private readonly tabs: HTMLDivElement;
+  private readonly grid: HTMLDivElement;
+  private readonly info: HTMLDivElement;
+  private book: CollectionBook | null = null;
+  private section = loadTab();
+  private picked: ItemId | null = null;
+
+  constructor(private readonly options: BookPanelOptions) {
+    this.panel = openPanel({ cardClass: "book", closeKeys: ["c"], closeOnBackdrop: true, onClose: options.onClose });
+    this.count = el("span", "panel-coins book-count");
+    this.tabs = el("div", "book-tabs");
+    this.grid = el("div", "book-grid");
+    this.info = el("div", "book-info");
+    this.panel.card.append(panelHead("Collection book", () => this.close(), this.count), this.tabs, this.grid, this.info);
+  }
+
+  get isOpen(): boolean {
+    return this.panel.isOpen;
+  }
+
+  close() {
+    this.panel.close();
+  }
+
+  /** Shows the book as the server last said. */
+  update(book: CollectionBook) {
+    if (JSON.stringify(book) === JSON.stringify(this.book)) return;
+    this.book = book;
+    this.render();
+  }
+
+  private render() {
+    const book = this.book;
+    if (!book) return;
+    const words = completionWords(book);
+    this.count.textContent = words.all;
+    this.tabs.replaceChildren(
+      ...BOOK_TABS.map(({ section, title }) => {
+        const tab = button("", `book-tab${section === this.section ? " on" : ""}`, () => {
+          this.section = section;
+          this.picked = null;
+          saveTab(section);
+          this.render();
+        });
+        tab.append(el("span", "", title), el("small", "", words.tabs[section]));
+        return tab;
+      }),
+    );
+    const entries = bookEntries(book, this.section);
+    this.grid.replaceChildren(...entries.map((entry) => this.cell(entry)));
+    this.showInfo(entries.find((entry) => entry.id === this.picked) ?? null);
+  }
+
+  private cell(entry: BookEntryView): HTMLButtonElement {
+    const cell = button("", `book-cell${entry.found ? "" : " unknown"}${entry.id === this.picked ? " picked" : ""}`, () => {
+      this.picked = this.picked === entry.id ? null : entry.id;
+      this.render();
+    });
+    cell.append(picture(this.options.icon(entry.id), "book-icon"), el("span", "book-name", entry.name));
+    if (entry.found && entry.rarity !== "common") cell.append(el("span", `book-rarity ${entry.rarity}`, entry.rarity === "rare" ? "★" : "✦"));
+    cell.setAttribute("aria-label", entry.found ? entry.name : "Not found yet");
+    return cell;
+  }
+
+  private showInfo(entry: BookEntryView | null) {
+    this.info.replaceChildren();
+    if (!entry) {
+      this.info.append(el("div", "book-hint", "Tap one to read about it."));
+      return;
+    }
+    const words = el("div", "grow");
+    words.append(el("b", "", entry.name === "???" ? "Still to find" : entry.name), ...entry.lines.map((line) => el("small", "", line)));
+    this.info.append(picture(this.options.icon(entry.id), `book-icon big${entry.found ? "" : " unknown"}`), words);
+  }
+}

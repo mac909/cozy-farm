@@ -66,6 +66,8 @@ export class UIScene extends Phaser.Scene {
   private emoteButtons: RoundButton[] = [];
   private lookButton!: RoundButton;
   private musicButton!: RoundButton;
+  /** The collection book, top right by the music. */
+  private bookButton!: RoundButton;
   private bagButton!: RoundButton;
   private actionButton!: ActionButton;
   /** Arrange furniture or decorations (shown in your own house and outdoors), and its mode's buttons. */
@@ -220,6 +222,15 @@ export class UIScene extends Phaser.Scene {
       onPress: () => this.toggleMusic(),
     });
 
+    this.bookButton = new RoundButton(this, {
+      size: SMALL_BUTTON_SIZE,
+      icon: UI_ICONS_KEY,
+      iconFrame: UI_ICON.book,
+      iconScale: 2,
+      hint: this.keyHints ? "C" : undefined,
+      onPress: () => this.events.emit("book"),
+    });
+
     // Last, so it covers everything.
     this.fader = this.add.rectangle(0, 0, 1, 1, NIGHT_COLOR, 1).setOrigin(0, 0).setAlpha(0);
 
@@ -268,6 +279,10 @@ export class UIScene extends Phaser.Scene {
     });
     // Panels catch Esc themselves while they're open; this is for getting out of bed, or finishing arranging.
     onKey("ESC", () => this.events.emit("escape"));
+    onKey("C", () => {
+      this.bookButton.press();
+      this.events.emit("book");
+    });
     onKey("F", () => {
       this.arrangeButton.press();
       this.events.emit("arrange");
@@ -339,6 +354,7 @@ export class UIScene extends Phaser.Scene {
     const s = SMALL_BUTTON_SIZE;
     this.lookButton.setPosition(right - s / 2, top + s / 2);
     this.musicButton.setPosition(right - s / 2 - (s + 10), top + s / 2);
+    this.bookButton.setPosition(right - s / 2 - 2 * (s + 10), top + s / 2);
 
     this.hotbar.layout(L.hotbar.x, L.hotbar.y, L.hotbar.size, L.hotbar.gap, this.keyHints);
     this.emoteButtons.forEach((button, i) => button.setPosition(L.emotes[i].x + s / 2, L.emotes[i].y + s / 2));

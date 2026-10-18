@@ -108,6 +108,7 @@ const furnitureData = {
 
   // ---------- Seaside pieces of our own (tools/sprites/seaside.ts) ----------
   ship_in_bottle: { id: "ship_in_bottle", name: "Ship in a Bottle", price: 160, where: HOUSE, turns: [ONE] },
+  fish_tank: { id: "fish_tank", name: "Fish Tank", price: 380, where: HOUSE, turns: [WIDE] },
   life_ring: { id: "life_ring", name: "Life Ring", price: 70, where: ANYWHERE, turns: [ONE] },
   anchor: { id: "anchor", name: "Anchor", price: 90, where: ANYWHERE, turns: [ONE] },
   beach_umbrella: { id: "beach_umbrella", name: "Beach Umbrella", price: 150, where: FARM, turns: [ONE] },

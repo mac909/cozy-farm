@@ -1,0 +1,197 @@
+/* The collection book (client/src/ui/BookPanel.ts) and the celebration card (Celebration.ts). */
+
+.book {
+  width: min(100%, 420px);
+}
+
+.book-count {
+  font-size: 13px;
+}
+
+.book-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.book-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  min-height: 48px;
+  padding: 4px 6px;
+  border: 2px solid #dcc79c;
+  border-radius: 12px;
+  background: #efe2c4;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.book-tab small {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9b8664;
+}
+
+.book-tab.on {
+  border-color: #ef7d6d;
+  background: #fff1d6;
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.book-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 6px 2px 4px;
+  border: 2px solid #dcc79c;
+  border-radius: 10px;
+  background: #efe2c4;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.book-cell.picked {
+  border-color: #ef7d6d;
+  box-shadow: 0 0 0 2px #ef7d6d;
+}
+
+.book-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.book-icon.big {
+  width: 48px;
+  height: 48px;
+  flex: none;
+}
+
+/* Still to find: a silhouette. */
+.book-icon.unknown,
+.book-cell.unknown .book-icon {
+  filter: brightness(0) opacity(0.28);
+}
+
+.book-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+.book-cell.unknown .book-name {
+  color: #b5a07c;
+}
+
+.book-rarity {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 11px;
+  color: #d9a400;
+}
+
+.book-rarity.rare {
+  color: #ef7d6d;
+}
+
+.book-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: #efe2c4;
+}
+
+.book-info .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.book-info small {
+  display: block;
+  color: #8a7556;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.book-hint {
+  flex: 1;
+  color: #8a7556;
+  text-align: center;
+}
+
+/* The celebration card for something new in the book, near the top of the screen. */
+.celebrate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 340px);
+  border: 3px solid #f1c471;
+  cursor: pointer;
+  animation: celebrate-in 380ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.celebrate.small {
+  border-color: #dcc79c;
+}
+
+@keyframes celebrate-in {
+  from {
+    transform: translateY(-14px) scale(0.85);
+  }
+}
+
+.celebrate-icon {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  image-rendering: pixelated;
+  animation: celebrate-bob 900ms ease-in-out infinite alternate;
+}
+
+@keyframes celebrate-bob {
+  to {
+    transform: translateY(-3px) rotate(-6deg);
+  }
+}
+
+.celebrate-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #c2412d;
+}
+
+.celebrate.small .celebrate-title {
+  color: #4a3b2a;
+}
+
+.celebrate-line {
+  color: #8a7556;
+  font-size: 14px;
+}

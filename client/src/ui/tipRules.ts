@@ -3,7 +3,19 @@
  * teach the rest. Edit the words here.
  */
 
-export type TipId = "dig" | "plant" | "bedtime" | "crate" | "houses" | "home" | "arrange" | "beach" | "fishing" | "fishSell" | "bugs";
+export type TipId =
+  | "dig"
+  | "plant"
+  | "bedtime"
+  | "crate"
+  | "houses"
+  | "home"
+  | "arrange"
+  | "beach"
+  | "fishing"
+  | "fishSell"
+  | "bugs"
+  | "book";
 
 export const TIPS: Readonly<Record<TipId, string>> = {
   dig: "Pick the hoe in your hotbar, walk into the farm field and tap the big round button to dig.",
@@ -18,6 +30,7 @@ export const TIPS: Readonly<Record<TipId, string>> = {
     "Stand on the dock or the beach facing the sea, and tap Fish. When the bobber dips, tap! Then hold to reel it in, and let go while it pulls. Anywhere on the screen works.",
   fishSell: "Different fish bite at the dock, the shore and the end of the dock, and at different times of day. They sell in the crate.",
   bugs: "Different butterflies come out at different times of day, and fireflies after dark. Walk up close and tap Catch.",
+  book: "That's new in your collection book! Tap the book at the top to see everything you've both found, and what's still out there.",
 };
 
 /** What just happened in the game that might call for a tip. */
@@ -33,7 +46,8 @@ export type TipEvent =
   | "pickedUp"
   | "rod"
   | "caughtFish"
-  | "caughtBug";
+  | "caughtBug"
+  | "discovered";
 
 const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   started: "dig",
@@ -48,6 +62,7 @@ const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   rod: "fishing",
   caughtFish: "fishSell",
   caughtBug: "bugs",
+  discovered: "book",
 };
 
 /** A tip that makes another out of date: moving in answers "go and move in". */

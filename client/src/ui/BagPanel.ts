@@ -14,6 +14,8 @@ export interface BagPanelOptions {
   split(from: number, count: number): void;
   /** Closes the bag and starts putting down the furniture in `slot`. */
   place(slot: number): void;
+  /** Opens the collection book instead. */
+  openBook(): void;
   onClose(): void;
 }
 
@@ -48,7 +50,7 @@ export class BagPanel {
     this.info = el("div", "bag-info");
     this.tip = el("p", "panel-tip");
     this.panel.card.append(
-      panelHead("Bag", () => this.close(), this.coins),
+      panelHead("Bag", () => this.close(), button("Book", "panel-pill", () => options.openBook()), this.coins),
       el("div", "panel-label", "Hotbar"),
       this.grid.top,
       el("div", "panel-label", "Bag"),

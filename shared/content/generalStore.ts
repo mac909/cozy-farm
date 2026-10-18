@@ -31,6 +31,7 @@ export const STORE_SHELVES: readonly { title: string; stock: readonly FurnitureI
       "cream_rug",
       "yellow_mat",
       "ship_in_bottle",
+      "fish_tank",
     ],
   },
   {

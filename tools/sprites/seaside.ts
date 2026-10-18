@@ -1,6 +1,6 @@
 /**
  * Seaside furniture and decorations the pack doesn't have, for the general store: a life ring on
- * a post, an anchor, a striped beach umbrella and a ship in a bottle. Each sits on the bottom of a
+ * a post, an anchor, a striped beach umbrella, a ship in a bottle and a fish tank. Each sits on the bottom of a
  * 32×32 frame (see SEASIDE_FRAMES); client/src/art/furnitureArt.ts cuts them out by rectangle.
  * Colours from palette.ts; the render script adds the outer outline.
  */
@@ -15,6 +15,7 @@ export const SEASIDE_FRAMES = {
   anchor: { x: 8, y: 0, w: 16, h: 32 },
   beach_umbrella: { x: 0, y: 0, w: 32, h: 32 },
   ship_in_bottle: { x: 8, y: 16, w: 16, h: 16 },
+  fish_tank: { x: 0, y: 5, w: 32, h: 27 },
 } as const;
 
 /** A wooden post with a red and white life ring hung on it. */
@@ -129,10 +130,52 @@ function shipInBottle(): Img {
   return img;
 }
 
+/** A fish tank on a wooden stand: two little fish, weed swaying in it, bubbles going up. Two tiles wide. */
+function fishTank(): Img {
+  const img = new Img(FRAME, FRAME);
+  // The stand: a board, and two legs.
+  img.rect(2, 24, 28, 3, C.woodMid);
+  img.rect(2, 24, 28, 1, C.woodLight);
+  img.rect(2, 26, 28, 1, C.woodShade);
+  img.rect(4, 27, 3, 4, C.woodShade);
+  img.rect(25, 27, 3, 4, C.woodShade);
+  // The glass, the lid, and the water: lighter at the surface, deeper at the bottom.
+  img.rect(2, 6, 28, 18, C.stoneLight);
+  img.rect(2, 5, 28, 1, C.woodShade);
+  img.rect(3, 7, 26, 16, C.aqua);
+  img.rect(3, 7, 26, 2, C.aquaLight);
+  img.rect(3, 18, 26, 3, C.sea);
+  // Sand and pebbles on the bottom.
+  img.rect(3, 21, 26, 2, C.sand);
+  for (const x of [5, 9, 14, 20, 26]) img.set(x, 21, C.tan);
+  for (const x of [7, 17, 23]) img.set(x, 22, C.tanDark);
+  // Weed, swaying.
+  for (const [x, y] of [[7, 20], [7, 19], [6, 18], [6, 17], [7, 16], [7, 15], [6, 14], [8, 20], [8, 18], [9, 17]] as const) img.set(x, y, C.leaf);
+  for (const [x, y] of [[23, 20], [23, 19], [24, 18], [24, 17], [23, 16], [22, 20], [22, 18]] as const) img.set(x, y, C.leafDark);
+  // An orange fish facing right, and a yellow one facing left.
+  img.rect(12, 11, 4, 2, C.carrot);
+  img.set(11, 10, C.orangeDark);
+  img.set(11, 13, C.orangeDark);
+  img.set(11, 11, C.orangeDark);
+  img.set(11, 12, C.orangeDark);
+  img.set(15, 11, C.outline);
+  img.rect(17, 15, 3, 2, C.petal);
+  img.set(20, 14, C.petalShade);
+  img.set(20, 15, C.petalShade);
+  img.set(20, 16, C.petalShade);
+  img.set(20, 17, C.petalShade);
+  img.set(17, 15, C.outline);
+  // Bubbles, and a glint on the glass.
+  for (const [x, y] of [[16, 9], [17, 7], [25, 11], [24, 9]] as const) img.set(x, y, C.white);
+  for (const y of [9, 10, 11]) img.set(4, y, C.white);
+  return img;
+}
+
 /** Every piece, in frame order. */
 export const SEASIDE: Readonly<Record<keyof typeof SEASIDE_FRAMES, () => Img>> = {
   life_ring: lifeRing,
   anchor,
   beach_umbrella: beachUmbrella,
   ship_in_bottle: shipInBottle,
+  fish_tank: fishTank,
 };

@@ -7,6 +7,7 @@ import { FISHING_ROD, ITEMS, type ItemId } from "../../../shared/content/items";
 import { isHint } from "../../../shared/farming/actions";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type {
+  BookEventMessage,
   BuyMessage,
   CastStartedMessage,
   CatchBugMessage,
@@ -28,7 +29,8 @@ import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
 import { countOf, type Inventory } from "../../../shared/inventory/inventory";
 import type { Crate } from "../../../shared/economy/shop";
-import { readBag, readBeach, readBugs, readClock, readCrate } from "../../../shared/stateSync";
+import { readBag, readBeach, readBook, readBugs, readClock, readCrate } from "../../../shared/stateSync";
+import { EMPTY_BOOK, type CollectionBook } from "../../../shared/collection/collection";
 import { roomFor } from "../../../shared/inventory/inventory";
 import type { GameClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
@@ -58,6 +60,9 @@ import { loadFarmerId, saveFarmerId } from "../ui/farmerStorage";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
 import { BagPanel } from "../ui/BagPanel";
+import { BookPanel } from "../ui/BookPanel";
+import { celebrationFor } from "../ui/bookText";
+import { Celebrations } from "../ui/Celebration";
 import { CratePanel } from "../ui/CratePanel";
 import { ShopPanel } from "../ui/ShopPanel";
 import { generalStoreCatalog, seedStandCatalog, type ShopCatalog } from "../ui/shopText";
@@ -70,6 +75,7 @@ import { Farming } from "../world/Farming";
 import { Homes, type Resident } from "../world/Homes";
 import { Arrange } from "../world/Arrange";
 import { BeachView } from "../world/Beach";
+import { playBurst } from "../world/effects";
 import { Fishing, OtherLines } from "../world/Fishing";
 import { MeadowView } from "../world/Meadow";
 import { homeOf } from "../../../shared/decor/decorate";
@@ -142,6 +148,9 @@ export class WorldScene extends Phaser.Scene {
   private otherLines!: OtherLines;
   /** The bugs in the meadow. */
   private meadow!: MeadowView;
+  /** The shared collection book, as the server last said, and the cards that cheer what's new in it. */
+  private book: CollectionBook = EMPTY_BOOK;
+  private celebrations!: Celebrations;
 
   constructor() {
     super("world");
@@ -187,6 +196,14 @@ export class WorldScene extends Phaser.Scene {
     this.ui.events.on("emote", (emote: EmoteId) => this.emote(emote));
     this.ui.events.on("editLook", () => void this.changeLook());
     this.ui.events.on("bag", () => this.toggleBag());
+    this.ui.events.on("book", () => this.toggleBook());
+    this.celebrations = new Celebrations({
+      icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+      openBook: () => {
+        if (!(this.panel instanceof BookPanel)) this.toggleBook();
+      },
+      shown: (celebration) => playSound(this, celebration.big ? "morning" : "coin"),
+    });
     startMusic(this);
     installDevCommands(
       (message) => this.room?.send("dev", message),
@@ -376,7 +393,14 @@ export class WorldScene extends Phaser.Scene {
     } else {
       this.farming.update();
     }
-    this.tips.update(!this.bedtime.asleep && !this.bedtime.cardOpen && this.panel === null && this.room !== null && !this.fishing.isActive);
+    this.tips.update(
+      !this.bedtime.asleep &&
+        !this.bedtime.cardOpen &&
+        this.panel === null &&
+        this.room !== null &&
+        !this.fishing.isActive &&
+        !this.celebrations.showing,
+    );
 
     const now = performance.now();
     const drawAt = now - REMOTE_DELAY_MS;
@@ -515,6 +539,7 @@ export class WorldScene extends Phaser.Scene {
       this.fishing.refused();
     });
     room.onMessage("castStarted", (message: CastStartedMessage) => this.fishing.started(message));
+    room.onMessage("bookEvent", (message: BookEventMessage) => this.celebrate(message));
     room.onMessage("you", (message: YouMessage) => {
       if (!isFarmerId(message?.farmerId)) return;
       this.farmerId = message.farmerId;
@@ -522,8 +547,6 @@ export class WorldScene extends Phaser.Scene {
     });
     // The connection handles being replaced (by its close code); this just keeps Colyseus from warning.
     room.onMessage("replaced", () => {});
-    // Celebrated by the collection book (coming with it); until then, heard and let go.
-    room.onMessage("bookEvent", () => {});
     room.onMessage("emote", (event: EmoteEvent) => {
       if (isEmote(event?.emote)) this.remotes.get(event.sessionId)?.character.showEmote(event.emote);
     });
@@ -565,6 +588,11 @@ export class WorldScene extends Phaser.Scene {
     this.farming.readFarm(state);
     this.homes.readState(state);
     this.beach.update(readBeach(state.beach));
+    const book = readBook(state.book);
+    if (JSON.stringify(book) !== JSON.stringify(this.book)) {
+      this.book = book;
+      if (this.panel instanceof BookPanel) this.panel.update(book);
+    }
     this.meadow.update(readBugs(state.bugs));
     // Not moved in anywhere yet, with a cottage free: say where they are.
     if (this.farmerId && VILLAGE_MAP.houses.length > 0 && !homeOf(this.homes.houseViews, this.farmerId)) {
@@ -695,10 +723,34 @@ export class WorldScene extends Phaser.Scene {
             this.closePanel();
             this.arrange.start(slot);
           },
+          openBook: () => this.toggleBook(),
           onClose,
         }),
     );
     bag?.update(this.registry.get("bag"), this.registry.get("coins"));
+  }
+
+  /** The book button, C, the bag's Book button, or a celebration card: opens the collection book, or closes it. */
+  private toggleBook() {
+    if (this.panel instanceof BookPanel) {
+      this.closePanel();
+      return;
+    }
+    const book = this.openPanel((onClose) => new BookPanel({ icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)), onClose }));
+    book?.update(this.book);
+  }
+
+  /** Something new in the book: a card on everyone's screen, and confetti over whoever found it. */
+  private celebrate(message: BookEventMessage) {
+    if (!message?.event || typeof message.by !== "string") return;
+    const celebration = celebrationFor(message.event, message.by);
+    this.celebrations.add(celebration);
+    const finder = message.sessionId === this.room?.sessionId ? this.me : this.remotes.get(message.sessionId)?.character;
+    if (finder && !finder.hidden && celebration.big) {
+      playBurst(this, finder.sprite.x, finder.sprite.y - 10, "celebrate", finder.sprite.depth + 5);
+      finder.showEmote("heart");
+    }
+    if (message.event.type === "discovered") this.tips.event("discovered");
   }
 
   /** Next to the crate: opens the crate card. */

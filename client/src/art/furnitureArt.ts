@@ -87,6 +87,7 @@ export const FURNITURE_ART: Readonly<Record<FurnitureId, readonly PieceArt[]>> =
   anchor: [at("seaside", 40, 0, 16, 32)],
   beach_umbrella: [at("seaside", 64, 0, 32, 32)],
   ship_in_bottle: [at("seaside", 104, 16, 16, 16)],
+  fish_tank: [at("seaside", 128, 5, 32, 27)],
 };
 
 /** The picture for a piece turned `turn` times (wrapping round, like footprintOf). */
