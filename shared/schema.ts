@@ -58,6 +58,37 @@ export class HouseState extends Schema {
   @type([PieceState]) furniture = new ArraySchema<PieceState>();
 }
 
+/** Something lying on the beach, on one sand tile. */
+export class BeachFindState extends Schema {
+  /** A BeachFindId: also the item it gives. */
+  @type("string") findId = "";
+  @type("uint16") col = 0;
+  @type("uint16") row = 0;
+}
+
+/** A bug fluttering about one meadow tile. Keyed by its id in FarmState.bugs. */
+export class BugState extends Schema {
+  /** A BugId. */
+  @type("string") bugId = "";
+  /** The tile it flutters round; each screen draws the flutter itself. */
+  @type("uint16") col = 0;
+  @type("uint16") row = 0;
+}
+
+/** One thing found in the collection book. Keyed "section:id" ("fish:sardine") in FarmState.book. */
+export class BookEntryState extends Schema {
+  /** "fish", "finds" or "bugs". */
+  @type("string") section = "";
+  @type("string") id = "";
+  /** How many have been caught or found. */
+  @type("uint32") count = 0;
+  @type("uint32") firstDay = 0;
+  @type("string") firstBy = "";
+  /** Fish only: the biggest so far, in centimetres, and who caught it. 0 and "" otherwise. */
+  @type("uint16") biggestCm = 0;
+  @type("string") biggestBy = "";
+}
+
 /** One person in the world. Positions are in world pixels. */
 export class Player extends Schema {
   @type("number") x = 0;
@@ -90,4 +121,10 @@ export class FarmState extends Schema {
   @type({ map: HouseState }) houses = new MapSchema<HouseState>();
   /** Decorations on the farm. */
   @type([PieceState]) decorations = new ArraySchema<PieceState>();
+  /** What's lying on the beach, in the order it washed up. */
+  @type([BeachFindState]) beach = new ArraySchema<BeachFindState>();
+  /** The bugs out in the meadow now, by id. Not saved: they come and go with the clock. */
+  @type({ map: BugState }) bugs = new MapSchema<BugState>();
+  /** The shared collection book: everything found so far, keyed "section:id". */
+  @type({ map: BookEntryState }) book = new MapSchema<BookEntryState>();
 }

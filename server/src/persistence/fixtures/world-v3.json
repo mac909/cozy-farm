@@ -1,0 +1,409 @@
+{
+  "version": 3,
+  "clock": {
+    "day": 9,
+    "minute": 843.75
+  },
+  "coins": 735,
+  "crate": [
+    {
+      "itemId": "radish",
+      "count": 6
+    },
+    {
+      "itemId": "strawberry",
+      "count": 2
+    },
+    {
+      "itemId": "carrot_seeds",
+      "count": 1
+    },
+    {
+      "itemId": "sardine",
+      "count": 4
+    },
+    {
+      "itemId": "cowrie_shell",
+      "count": 2
+    }
+  ],
+  "farm": [
+    {
+      "col": 5,
+      "row": 5,
+      "kind": "tilled",
+      "watered": false
+    },
+    {
+      "col": 6,
+      "row": 5,
+      "kind": "tilled",
+      "watered": true
+    },
+    {
+      "col": 7,
+      "row": 5,
+      "kind": "planted",
+      "watered": false,
+      "cropId": "radish",
+      "stage": 3,
+      "daysInStage": 0
+    },
+    {
+      "col": 8,
+      "row": 5,
+      "kind": "planted",
+      "watered": true,
+      "cropId": "carrot",
+      "stage": 2,
+      "daysInStage": 0
+    },
+    {
+      "col": 9,
+      "row": 6,
+      "kind": "planted",
+      "watered": false,
+      "cropId": "strawberry",
+      "stage": 2,
+      "daysInStage": 1
+    },
+    {
+      "col": 10,
+      "row": 6,
+      "kind": "planted",
+      "watered": true,
+      "cropId": "potato",
+      "stage": 1,
+      "daysInStage": 1
+    },
+    {
+      "col": 12,
+      "row": 7,
+      "kind": "planted",
+      "watered": false,
+      "cropId": "samphire",
+      "stage": 2,
+      "daysInStage": 0
+    },
+    {
+      "col": 14,
+      "row": 8,
+      "kind": "planted",
+      "watered": true,
+      "cropId": "pumpkin",
+      "stage": 0,
+      "daysInStage": 0
+    }
+  ],
+  "farmers": {
+    "3f2c8a1e-6b4d-4c7a-9e21-5d8f0a6b7c31": {
+      "name": "Pip",
+      "character": "woman",
+      "bag": [
+        {
+          "itemId": "hoe",
+          "count": 1
+        },
+        {
+          "itemId": "watering_can",
+          "count": 1
+        },
+        {
+          "itemId": "radish_seeds",
+          "count": 7
+        },
+        {
+          "itemId": "strawberry_seeds",
+          "count": 4
+        },
+        {
+          "itemId": "radish",
+          "count": 3
+        },
+        {
+          "itemId": "fishing_rod",
+          "count": 1
+        },
+        null,
+        null,
+        {
+          "itemId": "carrot",
+          "count": 2
+        },
+        {
+          "itemId": "sea_bream",
+          "count": 2
+        },
+        {
+          "itemId": "brimstone",
+          "count": 1
+        },
+        {
+          "itemId": "scallop_shell",
+          "count": 3
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "b71e09d4-2a5f-4e83-8c6d-0f4a9b2e1d57": {
+      "name": "Juno 🌻",
+      "character": "boy",
+      "bag": [
+        {
+          "itemId": "watering_can",
+          "count": 1
+        },
+        {
+          "itemId": "hoe",
+          "count": 1
+        },
+        {
+          "itemId": "carrot_seeds",
+          "count": 5
+        },
+        {
+          "itemId": "fishing_rod",
+          "count": 1
+        },
+        {
+          "itemId": "pumpkin_seeds",
+          "count": 1
+        },
+        null,
+        null,
+        {
+          "itemId": "samphire",
+          "count": 2
+        },
+        {
+          "itemId": "starfish",
+          "count": 1
+        },
+        {
+          "itemId": "firefly",
+          "count": 2
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "lastMorning": {
+    "day": 9,
+    "grew": 5,
+    "ready": 2,
+    "coins": 735,
+    "sale": {
+      "lines": [
+        {
+          "itemId": "radish",
+          "count": 4,
+          "priceEach": 35,
+          "total": 140
+        },
+        {
+          "itemId": "carrot",
+          "count": 2,
+          "priceEach": 60,
+          "total": 120
+        }
+      ],
+      "total": 260
+    },
+    "washedUp": [
+      "scallop_shell",
+      "sea_glass",
+      "conch_shell"
+    ]
+  },
+  "houses": {
+    "house1": {
+      "owner": "3f2c8a1e-6b4d-4c7a-9e21-5d8f0a6b7c31",
+      "furniture": [
+        {
+          "itemId": "red_bed",
+          "col": 0,
+          "row": 0,
+          "turn": 0
+        },
+        {
+          "itemId": "potted_fern",
+          "col": 1,
+          "row": 0,
+          "turn": 0
+        },
+        {
+          "itemId": "straw_rug",
+          "col": 3,
+          "row": 1,
+          "turn": 0
+        },
+        {
+          "itemId": "sofa",
+          "col": 3,
+          "row": 1,
+          "turn": 0
+        },
+        {
+          "itemId": "floor_lamp",
+          "col": 8,
+          "row": 0,
+          "turn": 0
+        }
+      ]
+    },
+    "house2": {
+      "owner": "b71e09d4-2a5f-4e83-8c6d-0f4a9b2e1d57",
+      "furniture": [
+        {
+          "itemId": "blue_bed",
+          "col": 6,
+          "row": 3,
+          "turn": 1
+        },
+        {
+          "itemId": "potted_fern",
+          "col": 1,
+          "row": 0,
+          "turn": 0
+        },
+        {
+          "itemId": "cream_rug",
+          "col": 2,
+          "row": 2,
+          "turn": 1
+        },
+        {
+          "itemId": "wooden_chair",
+          "col": 2,
+          "row": 2,
+          "turn": 1
+        }
+      ]
+    }
+  },
+  "decorations": [
+    {
+      "itemId": "fence",
+      "col": 23,
+      "row": 7,
+      "turn": 2
+    },
+    {
+      "itemId": "fence",
+      "col": 24,
+      "row": 7,
+      "turn": 0
+    },
+    {
+      "itemId": "fence",
+      "col": 25,
+      "row": 7,
+      "turn": 3
+    },
+    {
+      "itemId": "sunflower",
+      "col": 24,
+      "row": 8,
+      "turn": 0
+    },
+    {
+      "itemId": "stepping_stone",
+      "col": 29,
+      "row": 7,
+      "turn": 0
+    },
+    {
+      "itemId": "blue_flower_tub",
+      "col": 32,
+      "row": 6,
+      "turn": 0
+    }
+  ],
+  "worldSeed": 328151057,
+  "beach": {
+    "day": 9,
+    "finds": [
+      {
+        "findId": "scallop_shell",
+        "col": 20,
+        "row": 23
+      },
+      {
+        "findId": "sea_glass",
+        "col": 12,
+        "row": 24
+      },
+      {
+        "findId": "conch_shell",
+        "col": 33,
+        "row": 22
+      }
+    ]
+  },
+  "book": {
+    "fish": {
+      "sardine": {
+        "caught": 5,
+        "firstDay": 7,
+        "firstBy": "Pip",
+        "biggestCm": 19,
+        "biggestBy": "Juno 🌻"
+      },
+      "sea_bream": {
+        "caught": 2,
+        "firstDay": 8,
+        "firstBy": "Juno 🌻",
+        "biggestCm": 41,
+        "biggestBy": "Pip"
+      }
+    },
+    "finds": {
+      "scallop_shell": {
+        "found": 4,
+        "firstDay": 7,
+        "firstBy": "Pip"
+      },
+      "starfish": {
+        "found": 1,
+        "firstDay": 8,
+        "firstBy": "Juno 🌻"
+      }
+    },
+    "bugs": {
+      "firefly": {
+        "caught": 2,
+        "firstDay": 8,
+        "firstBy": "Juno 🌻"
+      },
+      "brimstone": {
+        "caught": 1,
+        "firstDay": 9,
+        "firstBy": "Pip"
+      }
+    }
+  }
+}

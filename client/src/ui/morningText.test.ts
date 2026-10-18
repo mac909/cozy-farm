@@ -24,6 +24,7 @@ describe("the morning card's words", () => {
         ],
         total: 260,
       },
+      washedUp: [],
     });
     expect(words.title).toBe("Good morning! Day 4");
     expect(words.sales).toEqual([
@@ -34,7 +35,7 @@ describe("the morning card's words", () => {
   });
 
   it("keeps a quiet night short", () => {
-    const words = morningWords({ day: 2, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 } });
+    const words = morningWords({ day: 2, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: [] });
     expect(words).toEqual({ title: "Good morning! Day 2", growth: null, sales: [], earned: null });
   });
 });

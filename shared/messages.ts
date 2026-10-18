@@ -1,8 +1,10 @@
 // Every message between client and server. Each feature has its own section, so features built side by side only meet in small additions.
 
+import type { BookEvent } from "./collection/collection";
 import type { CharacterId } from "./content/characters";
 import type { EmoteId } from "./content/emotes";
 import type { Hint } from "./farming/actions";
+import type { CastingState } from "./fishing/fishing";
 import type { Facing } from "./movement";
 import type { Look } from "./player";
 import type { MorningReport } from "./world/world";
@@ -191,4 +193,51 @@ export interface TakePieceMessage {
   itemId: string;
   col: number;
   row: number;
+}
+
+// ---------- Collecting: the beach, fishing, bugs and the book ----------
+
+/** Client → server ("pickUp"): pick up the beach find lying on col, row (in reach). */
+export interface PickUpMessage {
+  col: number;
+  row: number;
+}
+
+/** Client → server ("cast"), holding the fishing rod: cast into the water tile col, row (the one in front). */
+export interface CastMessage {
+  col: number;
+  row: number;
+}
+
+/**
+ * Server → the caster ("castStarted"): the line, as the fishing rules' casting state. The device
+ * plays it out (the bite, the reel) and says "landFish" if it's landed. The fish was picked here,
+ * from the spot and the time of day; the device shows it only once it's caught.
+ */
+export interface CastStartedMessage {
+  state: CastingState;
+}
+
+/** Client → server ("landFish"): the fish on the line is landed, and this long. */
+export interface LandFishMessage {
+  sizeCm: number;
+}
+
+/** Client → server ("reelIn"): stopped fishing without landing anything. */
+export type ReelInMessage = Record<string, never>;
+
+/** Client → server ("catchBug"): catch the bug with this id (it's fluttering next to me). */
+export interface CatchBugMessage {
+  id: string;
+}
+
+/**
+ * Server → everyone ("bookEvent"): something to celebrate in the collection book: a first discovery,
+ * a record fish, a section or the whole book done. `by` found it; `sessionId` is theirs, so each
+ * screen can put sparkles over the right head.
+ */
+export interface BookEventMessage {
+  event: BookEvent;
+  by: string;
+  sessionId: string;
 }

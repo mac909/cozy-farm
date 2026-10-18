@@ -16,13 +16,34 @@ import type {
 import { isFacing } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import { FarmState, Player } from "../../../shared/schema";
-import { steppedMinute, writeBag, writeClock, writeCrate, writeFarm, writeHouses, writePieces } from "../../../shared/stateSync";
+import {
+  steppedMinute,
+  writeBag,
+  writeBeach,
+  writeBook,
+  writeClock,
+  writeCrate,
+  writeFarm,
+  writeHouses,
+  writePieces,
+} from "../../../shared/stateSync";
+import { tideIn } from "../../../shared/beachcombing/tide";
 import { tickClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
-import { addFarmer, farmerOf, isFarmerId, listFarmers, setFarmerLook, type FarmerId, type World } from "../../../shared/world/world";
+import {
+  addFarmer,
+  farmerOf,
+  giveFishingRod,
+  isFarmerId,
+  listFarmers,
+  setFarmerLook,
+  type FarmerId,
+  type World,
+} from "../../../shared/world/world";
 import { liveWorld } from "../world/liveWorld";
 import { registerBag } from "./bag";
+import { registerBeach, VILLAGE_SHORE } from "./beach";
 import { registerCrate } from "./crate";
 import { registerDecor } from "./decor";
 import { registerDevCommands } from "./dev";
@@ -53,6 +74,9 @@ export class FarmRoom extends Room<FarmState> {
 
   onCreate() {
     this.setState(new FarmState());
+    // A world whose beach has never had a tide (brand new, or saved before Milestone 5) gets its first now.
+    const tide = tideIn(this.world, VILLAGE_SHORE);
+    if (tide.world !== this.world) liveWorld().set(tide.world);
     this.syncWorld();
     this.onMessage("move", (client, message: MoveMessage) => this.movePlayer(client, message));
     this.onMessage("look", (client, message: LookMessage) => this.changeLook(client, message));
@@ -64,6 +88,7 @@ export class FarmRoom extends Room<FarmState> {
     registerShop(this);
     registerHouses(this);
     registerDecor(this);
+    registerBeach(this);
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
@@ -73,7 +98,9 @@ export class FarmRoom extends Room<FarmState> {
     const look = lookFrom(options);
     const { farmerId, tellDevice } = this.whoIsJoining(options, look);
     const known = farmerOf(this.world, farmerId) !== undefined;
-    this.change(known ? setFarmerLook(this.world, farmerId, look) : addFarmer(this.world, farmerId, look));
+    const joined = known ? setFarmerLook(this.world, farmerId, look) : addFarmer(this.world, farmerId, look);
+    // Anyone still without a fishing rod (their bag was full when the save was upgraded) gets one now, if there's room.
+    this.change(giveFishingRod(joined, farmerId));
 
     const player = new Player();
     const spawn = tileCenter(VILLAGE_MAP.spawn.col, VILLAGE_MAP.spawn.row);
@@ -165,6 +192,8 @@ export class FarmRoom extends Room<FarmState> {
     writeCrate(this.state.crate, world.crate);
     writeHouses(this.state.houses, world.houses, world.farmers);
     writePieces(this.state.decorations, world.decorations);
+    writeBeach(this.state.beach, world.beach.finds);
+    writeBook(this.state.book, world.book);
     this.state.players.forEach((player) => {
       const farmer = farmerOf(world, player.farmerId);
       if (farmer) writeBag(player.bag, farmer.bag);

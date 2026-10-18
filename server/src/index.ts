@@ -6,7 +6,7 @@ import { Server, matchMaker } from "colyseus";
 import express from "express";
 import { FARM_ROOM, SERVER_PORT } from "../../shared/constants";
 import type { FarmerSummary } from "../../shared/messages";
-import { listFarmers, newWorld } from "../../shared/world/world";
+import { listFarmers, newWorld, randomWorldSeed } from "../../shared/world/world";
 import { resolveDataDir } from "./persistence/dataDir";
 import { SaveLoadError } from "./persistence/errors";
 import { SaveStore } from "./persistence/saveStore";
@@ -26,7 +26,7 @@ function loadWorld(): LiveWorld {
   const loaded = store.load(WORLD_ID);
   if (loaded.status === "none") {
     console.log(`No save yet in ${store.file}: starting a new world.`);
-    const live = new LiveWorld(store, newWorld());
+    const live = new LiveWorld(store, newWorld(randomWorldSeed()));
     // Saved straight away, so the first backup has something in it.
     live.saveNow();
     return live;

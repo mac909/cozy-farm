@@ -39,6 +39,20 @@ function busyWorld(): World {
       ready: 3,
       coins: 640,
       sale: { lines: [{ itemId: "radish", count: 4, priceEach: 35, total: 140 }], total: 140 },
+      washedUp: ["scallop_shell", "sea_glass"],
+    },
+    worldSeed: 3141592653,
+    beach: {
+      day: 4,
+      finds: [
+        { findId: "scallop_shell", col: 20, row: 23 },
+        { findId: "sea_glass", col: 12, row: 24 },
+      ],
+    },
+    book: {
+      fish: { sea_bream: { caught: 2, firstDay: 3, firstBy: "Pip", biggestCm: 41, biggestBy: "Juno 🌻" } },
+      finds: { starfish: { found: 1, firstDay: 2, firstBy: "Juno 🌻" } },
+      bugs: { brimstone: { caught: 3, firstDay: 4, firstBy: "Pip" } },
     },
   };
 }
@@ -56,9 +70,9 @@ describe("the world save", () => {
     expect(loaded).toEqual(world);
   });
 
-  it("is version 2 and lists dug tiles in reading order", () => {
+  it("is version 3 and lists dug tiles in reading order", () => {
     const save = worldToSave(busyWorld());
-    expect(save.version).toBe(2);
+    expect(save.version).toBe(3);
     expect(save.farm.map(({ col, row }) => `${col},${row}`)).toEqual(["12,4", "4,6", "5,6"]);
     expect(save.farmers["farmer-1"].bag).toHaveLength(INVENTORY_SLOTS);
   });
@@ -84,7 +98,31 @@ describe("the world save", () => {
     ["a farmer id that isn't one", { farmers: { "": { name: "x", character: "boy", bag: newInventory() } } }, /id/],
     ["a short bag", { farmers: { a: { name: "x", character: "boy", bag: [] } } }, /24 slots/],
     ["an overfull stack", { farmers: { a: { name: "x", character: "boy", bag: [{ itemId: "hoe", count: 2 }, ...newInventory().slice(1)] } } }, /count/],
-    ["a morning report with a bad sale", { lastMorning: { day: 2, grew: 0, ready: 0, coins: 0, sale: { lines: [{}], total: 0 } } }, /lastMorning.sale.lines\[0\]/],
+    [
+      "a morning report with a bad sale",
+      { lastMorning: { day: 2, grew: 0, ready: 0, coins: 0, sale: { lines: [{}], total: 0 }, washedUp: [] } },
+      /lastMorning.sale.lines\[0\]/,
+    ],
+    [
+      "a morning report with something odd washed up",
+      { lastMorning: { day: 2, grew: 0, ready: 0, coins: 0, sale: { lines: [], total: 0 }, washedUp: ["boot"] } },
+      /lastMorning.washedUp\[0\]/,
+    ],
+    ["a world seed that isn't one", { worldSeed: -1 }, /worldSeed/],
+    ["an unknown beach find", { beach: { day: 1, finds: [{ findId: "boot", col: 1, row: 1 }] } }, /beach.finds\[0\].findId/],
+    [
+      "two finds on one tile",
+      { beach: { day: 1, finds: [{ findId: "starfish", col: 1, row: 1 }, { findId: "sea_glass", col: 1, row: 1 }] } },
+      /two things on tile 1,1/,
+    ],
+    ["a beach without a day", { beach: { finds: [] } }, /beach.day/],
+    ["a fish the game doesn't know in the book", { book: { fish: { shark: {} }, finds: {}, bugs: {} } }, /book.fish has something/],
+    [
+      "a book entry caught no times",
+      { book: { fish: {}, finds: {}, bugs: { firefly: { caught: 0, firstDay: 1, firstBy: "Pip" } } } },
+      /book.bugs.firefly.caught/,
+    ],
+    ["a book without its bug pages", { book: { fish: {}, finds: {} } }, /book.bugs should be an object/],
     ["a missing part", { farm: undefined }, /farm should be a list/],
     ["a house with an odd id", { houses: { "": { owner: "farmer-1", furniture: [] } } }, /houses has an id/],
     ["a house nobody in the save owns", { houses: { house1: { owner: "farmer-9", furniture: [] } } }, /houses.house1.owner/],

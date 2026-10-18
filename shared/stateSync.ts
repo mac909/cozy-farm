@@ -1,4 +1,10 @@
 import type { ArraySchema, MapSchema } from "@colyseus/schema";
+import type { Beach } from "./beachcombing/beachcombing";
+import type { MeadowBug } from "./bugs/meadow";
+import { BOOK_SECTIONS, EMPTY_BOOK, type BookSection, type CollectionBook } from "./collection/collection";
+import { isBeachFindId } from "./content/beachFinds";
+import { isBugId } from "./content/bugs";
+import { isFishId } from "./content/fish";
 import { isCropId } from "./content/crops";
 import { isFurnitureId } from "./content/furniture";
 import { isItemId } from "./content/items";
@@ -6,7 +12,7 @@ import type { PlacedPiece } from "./decor/pieces";
 import type { FarmTile } from "./farming/farming";
 import type { Inventory, Slot } from "./inventory/inventory";
 import type { Crate } from "./economy/shop";
-import { BagSlot, type Clock, CrateEntry, FarmPlot, HouseState, PieceState } from "./schema";
+import { BagSlot, BeachFindState, BookEntryState, BugState, type Clock, CrateEntry, FarmPlot, HouseState, PieceState } from "./schema";
 import type { Farmer, FarmerId, House, TileKey } from "./world/world";
 import { HUD_MINUTE_STEP, type GameClock } from "./time/clock";
 
@@ -176,4 +182,92 @@ export function readHouses(source: MapSchema<HouseState>): Record<string, HouseV
     houses[id] = { owner: cell.owner, ownerName: cell.ownerName, furniture: readPieces(cell.furniture) };
   });
   return houses;
+}
+
+/** Copies the beach in, find by find, writing only what changed. */
+export function writeBeach(target: ArraySchema<BeachFindState>, beach: Beach): void {
+  while (target.length > beach.length) target.pop();
+  beach.forEach((find, i) => {
+    let cell = target[i];
+    if (!cell) {
+      cell = new BeachFindState();
+      target.push(cell);
+    }
+    if (cell.findId !== find.findId) cell.findId = find.findId;
+    if (cell.col !== find.col) cell.col = find.col;
+    if (cell.row !== find.row) cell.row = find.row;
+  });
+}
+
+/** The beach as the rules see it. Finds that don't make sense are left out. */
+export function readBeach(source: Iterable<BeachFindState>): Beach {
+  return Array.from(source).flatMap((cell) => (isBeachFindId(cell.findId) ? [{ findId: cell.findId, col: cell.col, row: cell.row }] : []));
+}
+
+/** Copies the bugs out now in: adds new ones, drops caught or gone ones. A bug never changes once it's out. */
+export function writeBugs(target: MapSchema<BugState>, bugs: readonly MeadowBug[]): void {
+  const ids = new Set(bugs.map((bug) => bug.id));
+  for (const id of [...target.keys()]) if (!ids.has(id)) target.delete(id);
+  for (const bug of bugs) {
+    if (target.has(bug.id)) continue;
+    const cell = new BugState();
+    cell.bugId = bug.bugId;
+    cell.col = bug.col;
+    cell.row = bug.row;
+    target.set(bug.id, cell);
+  }
+}
+
+/** The bugs as the rules see them. Bugs that don't make sense are left out. */
+export function readBugs(source: MapSchema<BugState>): MeadowBug[] {
+  const bugs: MeadowBug[] = [];
+  source.forEach((cell, id) => {
+    if (isBugId(cell.bugId)) bugs.push({ id, bugId: cell.bugId, col: cell.col, row: cell.row });
+  });
+  return bugs;
+}
+
+/** A book entry's key in the network state: "fish:sardine". */
+export const bookKey = (section: BookSection, id: string) => `${section}:${id}`;
+
+/** Copies the collection book in, entry by entry, writing only what changed. Entries never go away. */
+export function writeBook(target: MapSchema<BookEntryState>, book: CollectionBook): void {
+  for (const section of BOOK_SECTIONS) {
+    for (const [id, entry] of Object.entries(book[section])) {
+      if (!entry) continue;
+      const key = bookKey(section, id);
+      let cell = target.get(key);
+      const isNew = !cell;
+      if (!cell) cell = new BookEntryState();
+      const count = "found" in entry ? entry.found : entry.caught;
+      const biggestCm = "biggestCm" in entry ? entry.biggestCm : 0;
+      const biggestBy = "biggestBy" in entry ? entry.biggestBy : "";
+      if (cell.section !== section) cell.section = section;
+      if (cell.id !== id) cell.id = id;
+      if (cell.count !== count) cell.count = count;
+      if (cell.firstDay !== entry.firstDay) cell.firstDay = entry.firstDay;
+      if (cell.firstBy !== entry.firstBy) cell.firstBy = entry.firstBy;
+      if (cell.biggestCm !== biggestCm) cell.biggestCm = biggestCm;
+      if (cell.biggestBy !== biggestBy) cell.biggestBy = biggestBy;
+      if (isNew) target.set(key, cell);
+    }
+  }
+}
+
+/** The collection book as the rules see it. Entries that don't make sense are left out. */
+export function readBook(source: MapSchema<BookEntryState>): CollectionBook {
+  const fish: Record<string, unknown> = {};
+  const finds: Record<string, unknown> = {};
+  const bugs: Record<string, unknown> = {};
+  source.forEach((cell) => {
+    const first = { firstDay: cell.firstDay, firstBy: cell.firstBy };
+    if (cell.section === "fish" && isFishId(cell.id)) {
+      fish[cell.id] = { caught: cell.count, ...first, biggestCm: cell.biggestCm, biggestBy: cell.biggestBy };
+    } else if (cell.section === "finds" && isBeachFindId(cell.id)) {
+      finds[cell.id] = { found: cell.count, ...first };
+    } else if (cell.section === "bugs" && isBugId(cell.id)) {
+      bugs[cell.id] = { caught: cell.count, ...first };
+    }
+  });
+  return { ...EMPTY_BOOK, fish, finds, bugs } as CollectionBook;
 }

@@ -27,7 +27,15 @@ describe("newWorld", () => {
       lastMorning: null,
       houses: {},
       decorations: [],
+      worldSeed: 0,
+      beach: { day: 0, finds: [] },
+      book: { fish: {}, finds: {}, bugs: {} },
     });
+  });
+
+  it("keeps the world seed it's given, as a whole 32-bit number", () => {
+    expect(newWorld(12345).worldSeed).toBe(12345);
+    expect(newWorld(-1).worldSeed).toBe(0xffffffff);
   });
 });
 

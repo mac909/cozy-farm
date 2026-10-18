@@ -1,9 +1,13 @@
+import type { Beach } from "../beachcombing/beachcombing";
+import { EMPTY_BOOK, type CollectionBook } from "../collection/collection";
+import type { BeachFindId } from "../content/beachFinds";
 import type { CharacterId } from "../content/characters";
 import type { PlacedPiece } from "../decor/pieces";
 import { EMPTY_CRATE, type Crate, type CrateSale } from "../economy/shop";
 import { STARTING_COINS } from "../economy/wallet";
 import { UNTILLED, type FarmTile } from "../farming/farming";
-import { starterInventory, type Inventory } from "../inventory/inventory";
+import { FISHING_ROD } from "../content/items";
+import { addItems, countOf, starterInventory, type Inventory } from "../inventory/inventory";
 import type { Look } from "../player";
 import { newClock, type GameClock } from "../time/clock";
 
@@ -28,6 +32,18 @@ export interface World {
   readonly houses: Readonly<Record<HouseId, House>>;
   /** Decorations on the shared farm, in map tiles. */
   readonly decorations: readonly PlacedPiece[];
+  /** The world's own random number, picked once: what washes up on the beach and which bugs come out follow from it. */
+  readonly worldSeed: number;
+  /** What's lying on the sand, and the day the tide last brought something. */
+  readonly beach: BeachState;
+  /** The shared collection book: every fish, beach find and bug found so far. */
+  readonly book: CollectionBook;
+}
+
+/** The beach: finds lying on the sand, in the order they washed up, and the day of the last tide (0: never). */
+export interface BeachState {
+  readonly day: number;
+  readonly finds: Beach;
 }
 
 /** A cottage's name in the map ("house1"). */
@@ -65,10 +81,16 @@ export interface MorningReport {
   readonly sale: CrateSale;
   /** Coins in the wallet after the sale. */
   readonly coins: number;
+  /** What washed up on the beach this morning, in order. */
+  readonly washedUp: readonly BeachFindId[];
 }
 
-/** Day 1, 6 am, the starting coins, an empty farm and crate, nobody yet, and every cottage empty. */
-export function newWorld(): World {
+/**
+ * Day 1, 6 am, the starting coins, an empty farm and crate, nobody yet, every cottage empty, an
+ * empty beach (the first tide comes when the room starts) and an empty book. `worldSeed` is any
+ * whole number; the server picks a random one for a new world.
+ */
+export function newWorld(worldSeed = 0): World {
   return {
     clock: newClock(),
     coins: STARTING_COINS,
@@ -78,7 +100,15 @@ export function newWorld(): World {
     lastMorning: null,
     houses: {},
     decorations: [],
+    worldSeed: worldSeed >>> 0,
+    beach: { day: 0, finds: [] },
+    book: EMPTY_BOOK,
   };
+}
+
+/** A fresh world seed, for a new world. */
+export function randomWorldSeed(): number {
+  return Math.floor(Math.random() * 2 ** 32) >>> 0;
 }
 
 export function tileKey(col: number, row: number): TileKey {
@@ -127,6 +157,17 @@ export function setFarmerLook(world: World, id: FarmerId, look: Look): World {
   const farmer = farmerOf(world, id);
   if (!farmer || (farmer.name === look.name && farmer.character === look.character)) return world;
   return { ...world, farmers: { ...world.farmers, [id]: { ...farmer, name: look.name, character: look.character } } };
+}
+
+/**
+ * Gives a farmer a fishing rod if they haven't one and there's room (farmers from before Milestone
+ * 5 whose bags were full when the save was upgraded). Everyone else is left as they are.
+ */
+export function giveFishingRod(world: World, id: FarmerId): World {
+  const farmer = farmerOf(world, id);
+  if (!farmer || countOf(farmer.bag, FISHING_ROD) > 0) return world;
+  const added = addItems(farmer.bag, FISHING_ROD, 1);
+  return added.ok ? setFarmerBag(world, id, added.inventory) : world;
 }
 
 /** Replaces a farmer's bag. */

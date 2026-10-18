@@ -1,4 +1,8 @@
+import type { BugEntry, CollectionBook, FindEntry, FishEntry } from "../../../shared/collection/collection";
+import { isBeachFindId, type BeachFindId } from "../../../shared/content/beachFinds";
+import { isBugId } from "../../../shared/content/bugs";
 import { CROPS, isCropId } from "../../../shared/content/crops";
+import { isFishId } from "../../../shared/content/fish";
 import { FURNITURE, isFurnitureId } from "../../../shared/content/furniture";
 import type { PlacedPiece } from "../../../shared/decor/pieces";
 import { ITEMS, isItemId, type ItemId } from "../../../shared/content/items";
@@ -29,6 +33,7 @@ export type SavedFarmTile = { col: number; row: number } & Exclude<FarmTile, { k
 /**
  * Everything about the shared world that survives a restart: the World (shared/world/world.ts) as
  * JSON. Version 2: version 1 (Milestone 2) plus the houses and the farm's decorations (Milestone 4).
+ * Version 3: plus the world seed, the beach and the collection book (Milestone 5).
  *
  * To change this shape once it has reached the real farm: add a migration below that turns the
  * previous version into the new one, then update this type, `validate` and the converters.
@@ -47,6 +52,12 @@ export interface WorldSave {
   houses: Record<string, { owner: string; furniture: SavedPiece[] }>;
   /** Decorations on the farm, in map tiles. Since version 2. */
   decorations: SavedPiece[];
+  /** The world's own random number (beach finds and bugs follow from it). Since version 3. */
+  worldSeed: number;
+  /** What's lying on the sand, and the day of the last tide (0: never). Since version 3. */
+  beach: { day: number; finds: { findId: BeachFindId; col: number; row: number }[] };
+  /** The shared collection book. Since version 3. */
+  book: CollectionBook;
 }
 
 /** A piece of furniture or a decoration in a save. */
@@ -60,7 +71,45 @@ const migrations: Migration[] = [
   // 1 → 2 (Milestone 4): houses and decorations. Every cottage starts empty, ready for whoever
   // moves in, and the farm has no decorations yet. Nothing else changes.
   (save) => ({ ...save, houses: {}, decorations: [] }),
+  // 2 → 3 (Milestone 5): the world seed, an empty beach (the first tide comes when the server
+  // starts), an empty collection book, an empty "washed up" on the last morning, and a fishing rod
+  // in every farmer's first empty bag slot (a full bag gets one when its farmer next joins).
+  (save) => ({
+    ...save,
+    worldSeed: seedFromFarmers(save.farmers),
+    beach: { day: 0, finds: [] },
+    book: { fish: {}, finds: {}, bugs: {} },
+    lastMorning: isJsonObject(save.lastMorning) ? { ...save.lastMorning, washedUp: [] } : save.lastMorning,
+    farmers: isJsonObject(save.farmers)
+      ? Object.fromEntries(Object.entries(save.farmers).map(([id, farmer]) => [id, withRod(farmer)]))
+      : save.farmers,
+  }),
 ];
+
+function isJsonObject(value: unknown): value is SaveJson {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * A world seed for a save made before seeds existed: a hash (FNV-1a) of the farmers' ids, so
+ * upgrading the same save always gives the same beach. Written out here so it never changes.
+ */
+function seedFromFarmers(farmers: unknown): number {
+  const text = isJsonObject(farmers) ? Object.keys(farmers).sort().join(",") : "";
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193) >>> 0;
+  return hash >>> 0;
+}
+
+/** A saved farmer with a fishing rod in the first empty slot of their bag, unless they have one or it's full. */
+function withRod(farmer: unknown): unknown {
+  if (!isJsonObject(farmer) || !Array.isArray(farmer.bag)) return farmer;
+  const bag = farmer.bag as unknown[];
+  if (bag.some((slot) => isJsonObject(slot) && slot.itemId === "fishing_rod")) return farmer;
+  const empty = bag.indexOf(null);
+  if (empty < 0) return farmer;
+  return { ...farmer, bag: bag.map((slot, i) => (i === empty ? { itemId: "fishing_rod", count: 1 } : slot)) };
+}
 
 /** Biggest farm tile column or row a save may hold. The map is far smaller; this just catches nonsense. */
 const MAX_TILE = 9999;
@@ -110,6 +159,9 @@ export const WORLD_SAVE: SaveFormat<WorldSave> = {
         }),
       ),
       decorations: array(save.decorations, "decorations").map((piece, i) => savedPiece(piece, `decorations[${i}]`)),
+      worldSeed: whole(save.worldSeed, "worldSeed", 0, 0xffffffff),
+      beach: savedBeach(save.beach, "beach"),
+      book: savedBook(save.book, "book"),
     };
   },
 };
@@ -144,6 +196,9 @@ export function worldToSave(world: World): WorldSave {
       Object.entries(world.houses).map(([id, house]) => [id, { owner: house.owner, furniture: house.furniture.map(pieceToSave) }]),
     ),
     decorations: world.decorations.map(pieceToSave),
+    worldSeed: world.worldSeed,
+    beach: { day: world.beach.day, finds: world.beach.finds.map(({ findId, col, row }) => ({ findId, col, row })) },
+    book: world.book,
   };
 }
 
@@ -171,6 +226,9 @@ export function worldFromSave(save: WorldSave): World {
       Object.entries(save.houses).map(([id, house]): [string, House] => [id, { owner: house.owner, furniture: house.furniture.map(pieceFromSave) }]),
     ),
     decorations: save.decorations.map(pieceFromSave),
+    worldSeed: save.worldSeed,
+    beach: { day: save.beach.day, finds: save.beach.finds },
+    book: save.book,
   };
 }
 
@@ -276,6 +334,76 @@ function savedHouse(value: unknown, path: string, farmers: SaveJson): WorldSave[
   return { owner: house.owner, furniture: array(house.furniture, `${path}.furniture`).map((piece, i) => savedPiece(piece, `${path}.furniture[${i}]`)) };
 }
 
+/** What's on the beach: each find on its own tile. */
+function savedBeach(value: unknown, path: string): WorldSave["beach"] {
+  const beach = object(value, path);
+  const seen = new Set<string>();
+  return {
+    day: whole(beach.day, `${path}.day`, 0),
+    finds: array(beach.finds, `${path}.finds`).map((entry, i) => {
+      const at = `${path}.finds[${i}]`;
+      const find = object(entry, at);
+      if (!isBeachFindId(find.findId)) throw new Error(`${at}.findId isn't a beach find the game knows: ${JSON.stringify(find.findId)}`);
+      const col = whole(find.col, `${at}.col`, 0, MAX_TILE);
+      const row = whole(find.row, `${at}.row`, 0, MAX_TILE);
+      const key = tileKey(col, row);
+      if (seen.has(key)) throw new Error(`${path}.finds has two things on tile ${key}`);
+      seen.add(key);
+      return { findId: find.findId, col, row };
+    }),
+  };
+}
+
+/** A name in the book (the finder's name at the time). */
+function finderName(value: unknown, path: string): string {
+  if (typeof value !== "string" || value.length > 64) throw new Error(`${path} should be a name, not ${JSON.stringify(value)}`);
+  return value;
+}
+
+/** The collection book: entries only for things the game knows. */
+function savedBook(value: unknown, path: string): CollectionBook {
+  const book = object(value, path);
+  const section = <T>(name: string, known: (id: unknown) => boolean, entry: (value: SaveJson, at: string) => T): Record<string, T> =>
+    Object.fromEntries(
+      Object.entries(object(book[name], `${path}.${name}`)).map(([id, value]) => {
+        const at = `${path}.${name}.${id}`;
+        if (!known(id)) throw new Error(`${path}.${name} has something the game doesn't know: ${JSON.stringify(id)}`);
+        return [id, entry(object(value, at), at)];
+      }),
+    );
+  return {
+    fish: section(
+      "fish",
+      isFishId,
+      (e, at): FishEntry => ({
+        caught: whole(e.caught, `${at}.caught`, 1),
+        firstDay: whole(e.firstDay, `${at}.firstDay`, 1),
+        firstBy: finderName(e.firstBy, `${at}.firstBy`),
+        biggestCm: whole(e.biggestCm, `${at}.biggestCm`, 1),
+        biggestBy: finderName(e.biggestBy, `${at}.biggestBy`),
+      }),
+    ),
+    finds: section(
+      "finds",
+      isBeachFindId,
+      (e, at): FindEntry => ({
+        found: whole(e.found, `${at}.found`, 1),
+        firstDay: whole(e.firstDay, `${at}.firstDay`, 1),
+        firstBy: finderName(e.firstBy, `${at}.firstBy`),
+      }),
+    ),
+    bugs: section(
+      "bugs",
+      isBugId,
+      (e, at): BugEntry => ({
+        caught: whole(e.caught, `${at}.caught`, 1),
+        firstDay: whole(e.firstDay, `${at}.firstDay`, 1),
+        firstBy: finderName(e.firstBy, `${at}.firstBy`),
+      }),
+    ),
+  };
+}
+
 function morningReport(value: unknown, path: string): MorningReport {
   const report = object(value, path);
   const sale = object(report.sale, `${path}.sale`);
@@ -297,5 +425,9 @@ function morningReport(value: unknown, path: string): MorningReport {
       }),
       total: whole(sale.total, `${path}.sale.total`, 0),
     },
+    washedUp: array(report.washedUp, `${path}.washedUp`).map((id, i) => {
+      if (!isBeachFindId(id)) throw new Error(`${path}.washedUp[${i}] isn't a beach find the game knows: ${JSON.stringify(id)}`);
+      return id;
+    }),
   };
 }

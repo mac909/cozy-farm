@@ -77,6 +77,15 @@ describe("old saves", () => {
       expect(loaded.houses).toEqual({});
       expect(loaded.decorations).toEqual([]);
     });
+
+    it("gets a fishing rod for each farmer, an empty beach and an empty book", () => {
+      const loaded = world();
+      expect(loaded.farmers[PIP].bag[5]).toEqual({ itemId: "fishing_rod", count: 1 });
+      expect(loaded.farmers[JUNO].bag[3]).toEqual({ itemId: "fishing_rod", count: 1 });
+      expect(loaded.beach).toEqual({ day: 0, finds: [] });
+      expect(loaded.book).toEqual({ fish: {}, finds: {}, bugs: {} });
+      expect(loaded.lastMorning?.washedUp).toEqual([]);
+    });
   });
 
   describe("version 2 (Milestone 4: houses and decorations)", () => {
@@ -94,6 +103,62 @@ describe("old saves", () => {
       const loaded = world();
       expect(loaded.decorations).toContainEqual({ itemId: "fence", col: 23, row: 7, turn: 2 });
       expect(loaded.decorations.length).toBe(6);
+    });
+
+    it("puts a fishing rod in each farmer's first empty slot, and keeps everything else in the bags", () => {
+      const v2 = JSON.parse(readFixture("world-v2.json"));
+      const loaded = world();
+      for (const [id, slot] of [[PIP, 5], [JUNO, 3]] as const) {
+        const bag = loaded.farmers[id].bag;
+        expect(bag[slot]).toEqual({ itemId: "fishing_rod", count: 1 });
+        expect(bag.filter((_, i) => i !== slot)).toEqual(v2.farmers[id].bag.filter((_: unknown, i: number) => i !== slot));
+      }
+    });
+
+    it("gets the same world seed every time it's upgraded, an empty beach and an empty book", () => {
+      expect(world().worldSeed).toBe(world().worldSeed);
+      expect(world().worldSeed).toBeGreaterThan(0);
+      expect(world().beach).toEqual({ day: 0, finds: [] });
+      expect(world().book).toEqual({ fish: {}, finds: {}, bugs: {} });
+    });
+
+    it("doesn't give a second rod, or squeeze one into a full bag", () => {
+      const v2 = JSON.parse(readFixture("world-v2.json"));
+      v2.farmers[PIP].bag = v2.farmers[PIP].bag.map((slot: unknown) => slot ?? { itemId: "radish", count: 1 });
+      v2.farmers[JUNO].bag[10] = { itemId: "fishing_rod", count: 1 };
+      const { save } = upgradeSave(JSON.stringify(v2), WORLD_SAVE, "edited v2");
+      expect(save.farmers[PIP].bag.some((slot) => slot?.itemId === "fishing_rod")).toBe(false);
+      expect(save.farmers[JUNO].bag.filter((slot) => slot?.itemId === "fishing_rod")).toHaveLength(1);
+    });
+  });
+
+  describe("version 3 (Milestone 5: the beach, fishing, bugs and the collection book)", () => {
+    const world = () => worldFromSave(upgradeSave(readFixture("world-v3.json"), WORLD_SAVE, "world-v3.json").save);
+
+    it("keeps what's on the beach and the day of the last tide", () => {
+      const loaded = world();
+      expect(loaded.beach.day).toBe(9);
+      expect(loaded.beach.finds).toEqual([
+        { findId: "scallop_shell", col: 20, row: 23 },
+        { findId: "sea_glass", col: 12, row: 24 },
+        { findId: "conch_shell", col: 33, row: 22 },
+      ]);
+      expect(loaded.lastMorning?.washedUp).toEqual(["scallop_shell", "sea_glass", "conch_shell"]);
+    });
+
+    it("keeps the collection book, records and all", () => {
+      const loaded = world();
+      expect(loaded.book.fish.sea_bream).toEqual({ caught: 2, firstDay: 8, firstBy: "Juno 🌻", biggestCm: 41, biggestBy: "Pip" });
+      expect(loaded.book.finds.starfish?.firstBy).toBe("Juno 🌻");
+      expect(loaded.book.bugs.firefly?.caught).toBe(2);
+    });
+
+    it("keeps fish, finds and bugs in the bags and the crate", () => {
+      const loaded = world();
+      expect(loaded.farmers[PIP].bag[9]).toEqual({ itemId: "sea_bream", count: 2 });
+      expect(loaded.farmers[JUNO].bag[9]).toEqual({ itemId: "firefly", count: 2 });
+      expect(loaded.crate).toContainEqual({ itemId: "sardine", count: 4 });
+      expect(loaded.worldSeed).toBe(328151057);
     });
   });
 });

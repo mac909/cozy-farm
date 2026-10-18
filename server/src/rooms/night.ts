@@ -9,6 +9,7 @@ import { endNight } from "../../../shared/world/night";
 import { placeNear, SERVER_NEAR_TILES, wakeSpots } from "../../../shared/world/places";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { liveWorld } from "../world/liveWorld";
+import { VILLAGE_SHORE } from "./beach";
 import type { FarmRoom } from "./FarmRoom";
 
 /**
@@ -60,12 +61,14 @@ export class Bedtime {
    * each player is told what happened and where to wake up.
    */
   startNight() {
-    const { world, report } = endNight(this.room.world);
+    const { world, report } = endNight(this.room.world, VILLAGE_SHORE);
     this.room.change(world);
     this.room.state.players.forEach((player) => (player.inBed = false));
     this.drops = [];
     liveWorld().saveNow();
-    console.log(`Night: day ${report.day} begins. ${report.grew} crops grew, ${report.ready} ripe, the crate sold for ${report.sale.total}.`);
+    console.log(
+      `Night: day ${report.day} begins. ${report.grew} crops grew, ${report.ready} ripe, the crate sold for ${report.sale.total}, ${report.washedUp.length} finds washed up.`,
+    );
 
     // Where to wake up first, so the client knows the morning card waits for its fade. Anyone
     // in a house wakes up where they are (by their bed); everyone else in front of the tent.
