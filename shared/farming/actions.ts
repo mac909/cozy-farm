@@ -192,7 +192,8 @@ export type HintReason =
   | "someone-there"
   | "coming-soon"
   | "no-water"
-  | "nothing-biting";
+  | "nothing-biting"
+  | "no-rod";
 
 /** A hint, with the details some of them need. */
 export interface Hint {
@@ -239,6 +240,7 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "coming-soon": "Coming soon!",
   "no-water": "Face the water from the dock or the beach to fish.",
   "nothing-biting": "Nothing's biting here just now.",
+  "no-rod": "You need the fishing rod for that.",
 };
 
 /** True for a hint the client can show; use it on hints that arrive from the server. */

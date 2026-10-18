@@ -12,6 +12,8 @@ import { Hotbar, slotName } from "../ui/Hotbar";
 import { Joystick } from "../ui/Joystick";
 import { RoundButton } from "../ui/RoundButton";
 import { EVENING_COLOR, eveningTint, IN_BED_TINT } from "../ui/evening";
+import { FishingStrip } from "../ui/FishingStrip";
+import type { FishingHudView } from "../ui/fishingText";
 import type { ArrangeHud } from "../world/Arrange";
 import { safeArea } from "../ui/safeArea";
 
@@ -72,6 +74,10 @@ export class UIScene extends Phaser.Scene {
   private putAwayButton!: RoundButton;
   private doneButton!: RoundButton;
   private arrangeHud: ArrangeHud | null = null;
+  /** Fishing: the strip at the top of the screen, and Stop in the bag's place. */
+  private fishingStrip!: FishingStrip;
+  private stopButton!: RoundButton;
+  private fishing = false;
   private toast!: Phaser.GameObjects.Text;
   private toastTimer?: Phaser.Time.TimerEvent;
   /** The evening tint over the world (deeper while you're in bed), under the HUD. */
@@ -183,6 +189,16 @@ export class UIScene extends Phaser.Scene {
       label: "Done",
       onPress: () => this.events.emit("done"),
     });
+    this.stopButton = new RoundButton(this, {
+      size: SMALL_BUTTON_SIZE,
+      icon: UI_ICONS_KEY,
+      iconFrame: UI_ICON.stop,
+      iconScale: 2,
+      hint: hint("Esc"),
+      label: "Stop",
+      onPress: () => this.events.emit("escape"),
+    });
+    this.fishingStrip = new FishingStrip(this);
     this.onRegistry("arrange", (view: ArrangeHud | null) => this.showArrangeMode(view));
     this.onRegistry("canArrange", () => this.showArrangeMode(this.arrangeHud));
 
@@ -334,6 +350,10 @@ export class UIScene extends Phaser.Scene {
     this.putAwayButton.setPosition(first.x + s / 2, first.y + s / 2);
     this.turnButton.setPosition(second.x + s / 2, second.y + s / 2);
     this.doneButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
+    this.stopButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
+    // At the top, under the clock card when upright (between it and the buttons when sideways),
+    // so it never covers you on the dock, low on the screen where the camera stops.
+    this.fishingStrip.setPosition(Math.round(width / 2), Math.round(top + (L.upright ? 70 : 0) + FishingStrip.HEIGHT));
     this.actionButton.setPosition(L.action.x + ACTION_SIZE / 2, L.action.y + ACTION_SIZE / 2);
     this.toast.setPosition(width / 2, L.toastY);
     this.events.emit("layout", L);
@@ -342,6 +362,20 @@ export class UIScene extends Phaser.Scene {
   /** What the Action button says. Cheap to call every frame. Does nothing until the HUD exists. */
   setAction(view: ActionView) {
     this.actionButton?.show(view);
+  }
+
+  /**
+   * Fishing: the strip at the top of the screen (null puts it away), Stop instead of the bag and the
+   * emotes, and the stick off so a touch anywhere is the reel. Cheap to call every frame.
+   */
+  setFishing(view: FishingHudView | null) {
+    this.fishingStrip?.show(view);
+    const fishing = view !== null;
+    if (fishing === this.fishing) return;
+    this.fishing = fishing;
+    this.joystick?.setEnabled(!fishing);
+    if (fishing) this.toast.setVisible(false);
+    this.showArrangeMode(this.arrangeHud);
   }
 
   /** Whether the Action button, Space or Enter is being held down (hold to repeat). */
@@ -403,9 +437,11 @@ export class UIScene extends Phaser.Scene {
     this.arrangeHud = view;
     const inBed = this.registry.get("inBed") === true;
     const arranging = view !== null && !inBed;
-    for (const button of this.emoteButtons) button.setVisible(!inBed && !arranging);
-    this.bagButton.setVisible(!inBed && !arranging);
-    this.arrangeButton.setVisible(!inBed && !arranging && this.registry.get("canArrange") === true);
+    const fishing = this.fishing && !inBed;
+    for (const button of this.emoteButtons) button.setVisible(!inBed && !arranging && !fishing);
+    this.bagButton.setVisible(!inBed && !arranging && !fishing);
+    this.stopButton.setVisible(fishing);
+    this.arrangeButton.setVisible(!inBed && !arranging && !fishing && this.registry.get("canArrange") === true);
     this.turnButton.setVisible(arranging).setAlpha(view?.canTurn ? 1 : 0.4);
     this.putAwayButton.setVisible(arranging).setAlpha(view?.canPutAway ? 1 : 0.4);
     this.doneButton.setVisible(arranging);

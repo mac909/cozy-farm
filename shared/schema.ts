@@ -103,6 +103,8 @@ export class Player extends Schema {
   @type("string") farmerId = "";
   /** In bed (the tent or a bed in a house), asleep: hidden from view until they get up or the morning comes. Never saved. */
   @type("boolean") inBed = false;
+  /** Fishing: the tile their bobber floats on, "col,row", so everyone sees the line; "" when not. Never saved. */
+  @type("string") fishing = "";
   /** The farmer's bag: INVENTORY_SLOTS slots, the first HOTBAR_SLOTS of them the hotbar. */
   @type([BagSlot]) bag = new ArraySchema<BagSlot>();
 }

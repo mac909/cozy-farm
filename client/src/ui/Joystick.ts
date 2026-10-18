@@ -12,6 +12,8 @@ const RADIUS = 48;
 export class Joystick {
   /** Current movement direction, length 0–1. */
   vector: Vec = { x: 0, y: 0 };
+  /** Off while fishing: a touch anywhere on the screen is the reel then, not the stick. */
+  private enabled = true;
 
   private readonly base: Phaser.GameObjects.Arc;
   private readonly thumb: Phaser.GameObjects.Arc;
@@ -28,8 +30,20 @@ export class Joystick {
     scene.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, this.onUp, this);
   }
 
+  /** Turns the stick on or off; turning it off lets go of it. */
+  setEnabled(enabled: boolean) {
+    if (this.enabled === enabled) return;
+    this.enabled = enabled;
+    if (!enabled && this.pointerId !== null) {
+      this.pointerId = null;
+      this.vector = { x: 0, y: 0 };
+      this.base.setVisible(false);
+      this.thumb.setVisible(false);
+    }
+  }
+
   private onDown(pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) {
-    if (!pointer.wasTouch || this.pointerId !== null || over.length > 0) return;
+    if (!this.enabled || !pointer.wasTouch || this.pointerId !== null || over.length > 0) return;
     this.pointerId = pointer.id;
     this.originX = pointer.x;
     this.originY = pointer.y;

@@ -3,11 +3,12 @@ import { getStateCallbacks, type Room } from "colyseus.js";
 import { POSITION_SEND_MS, TILE_SIZE, WALK_SPEED } from "../../../shared/constants";
 import { DEFAULT_CHARACTER } from "../../../shared/content/characters";
 import type { EmoteId } from "../../../shared/content/emotes";
-import { ITEMS, type ItemId } from "../../../shared/content/items";
+import { FISHING_ROD, ITEMS, type ItemId } from "../../../shared/content/items";
 import { isHint } from "../../../shared/farming/actions";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type {
   BuyMessage,
+  CastStartedMessage,
   EmoteEvent,
   EmoteMessage,
   JoinOptions,
@@ -67,6 +68,7 @@ import { Farming } from "../world/Farming";
 import { Homes, type Resident } from "../world/Homes";
 import { Arrange } from "../world/Arrange";
 import { BeachView } from "../world/Beach";
+import { Fishing, OtherLines } from "../world/Fishing";
 import { homeOf } from "../../../shared/decor/decorate";
 import { targetTile, feetTile } from "../../../shared/world/places";
 import { areaOf, VILLAGE } from "../../../shared/world/houses";
@@ -101,6 +103,8 @@ interface RemotePlayer {
   name: string;
   farmerId: string;
   inBed: boolean;
+  /** Their bobber's tile while they fish ("col,row"), or "". */
+  fishing: string;
 }
 
 /** The village itself: map, characters, camera. */
@@ -130,6 +134,9 @@ export class WorldScene extends Phaser.Scene {
   private crate: Crate = [];
   /** What's lying on the beach. */
   private beach!: BeachView;
+  /** Your own fishing, and everyone else's lines. */
+  private fishing!: Fishing;
+  private otherLines!: OtherLines;
 
   constructor() {
     super("world");
@@ -206,6 +213,7 @@ export class WorldScene extends Phaser.Scene {
       closePanels: () => {
         this.closePanel();
         this.arrange.stop();
+        this.fishing.stop();
       },
       show: ({ inBed, sleepers }) => {
         if (this.registry.get("inBed") !== inBed) this.registry.set("inBed", inBed);
@@ -216,7 +224,11 @@ export class WorldScene extends Phaser.Scene {
       morningShown: (report) => playSound(this, report.sale.total > 0 ? "coin" : "morning"),
       cardClosed: () => this.releaseKeys(),
     });
-    this.ui.events.on("escape", () => (this.arrange.isActive ? this.arrange.stop() : this.bedtime.wake()));
+    this.ui.events.on("escape", () => {
+      if (this.fishing.isActive) this.fishing.stop();
+      else if (this.arrange.isActive) this.arrange.stop();
+      else this.bedtime.wake();
+    });
 
     this.farming = new Farming(this, new Outline(this), {
       me: this.me,
@@ -226,14 +238,14 @@ export class WorldScene extends Phaser.Scene {
       bag: () => this.registry.get("bag") as Inventory | null,
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
-      busy: () => this.bedtime.asleep || this.panel?.isOpen === true || this.arrange.isActive,
+      busy: () => this.bedtime.asleep || this.panel?.isOpen === true || this.arrange.isActive || this.fishing.isActive,
       spot: (position) => this.homes.spot(position),
       placing: () => this.homes.placing(),
       findAt: (col, row) => this.beach.findAt(col, row),
       bugNear: () => null,
       on: {
         catchBug: () => {},
-        fish: () => this.farming.hint({ reason: "coming-soon" }),
+        fish: (_spot, col, row) => this.fishing.start(col, row),
         sleep: () => this.bedtime.sleep(),
         crate: () => this.openCrate(),
         seeds: () => this.openShop(seedStandCatalog(), "seedStand"),
@@ -268,7 +280,32 @@ export class WorldScene extends Phaser.Scene {
       hudInput: this.ui.input,
       started: () => this.tips.event("arranging"),
     });
-    this.ui.events.on("action", () => (this.arrange.isActive ? this.arrange.act() : this.farming.act()));
+    this.fishing = new Fishing(this, {
+      me: this.me,
+      room: () => this.room,
+      face: (facing) => {
+        this.facing = facing;
+        this.me.setMotion(facing, false);
+      },
+      showAction: (view) => this.ui.setAction(view),
+      showHud: (view) => this.ui.setFishing(view),
+      holding: () => this.ui.actionHeld(),
+      overHud: (pointer) => this.ui.input.hitTestPointer(pointer).length > 0,
+      hudInput: this.ui.input,
+      touch: this.sys.game.device.input.touch,
+      ended: (caught) => {
+        if (caught) this.tips.event("caughtFish");
+      },
+    });
+    this.otherLines = new OtherLines(this);
+    this.ui.events.on("selectSlot", (_slot: number, item: { itemId?: string } | null) => {
+      if (item?.itemId === FISHING_ROD) this.tips.event("rod");
+    });
+    this.ui.events.on("action", () => {
+      if (this.fishing.isActive) this.fishing.press();
+      else if (this.arrange.isActive) this.arrange.act();
+      else this.farming.act();
+    });
     this.ui.events.on("arrange", () => {
       if (this.arrange.isActive) this.arrange.stop();
       // Holding furniture that goes here, you start off carrying it.
@@ -299,12 +336,16 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  update(time: number) {
+  update(time: number, delta: number) {
     const input = this.readInput();
     let move: Vec;
     if (this.bedtime.holdStill(input)) {
       // In bed you stay put; moving gets you up instead.
       move = { x: 0, y: 0 };
+    } else if (this.fishing.isActive) {
+      // Fishing: you stand still; walking off with the keys reels in.
+      move = { x: 0, y: 0 };
+      if (input.x !== 0 || input.y !== 0) this.fishing.stop();
     } else if (this.arrange.isActive) {
       // Arranging: the stick moves the cursor, not you.
       move = { x: 0, y: 0 };
@@ -320,13 +361,16 @@ export class WorldScene extends Phaser.Scene {
     this.facing = facingFor(move.x, move.y, this.facing);
     this.me.setMotion(this.facing, move.x !== 0 || move.y !== 0);
     this.sendPosition(time);
-    if (this.arrange.isActive) {
+    if (this.fishing.isActive) {
+      this.farming.pause();
+      this.fishing.update(delta);
+    } else if (this.arrange.isActive) {
       this.farming.pause();
       this.arrange.update(input);
     } else {
       this.farming.update();
     }
-    this.tips.update(!this.bedtime.asleep && !this.bedtime.cardOpen && this.panel === null && this.room !== null);
+    this.tips.update(!this.bedtime.asleep && !this.bedtime.cardOpen && this.panel === null && this.room !== null && !this.fishing.isActive);
 
     const now = performance.now();
     const drawAt = now - REMOTE_DELAY_MS;
@@ -347,10 +391,14 @@ export class WorldScene extends Phaser.Scene {
     const canArrange = !this.bedtime.asleep && this.room !== null && this.homes.placing() !== null;
     if (this.registry.get("canArrange") !== canArrange) this.registry.set("canArrange", canArrange);
     // You only see who's where you are: the village, or the same room. Sleepers are tucked in.
-    for (const remote of this.remotes.values()) {
+    const lines: Parameters<OtherLines["update"]>[0][number][] = [];
+    for (const [id, remote] of this.remotes) {
       const { sprite } = remote.character;
       remote.character.setHidden(remote.inBed || areaOf(VILLAGE_MAP, sprite) !== this.homes.currentArea);
+      const facing = remote.character.facingNow;
+      lines.push({ id, x: sprite.x, y: sprite.y, depth: sprite.depth, facing, fishing: remote.fishing, visible: !remote.character.hidden });
     }
+    this.otherLines.update(lines);
   }
 
   /**
@@ -445,6 +493,7 @@ export class WorldScene extends Phaser.Scene {
         remote.farmerId = player.farmerId;
         // Asleep in the tent or a bed: hidden (in update()).
         remote.inBed = player.inBed;
+        remote.fishing = player.fishing;
       });
     });
     room.onMessage("wakeUp", (message: WakeUpMessage) => this.bedtime.wakeUp(message));
@@ -454,8 +503,11 @@ export class WorldScene extends Phaser.Scene {
     this.tips.event("started");
     room.onStateChange((state) => this.readState(state));
     room.onMessage("hint", (hint: unknown) => {
-      if (isHint(hint)) this.farming.hint(hint);
+      if (!isHint(hint)) return;
+      this.farming.hint(hint);
+      this.fishing.refused();
     });
+    room.onMessage("castStarted", (message: CastStartedMessage) => this.fishing.started(message));
     room.onMessage("you", (message: YouMessage) => {
       if (!isFarmerId(message?.farmerId)) return;
       this.farmerId = message.farmerId;
@@ -539,6 +591,7 @@ export class WorldScene extends Phaser.Scene {
       name: player.name,
       farmerId: player.farmerId,
       inBed: player.inBed,
+      fishing: player.fishing,
     };
     this.recordPosition(remote, player);
     remote.character.setHidden(player.inBed);
@@ -591,6 +644,7 @@ export class WorldScene extends Phaser.Scene {
   private openPanel<T extends OpenPanel>(open: (onClose: () => void) => T): T | null {
     if (this.bedtime.asleep) return null;
     this.arrange.stop();
+    this.fishing.stop();
     this.closePanel();
     this.releaseKeys();
     playSound(this, "open");

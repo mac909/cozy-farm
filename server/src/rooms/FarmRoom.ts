@@ -48,6 +48,7 @@ import { registerCrate } from "./crate";
 import { registerDecor } from "./decor";
 import { registerDevCommands } from "./dev";
 import { registerFarming } from "./farming";
+import { registerFishing } from "./fishing";
 import { registerHouses } from "./houses";
 import { Bedtime } from "./night";
 import { registerShop } from "./shop";
@@ -71,6 +72,7 @@ export class FarmRoom extends Room<FarmState> {
   maxClients = 8;
   autoDispose = false;
   private bedtime!: Bedtime;
+  private fishing!: ReturnType<typeof registerFishing>;
 
   onCreate() {
     this.setState(new FarmState());
@@ -89,6 +91,7 @@ export class FarmRoom extends Room<FarmState> {
     registerHouses(this);
     registerDecor(this);
     registerBeach(this);
+    this.fishing = registerFishing(this);
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
@@ -168,6 +171,7 @@ export class FarmRoom extends Room<FarmState> {
     this.state.players.delete(client.sessionId);
     console.log(`${player?.name} (${client.sessionId}) left (${this.state.players.size} online)`);
     if (player) this.bedtime.left(player);
+    this.fishing.left(client);
     // Nobody's left to change anything, so save now rather than in a moment.
     if (this.state.players.size === 0) liveWorld().saveNow();
   }

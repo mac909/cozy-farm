@@ -181,10 +181,15 @@ export class Character {
 
   /** Pops up a bubble over the character's head for a couple of seconds. A new emote replaces the old one. */
   showEmote(emote: EmoteId) {
+    this.showBubble(EMOTES_KEY, emoteFrame(emote));
+  }
+
+  /** Pops up any bubble picture over the character's head for `ms` (the "!" of a bite, say). */
+  showBubble(key: string, frame?: number, ms = EMOTE_SHOW_MS) {
     if (this.hidden) return;
     this.bubbleTween?.stop();
     this.bubble?.destroy();
-    const bubble = this.scene.add.image(0, 0, EMOTES_KEY, emoteFrame(emote)).setOrigin(0.5, 1).setDepth(OVERHEAD_DEPTH + 1);
+    const bubble = this.scene.add.image(0, 0, key, frame).setOrigin(0.5, 1).setDepth(OVERHEAD_DEPTH + 1);
     this.bubble = bubble;
     this.followSprite();
     const fade = 250;
@@ -192,13 +197,25 @@ export class Character {
       targets: bubble,
       tweens: [
         { alpha: { from: 0, to: 1 }, duration: 120 },
-        { alpha: 0, delay: EMOTE_SHOW_MS - 120 - fade, duration: fade },
+        { alpha: 0, delay: Math.max(0, ms - 120 - fade), duration: fade },
       ],
       onComplete: () => {
         bubble.destroy();
         if (this.bubble === bubble) this.bubble = undefined;
       },
     });
+  }
+
+  /** Takes down the bubble over the head now, if there is one. */
+  hideBubble() {
+    this.bubbleTween?.stop();
+    this.bubble?.destroy();
+    this.bubble = undefined;
+  }
+
+  /** Which way the character is facing. */
+  get facingNow(): Facing {
+    return this.facing;
   }
 
   /** Call every frame after moving the sprite. */
