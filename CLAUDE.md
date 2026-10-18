@@ -22,7 +22,9 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 
 ## Network
 
-- The real farm's address is **http://100.82.139.111:8080** (the PC's Tailscale IP; `msi` in Tailscale). Always include `http://`: browsers otherwise try HTTPS, which the game doesn't serve, and fail.
+- The real farm's address is **https://msi.tailbddd5f.ts.net** (`msi` is the PC in the tailnet `tailbddd5f.ts.net`). `tailscale serve` on the PC publishes it: Tailscale holds the HTTPS certificate and forwards to the farm on localhost:8080, WebSockets included (the client switches to `wss:` by itself). The setting was made with `--bg`, so it lasts across reboots. `tailscale serve status` shows it; `tailscale serve reset` removes it. HTTPS certificates are switched on for the tailnet on the admin console's DNS page.
+- The old address still works: **http://100.82.139.111:8080** (the PC's Tailscale IP). Always include `http://` with it: browsers otherwise try HTTPS, which that address doesn't serve, and fail.
+- Players install the game on their phone's home screen from the HTTPS address (steps in README.md). It then opens full screen, using `client/public/manifest.webmanifest`, the icons next to it, and the Apple meta tags in `client/index.html`. There's no service worker; the game needs the server anyway. A home-screen app keeps its own storage, so it asks for a name and look again the first time it opens. Manifest changes reach phones with the next `npm run farm:up`.
 - Every device needs the Tailscale app switched on. It works at home and away.
 - The home router (Spectrum) blocks Wi-Fi devices from reaching each other, so `192.168.1.x` addresses don't work from phones. Tailscale goes through its relay instead (about 50–150 ms).
 - Windows Firewall: the Wi-Fi and Tailscale networks are set to Private, the "Docker Desktop Backend" rule allows Private, and a "Cozy Farm (port 8080)" rule allows the local subnet. Changing firewall rules needs an admin window, so the developer runs those commands.
