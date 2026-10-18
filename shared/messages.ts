@@ -1,3 +1,5 @@
+// Every message between client and server. Each feature has its own section, so features built side by side only meet in small additions.
+
 import type { EmoteId } from "./content/emotes";
 import type { Facing } from "./movement";
 import type { Look } from "./player";
@@ -33,4 +35,15 @@ export interface EmoteMessage {
 export interface EmoteEvent {
   sessionId: string;
   emote: EmoteId;
+}
+
+// ---------- Dev commands (refused when NODE_ENV is production) ----------
+
+/** What a dev command does: start the night now, set the clock (value: game minutes after midnight), or add coins (value: how many). */
+export type DevCommand = "nextDay" | "setTime" | "addCoins";
+
+/** Client → server ("dev"): a shortcut for testing. Also on window.dev in the browser console. */
+export interface DevMessage {
+  command: DevCommand;
+  value?: number;
 }

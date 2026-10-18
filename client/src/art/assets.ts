@@ -20,8 +20,34 @@ export const UI_ICON = { musicOn: 0, musicOff: 1 } as const;
 export const SHIPPING_CRATE_KEY = "shipping-crate";
 export const RIPPLES_KEY = "ripples";
 export const RIPPLE_ANIM = "ripple";
+/** The clock card's sun and moon. */
+export const SUN_KEY = "sun";
+export const MOON_KEY = "moon";
+/** The pack's "Zzz" bubble, same size as the emote bubbles. */
+export const ZZZ_KEY = "zzz";
+/** The pack's camp props; the tent is the named frame TENT_FRAME. */
+export const CAMP_KEY = "camp";
+export const TENT_FRAME = "tent";
+/** Our crops sheet: growth stages, harvested item and seed packet per crop (see manifest.json). */
+export const CROPS_KEY = "crops";
+/** Our dug soil: frame = neighbour mask (N1 E2 S4 W8), +16 when watered. */
+export const SOIL_KEY = "soil";
+/** The outline's corner, drawn in code at boot. */
+export const OUTLINE_KEY = "outline";
+/** Item icons that are single images. */
+export const HOE_KEY = "item-hoe";
+export const WATERING_CAN_KEY = "item-watering-can";
+export const BAG_KEY = "item-bag";
+export const FISH_KEY = "item-fish";
+export const BEACH_ITEMS_KEY = "beach-items";
+/** A small white dot for dirt puffs and splashes, drawn in code at boot. */
+export const PARTICLE_KEY = "particle";
+
+/** The pose rows of a character sheet after the walk cycle: row 4 swings a tool. */
+const SWING_ROW = 4;
 
 export const emoteFrame = (emote: EmoteId) => EMOTES.findIndex((e) => e.id === emote);
+export const swingFrame = (facing: Facing) => SWING_ROW * SHEET_COLUMNS + FACING_COLUMN[facing];
 
 /**
  * Character sheets are 4 columns (facing down, up, left, right) by 7 rows of animations.
@@ -56,10 +82,44 @@ export function loadArt(scene: Phaser.Scene): void {
     frameWidth: 16,
     frameHeight: 16,
   });
+  load.image(SUN_KEY, encodeURI(`${PACK}Ui/Skill Icon/Meteo/Sun.png`));
+  load.image(MOON_KEY, encodeURI(`${PACK}Ui/Skill Icon/Meteo/Moon.png`));
+  load.image(ZZZ_KEY, `${PACK}Ui/Emote/emote28.png`);
+  load.image(CAMP_KEY, `${PACK}Backgrounds/Tilesets/tileset_camp.png`);
+  load.spritesheet(CROPS_KEY, `${CUSTOM}crops.png`, { frameWidth: 16, frameHeight: 16 });
+  load.spritesheet(SOIL_KEY, `${CUSTOM}soil.png`, { frameWidth: 16, frameHeight: 16 });
+  load.spritesheet(BEACH_ITEMS_KEY, `${CUSTOM}beach-items.png`, { frameWidth: 16, frameHeight: 16 });
+  load.image(HOE_KEY, `${PACK}Items/Tool/Hoe.png`);
+  load.image(WATERING_CAN_KEY, `${PACK}Items/Tool/WateringCan.png`);
+  load.image(BAG_KEY, `${PACK}Items/Object/Bag.png`);
+  load.image(FISH_KEY, `${PACK}Items/Food/Fish.png`);
 }
 
-/** Sets up the animations, once the art has loaded. */
+/** Where the tent is on the pack's camp sheet: the plain one, 3 × 3 tiles. */
+const TENT_ON_SHEET = { x: 64, y: 0, width: 48, height: 48 };
+
+/** Frames cut from bigger sheets, and the few tiny textures drawn in code. Call once the art has loaded. */
+function createTextures(scene: Phaser.Scene): void {
+  const { x, y, width, height } = TENT_ON_SHEET;
+  scene.textures.get(CAMP_KEY).add(TENT_FRAME, 0, x, y, width, height);
+
+  // The outline's corner: an L of white pixels with a dark edge, 16×16, for the top-left corner.
+  // The other three corners are the same image flipped.
+  const corner = scene.make.graphics({}, false);
+  corner.fillStyle(0x000000, 0.55).fillRect(0, 0, 6, 2).fillRect(0, 0, 2, 6);
+  corner.fillStyle(0xffffff, 1).fillRect(0, 0, 5, 1).fillRect(0, 0, 1, 5);
+  corner.generateTexture(OUTLINE_KEY, 16, 16);
+  corner.destroy();
+
+  const dot = scene.make.graphics({}, false);
+  dot.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 2);
+  dot.generateTexture(PARTICLE_KEY, 2, 2);
+  dot.destroy();
+}
+
+/** Sets up the animations and extra frames, once the art has loaded. */
 export function createAnimations(scene: Phaser.Scene): void {
+  createTextures(scene);
   for (const { id } of CHARACTERS) {
     for (const facing of Object.keys(FACING_COLUMN) as Facing[]) {
       scene.anims.create({

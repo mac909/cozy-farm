@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:fresh": "node -e \"require('node:fs').rmSync('data-dev',{recursive:true,force:true})\" && npm run dev",
     "dev:server": "tsx watch server/src/index.ts",
     "dev:client": "vite",
     "build": "vite build",

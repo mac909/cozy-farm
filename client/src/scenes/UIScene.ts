@@ -1,18 +1,14 @@
 import Phaser from "phaser";
 import { EMOTES, type EmoteId } from "../../../shared/content/emotes";
 import type { Look } from "../../../shared/player";
+import type { GameClock } from "../../../shared/time/clock";
 import { characterKey, EMOTES_KEY, emoteFrame, UI_ICON, UI_ICONS_KEY } from "../art/assets";
 import { loadMuted, saveMuted } from "../audio/music";
 import type { NetStatus } from "../net/connection";
+import { ClockCard } from "../ui/ClockCard";
 import { Joystick } from "../ui/Joystick";
 import { RoundButton } from "../ui/RoundButton";
 import { safeArea } from "../ui/safeArea";
-
-const STATUS_TEXT: Record<NetStatus, string> = {
-  connecting: "Connecting…",
-  connected: "● Connected",
-  reconnecting: "○ Reconnecting…",
-};
 
 /** Keyboard shortcuts for emotes: the Phaser key name, and the label shown on the button. */
 const EMOTE_KEYS: Record<EmoteId, { key: string; label: string }> = {
@@ -28,10 +24,11 @@ const GAP = 12;
 /**
  * Screen-space HUD and controls, drawn above the world at zoom 1.
  * Emits "emote" (with an EmoteId) and "editLook" for WorldScene to act on.
+ * Reads "netStatus", "look" and "clock" from the game registry, which WorldScene keeps up to date.
  */
 export class UIScene extends Phaser.Scene {
   joystick?: Joystick;
-  private status!: Phaser.GameObjects.Text;
+  private clockCard!: ClockCard;
   private emoteButtons: RoundButton[] = [];
   private lookButton!: RoundButton;
   private musicButton!: RoundButton;
@@ -45,16 +42,10 @@ export class UIScene extends Phaser.Scene {
   create() {
     this.joystick = new Joystick(this);
 
-    this.status = this.add.text(0, 0, "", {
-      fontFamily: "monospace",
-      fontSize: "13px",
-      color: "#ffffff",
-      backgroundColor: "rgba(0, 0, 0, 0.45)",
-      padding: { x: 6, y: 3 },
-      resolution: window.devicePixelRatio,
-    });
-    this.showStatus(this.registry.get("netStatus"));
-    this.onRegistry("netStatus", (status: NetStatus) => this.showStatus(status));
+    this.clockCard = new ClockCard(this);
+    this.showClock();
+    this.onRegistry("netStatus", () => this.showClock());
+    this.onRegistry("clock", () => this.showClock());
 
     // Key hints only make sense where there's a keyboard.
     const showHints = !this.sys.game.device.input.touch;
@@ -98,7 +89,7 @@ export class UIScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
   }
 
-  /** Status top left; music and look buttons top right; emotes bottom right: all clear of notches and the home bar. */
+  /** Clock card top left; music and look buttons top right; emotes bottom right: all clear of notches and the home bar. */
   private layout() {
     const { width, height } = this.scale;
     const safe = safeArea();
@@ -107,7 +98,7 @@ export class UIScene extends Phaser.Scene {
     const top = safe.top + MARGIN;
     const bottom = height - safe.bottom - MARGIN;
 
-    this.status.setPosition(left, top);
+    this.clockCard.setPosition(left, top);
     const corner = CORNER_BUTTON_SIZE / 2;
     this.lookButton.setPosition(right - corner, top + corner);
     this.musicButton.setPosition(right - corner - (CORNER_BUTTON_SIZE + GAP), top + corner);
@@ -117,6 +108,14 @@ export class UIScene extends Phaser.Scene {
     this.emoteButtons.forEach((button, i) => {
       const fromRight = this.emoteButtons.length - 1 - i;
       button.setPosition(right - r - fromRight * (EMOTE_BUTTON_SIZE + GAP), bottom - r);
+    });
+  }
+
+  private showClock() {
+    this.clockCard.show({
+      clock: (this.registry.get("clock") as GameClock | undefined) ?? null,
+      status: this.registry.get("netStatus") as NetStatus,
+      sleepers: null,
     });
   }
 
@@ -130,10 +129,6 @@ export class UIScene extends Phaser.Scene {
 
   private musicIcon() {
     return this.muted ? UI_ICON.musicOff : UI_ICON.musicOn;
-  }
-
-  private showStatus(status: NetStatus) {
-    this.status.setText(STATUS_TEXT[status]);
   }
 
   private onRegistry<T>(key: string, handler: (value: T) => void) {

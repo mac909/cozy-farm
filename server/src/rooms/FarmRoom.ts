@@ -4,23 +4,41 @@ import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage } 
 import { isFacing } from "../../../shared/movement";
 import { isEmote, lookFrom } from "../../../shared/player";
 import { FarmState, Player } from "../../../shared/schema";
+import { steppedMinute, writeClock } from "../../../shared/stateSync";
+import { tickClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
+import type { World } from "../../../shared/world/world";
+import { liveWorld } from "../world/liveWorld";
+import { registerDevCommands } from "./dev";
 
 const WORLD_WIDTH = VILLAGE_MAP.width * TILE_SIZE;
 const WORLD_HEIGHT = VILLAGE_MAP.height * TILE_SIZE;
 
+/** How often the room's clock ticks, in milliseconds. */
+const TICK_MS = 250;
+
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-/** The one shared world that both players join. */
+/**
+ * The one shared world that both players join. It's made when the server starts and never closes.
+ *
+ * The plain World in liveWorld() is the source of truth: message handlers (one file per feature in
+ * this folder) change it through `change()`, which copies what changed into the network state and
+ * saves soon after.
+ */
 export class FarmRoom extends Room<FarmState> {
-  maxClients = 4;
+  maxClients = 8;
+  autoDispose = false;
 
   onCreate() {
     this.setState(new FarmState());
+    this.syncWorld();
     this.onMessage("move", (client, message: MoveMessage) => this.movePlayer(client, message));
     this.onMessage("look", (client, message: LookMessage) => this.changeLook(client, message));
     this.onMessage("emote", (client, message: EmoteMessage) => this.emote(client, message));
+    registerDevCommands(this);
+    this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
   }
 
   onJoin(client: Client, options?: Partial<JoinOptions>) {
@@ -39,6 +57,36 @@ export class FarmRoom extends Room<FarmState> {
     const name = this.state.players.get(client.sessionId)?.name;
     this.state.players.delete(client.sessionId);
     console.log(`${name} (${client.sessionId}) left (${this.state.players.size} online)`);
+    // Nobody's left to change anything, so save now rather than in a moment.
+    if (this.state.players.size === 0) liveWorld().saveNow();
+  }
+
+  /** The world as it is now. Treat it as read-only; change it with `change()`. */
+  get world(): World {
+    return liveWorld().world;
+  }
+
+  /** Replaces the world, copies what changed into the network state, and saves soon. */
+  change(next: World, options?: { save?: boolean }) {
+    liveWorld().set(next, options);
+    this.syncWorld();
+  }
+
+  /** Copies the world into the network state. Only changed values are written, so only they get sent. */
+  syncWorld() {
+    const world = this.world;
+    writeClock(this.state.clock, world.clock);
+    if (this.state.coins !== world.coins) this.state.coins = world.coins;
+  }
+
+  /** Time passes only while someone's here. The network clock (and the save) only change every 10 game minutes. */
+  private tick(deltaMs: number) {
+    if (this.state.players.size === 0) return;
+    const before = this.world.clock;
+    const clock = tickClock(before, deltaMs);
+    if (clock === before) return;
+    const stepped = clock.day !== before.day || steppedMinute(clock.minute) !== steppedMinute(before.minute);
+    this.change({ ...this.world, clock }, { save: stepped });
   }
 
   private movePlayer(client: Client, message: MoveMessage) {

@@ -35,7 +35,8 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Game server on :2567 and Vite on :5173. Open http://localhost:5173. |
+| `npm run dev` | Game server on :2567 and Vite on :5173. Open http://localhost:5173. It saves to `data-dev/` (never the real farm). In the browser console, `dev.nextDay()`, `dev.setTime("23:50")` and `dev.addCoins(100)` skip ahead for testing. |
+| `npm run dev:fresh` | Deletes the dev save (`data-dev/`) and starts `npm run dev` with a brand-new world |
 | `npm test` | Unit tests |
 | `npm run typecheck` | TypeScript check across client, server, and shared |
 | `npm run build` | Builds the client into `dist/client` |

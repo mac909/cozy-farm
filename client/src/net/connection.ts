@@ -65,7 +65,8 @@ export class FarmConnection {
     this.retryTimer = undefined;
     let room: Room<FarmState>;
     try {
-      room = await this.client.joinOrCreate<FarmState>(FARM_ROOM, this.joinOptions());
+      // The server makes the one room when it starts, so joining never creates another.
+      room = await this.client.join<FarmState>(FARM_ROOM, this.joinOptions());
     } catch (error) {
       console.warn("Could not reach the game server:", error);
       this.retryLater();

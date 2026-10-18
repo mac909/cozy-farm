@@ -8,6 +8,9 @@ import type { SaveFormat, VersionedSave } from "./saveFormat";
 import { SAVE_FILE, SaveStore, checkSaveFile, snapshotSaves } from "./saveStore";
 import { WORLD_ID, WORLD_SAVE, type WorldSave, newWorldSave } from "./worldSave";
 
+/** A new world's save, on the given day. */
+const onDay = (day: number): WorldSave => ({ ...newWorldSave(), clock: { day, minute: 360 } });
+
 let dataDir: string;
 let stores: SaveStore<VersionedSave>[];
 
@@ -46,7 +49,7 @@ function readRawSave(worldId: string) {
   return row?.data;
 }
 
-/** A pretend format at version 3, with a wallet added in 2 and `day` renamed to `dayNumber` in 3. */
+/** A pretend format at version 3, with a wallet added in 2 and `clock.day` moved to `dayNumber` in 3. */
 interface V3Save {
   version: number;
   dayNumber: number;
@@ -55,7 +58,7 @@ interface V3Save {
 const v3Format: SaveFormat<V3Save> = {
   migrations: [
     (save) => ({ ...save, coins: 0 }),
-    ({ day, ...rest }) => ({ ...rest, dayNumber: day }),
+    ({ clock, ...rest }) => ({ ...rest, dayNumber: (clock as { day: number }).day }),
   ],
   validate(save) {
     if (typeof save.dayNumber !== "number") throw new Error("dayNumber is missing");
@@ -72,7 +75,7 @@ describe("SaveStore", () => {
   });
 
   it("loads a save back after a restart", () => {
-    const world: WorldSave = { ...newWorldSave(), day: 7 };
+    const world: WorldSave = onDay(7);
     openStore(WORLD_SAVE).save(WORLD_ID, world);
     stores[0].close();
 
@@ -84,20 +87,20 @@ describe("SaveStore", () => {
 
   it("stores the save as JSON with its version inside", () => {
     openStore(WORLD_SAVE).save(WORLD_ID, newWorldSave());
-    expect(JSON.parse(readRawSave(WORLD_ID)!)).toEqual({ version: 1, day: 1 });
+    expect(JSON.parse(readRawSave(WORLD_ID)!)).toEqual(newWorldSave());
   });
 
   it("replaces the previous save and keeps worlds apart", () => {
     const store = openStore(WORLD_SAVE);
-    store.save(WORLD_ID, { ...newWorldSave(), day: 1 });
-    store.save(WORLD_ID, { ...newWorldSave(), day: 2 });
-    store.save("other", { ...newWorldSave(), day: 9 });
-    expect(store.load(WORLD_ID)).toMatchObject({ save: { day: 2 } });
-    expect(store.load("other")).toMatchObject({ save: { day: 9 } });
+    store.save(WORLD_ID, onDay(1));
+    store.save(WORLD_ID, onDay(2));
+    store.save("other", onDay(9));
+    expect(store.load(WORLD_ID)).toMatchObject({ save: { clock: { day: 2 } } });
+    expect(store.load("other")).toMatchObject({ save: { clock: { day: 9 } } });
   });
 
   it("upgrades an old save through each migration and archives the original", () => {
-    openStore(WORLD_SAVE).save(WORLD_ID, { ...newWorldSave(), day: 4 });
+    openStore(WORLD_SAVE).save(WORLD_ID, onDay(4));
     const original = readRawSave(WORLD_ID);
 
     const store = openStore(v3Format);
@@ -171,32 +174,32 @@ describe("SaveStore", () => {
 
   it("won't write a save that couldn't be loaded back", () => {
     const store = openStore(WORLD_SAVE);
-    store.save(WORLD_ID, { ...newWorldSave(), day: 3 });
-    expect(() => store.save(WORLD_ID, { version: 1, day: Number.NaN })).toThrow(/wouldn't load back/);
-    expect(() => store.save(WORLD_ID, { version: 0, day: 4 })).toThrow(/saves are written as version 1/);
-    expect(store.load(WORLD_ID)).toMatchObject({ save: { day: 3 } });
+    store.save(WORLD_ID, onDay(3));
+    expect(() => store.save(WORLD_ID, { ...onDay(3), coins: Number.NaN })).toThrow(/wouldn't load back/);
+    expect(() => store.save(WORLD_ID, { ...onDay(4), version: 0 })).toThrow(/saves are written as version 1/);
+    expect(store.load(WORLD_ID)).toMatchObject({ save: { clock: { day: 3 } } });
   });
 
   it("keeps the previous save when a write fails partway, and carries on afterwards", () => {
     const store = openStore(WORLD_SAVE);
-    store.save(WORLD_ID, { ...newWorldSave(), day: 3 });
+    store.save(WORLD_ID, onDay(3));
 
     const saboteur = new DatabaseSync(store.file);
     saboteur.exec("CREATE TRIGGER fail_update BEFORE UPDATE ON saves BEGIN SELECT RAISE(ABORT, 'disk on fire'); END");
-    expect(() => store.save(WORLD_ID, { ...newWorldSave(), day: 4 })).toThrow(/disk on fire/);
-    expect(store.load(WORLD_ID)).toMatchObject({ save: { day: 3 } });
+    expect(() => store.save(WORLD_ID, onDay(4))).toThrow(/disk on fire/);
+    expect(store.load(WORLD_ID)).toMatchObject({ save: { clock: { day: 3 } } });
 
     saboteur.exec("DROP TRIGGER fail_update");
     saboteur.close();
-    store.save(WORLD_ID, { ...newWorldSave(), day: 5 });
-    expect(store.load(WORLD_ID)).toMatchObject({ save: { day: 5 } });
+    store.save(WORLD_ID, onDay(5));
+    expect(store.load(WORLD_ID)).toMatchObject({ save: { clock: { day: 5 } } });
   });
 });
 
 describe("snapshotSaves", () => {
   it("copies the saves to a new file and checks every world loads", () => {
     const store = openStore(WORLD_SAVE);
-    store.save(WORLD_ID, { ...newWorldSave(), day: 12 });
+    store.save(WORLD_ID, onDay(12));
     const dest = path.join(dataDir, "backup.sqlite");
 
     const worlds = snapshotSaves(dataDir, dest, WORLD_SAVE);
@@ -206,7 +209,7 @@ describe("snapshotSaves", () => {
     const restoredDir = path.join(dataDir, "restored");
     mkdirSync(restoredDir);
     copyFileSync(dest, path.join(restoredDir, SAVE_FILE));
-    expect(openStore(WORLD_SAVE, restoredDir).load(WORLD_ID)).toMatchObject({ save: { day: 12 } });
+    expect(openStore(WORLD_SAVE, restoredDir).load(WORLD_ID)).toMatchObject({ save: { clock: { day: 12 } } });
   });
 
   it("fails without creating anything when there's no save yet", () => {
@@ -223,7 +226,7 @@ describe("snapshotSaves", () => {
 
 describe("checkSaveFile", () => {
   it("lists the worlds in a good save database without changing it", () => {
-    openStore(WORLD_SAVE).save(WORLD_ID, { ...newWorldSave(), day: 4 });
+    openStore(WORLD_SAVE).save(WORLD_ID, onDay(4));
     const file = path.join(dataDir, SAVE_FILE);
     const before = readFileSync(file);
 

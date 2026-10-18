@@ -8,6 +8,8 @@ import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage } 
 import { clampMove, type Facing, facingFor, isFacing, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
+import { readClock } from "../../../shared/stateSync";
+import type { GameClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { COLLISION_LAYER, FARMLAND_LAYER, isAboveCharacters, OBJECTS_LAYER } from "../../../shared/world/tiledMap";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
@@ -21,6 +23,7 @@ import {
   walkFrames,
 } from "../art/assets";
 import { startMusic } from "../audio/music";
+import { installDevCommands } from "../net/devCommands";
 import { FarmConnection } from "../net/connection";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
@@ -104,6 +107,7 @@ export class WorldScene extends Phaser.Scene {
     this.ui.events.on("emote", (emote: EmoteId) => this.emote(emote));
     this.ui.events.on("editLook", () => void this.changeLook());
     startMusic(this);
+    installDevCommands((message) => this.room?.send("dev", message));
 
     this.connection = new FarmConnection(() => this.joinOptions(), {
       status: (status) => this.registry.set("netStatus", status),
@@ -214,9 +218,17 @@ export class WorldScene extends Phaser.Scene {
       });
     });
     $(room.state).players.onRemove((_player, sessionId) => this.removeRemote(sessionId));
+    room.onStateChange((state) => this.readState(state));
     room.onMessage("emote", (event: EmoteEvent) => {
       if (isEmote(event?.emote)) this.remotes.get(event.sessionId)?.character.showEmote(event.emote);
     });
+  }
+
+  /** After every update from the server: passes on whatever the HUD shows. */
+  private readState(state: FarmState) {
+    const clock = readClock(state.clock);
+    const shown = this.registry.get("clock") as GameClock | null;
+    if (!shown || shown.day !== clock.day || shown.minute !== clock.minute) this.registry.set("clock", clock);
   }
 
   /** The connection dropped: other players will come back when we rejoin (with new session ids). */
