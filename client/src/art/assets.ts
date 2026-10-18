@@ -36,6 +36,8 @@ export const CAMP_KEY = "camp";
 export const TENT_FRAME = "tent";
 /** Our crops sheet: growth stages, harvested item and seed packet per crop (see manifest.json). */
 export const CROPS_KEY = "crops";
+/** Golden crops (Milestone 7): each crop's harvested item in gold, one 16×16 frame each in CROPS order. */
+export const GOLDEN_CROPS_KEY = "golden-crops";
 /** Our dug soil: frame = neighbour mask (N1 E2 S4 W8), +16 when watered. */
 export const SOIL_KEY = "soil";
 /** The outline's corner, drawn in code at boot. */
@@ -141,6 +143,7 @@ export function loadArt(scene: Phaser.Scene): void {
   load.image(ZZZ_KEY, `${PACK}Ui/Emote/emote28.png`);
   load.image(CAMP_KEY, `${PACK}Backgrounds/Tilesets/tileset_camp.png`);
   load.spritesheet(CROPS_KEY, `${CUSTOM}crops.png`, { frameWidth: 16, frameHeight: 16 });
+  load.spritesheet(GOLDEN_CROPS_KEY, `${CUSTOM}golden-crops.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(SOIL_KEY, `${CUSTOM}soil.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(BEACH_ITEMS_KEY, `${CUSTOM}beach-items.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(FISH_ICONS_KEY, `${CUSTOM}fish.png`, { frameWidth: 16, frameHeight: 16 });

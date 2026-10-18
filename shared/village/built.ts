@@ -1,4 +1,4 @@
-import { PROJECTS, PROJECT_IDS, stepName } from "../content/projects";
+import { PROJECTS, PROJECT_IDS, houseProjectOf, projectDef, stepName } from "../content/projects";
 import type { World } from "../world/world";
 import { isFinished, keeperHere, progressOf } from "./projects";
 
@@ -11,6 +11,7 @@ import { isFinished, keeperHere, progressOf } from "./projects";
  * - "lighthouse/path", "lighthouse/stairs", …: a project's step, from the morning it's built.
  * - "lighthouse": a whole project, from the morning its last step is built, or for one that opens
  *   at a set time (the lamp is lit at dusk), from then.
+ * - "house1:porch": a house upgrade (Milestone 7), from the morning it's built.
  */
 
 /** Built when Marlow is here. */
@@ -26,6 +27,14 @@ export function builtThings(world: Pick<World, "village" | "clock">): Set<string
     const steps = Math.min(progress.built, project.steps.length);
     for (let step = 0; step < steps; step++) built.add(stepName(project, step));
     if (isFinished(project, progress) && opened(project.opensAtMinute, progress.doneDay, world.clock)) built.add(id);
+  }
+  // House upgrades: only the ones anyone has given to are in the village's projects.
+  for (const [id, progress] of Object.entries(world.village.projects)) {
+    if (!houseProjectOf(id)) continue;
+    const project = projectDef(id)!;
+    const steps = Math.min(progress.built, project.steps.length);
+    for (let step = 0; step < steps; step++) built.add(stepName(project, step));
+    if (isFinished(project, progress)) built.add(id);
   }
   return built;
 }

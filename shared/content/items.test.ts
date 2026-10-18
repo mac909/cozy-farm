@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CROPS, type CropId } from "./crops";
 import { BUG_IDS, BUGS } from "./bugs";
-import { ITEMS, STARTER_ITEMS, bugItemId, cropItemId, isItemId, seedItemId, type ItemDef } from "./items";
+import { ITEMS, STARTER_ITEMS, bugItemId, cropItemId, goldenItemId, isItemId, seedItemId, type ItemDef } from "./items";
+import { isGift } from "./furniture";
+import { PERK } from "./skills";
 
 const CROP_IDS = Object.keys(CROPS) as CropId[];
 const items = Object.entries(ITEMS);
@@ -35,7 +37,7 @@ describe("item data", () => {
 
   it("has no two items with the same id across categories", () => {
     const expected =
-      CROP_IDS.length * 2 +
+      CROP_IDS.length * 3 +
       inCategory("tool").length +
       inCategory("beach").length +
       inCategory("material").length +
@@ -63,6 +65,17 @@ describe("seeds and crops", () => {
       expect(crop.buyPrice).toBeUndefined();
     });
   }
+
+  it("has a golden one for each crop, selling for more and never bought", () => {
+    for (const cropId of CROP_IDS) {
+      const golden = ITEMS[goldenItemId(cropId)];
+      expect(golden.category === "crop" && golden.cropId).toBe(cropId);
+      expect(golden.category === "crop" && golden.golden).toBe(true);
+      expect(golden.sellPrice).toBe(CROPS[cropId].sellPrice * PERK.goldenPrice);
+      expect(golden.buyPrice).toBeUndefined();
+      expect(golden.name).toBe(`Golden ${CROPS[cropId].name}`);
+    }
+  });
 
   it("derives seed ids from crop ids", () => {
     expect(seedItemId("radish")).toBe("radish_seeds");
@@ -117,10 +130,11 @@ describe("bugs", () => {
 describe("furniture", () => {
   const furniture = inCategory("furniture");
 
-  it("is all for sale, and sells back for less", () => {
+  it("is all for sale but for a skill's gifts, and sells back for less", () => {
     expect(furniture.length).toBeGreaterThanOrEqual(10);
     for (const piece of furniture) {
-      expect(piece.buyPrice).toBeDefined();
+      if (piece.category !== "furniture") throw new Error("filtered by category");
+      expect(piece.buyPrice === undefined).toBe(isGift(piece.furnitureId));
       expect(piece.sellPrice).toBeDefined();
     }
   });

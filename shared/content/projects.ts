@@ -1,3 +1,5 @@
+import { HOUSE_UPGRADES } from "./houseUpgrades";
+import { HOUSES } from "./houses";
 import type { ItemCategory, ItemId } from "./items";
 
 /**
@@ -72,6 +74,8 @@ export interface ProjectDef {
    * lit at dusk), not in the morning. Missing: it opens with the morning.
    */
   readonly opensAtMinute?: number;
+  /** A house upgrade (Milestone 7): which cottage, and which upgrade (shared/content/houseUpgrades.ts). Missing: the village's. */
+  readonly house?: { readonly houseId: string; readonly upgrade: string };
 }
 
 const lighthouse: ProjectDef = {
@@ -125,20 +129,77 @@ const lighthouse: ProjectDef = {
       note: "She's ready. I'll light her at dusk, and I'd like you both there.",
     },
   ],
-  opens: ["The light shines every night", "Fish bite at the point after dark", "Climb up for the view"],
+  opens: ["The light shines every night", "Fish bite at the point after dark", "Climb up for the view", "Porches for your cottages, on the board"],
   opening: { title: "The lighthouse is lit!", note: "There she is. Every boat from here to the horizon can see we're home." },
   finishedWord: "Lit",
   opensAtMinute: 18 * 60,
 };
 
-/** Every project, in the order they go up on the board: one at a time, the next the morning after the last one opens. */
+/**
+ * The village's projects, in the order they go up on the board: one at a time, the next the morning
+ * after the last one opens. House upgrades are projects too (houseProject), but not listed here.
+ */
 export const PROJECTS: Readonly<Record<string, ProjectDef>> = { lighthouse };
 
 export const PROJECT_IDS: readonly string[] = Object.keys(PROJECTS);
 
-/** True if `id` names a project. Use it to check ids from saves and client messages. */
+/** A house upgrade's project id: "house1:porch". */
+export function houseProjectId(houseId: string, upgrade: string): string {
+  return `${houseId}:${upgrade}`;
+}
+
+/** The cottage and upgrade in a house upgrade's project id, or null if it isn't one the game knows. */
+export function houseProjectOf(id: string): { houseId: string; upgrade: string } | null {
+  const match = /^([A-Za-z0-9_-]{1,32}):([a-z][a-zA-Z]*)$/.exec(id);
+  if (!match || !Object.hasOwn(HOUSES, match[1]) || !Object.hasOwn(HOUSE_UPGRADES, match[2])) return null;
+  return { houseId: match[1], upgrade: match[2] };
+}
+
+const houseProjects = new Map<string, ProjectDef>();
+
+/** A house upgrade as a one-step project for one cottage (made once and kept). */
+export function houseProject(houseId: string, upgrade: string): ProjectDef {
+  const id = houseProjectId(houseId, upgrade);
+  let project = houseProjects.get(id);
+  if (!project) {
+    const def = HOUSE_UPGRADES[upgrade];
+    project = {
+      id,
+      name: def.name,
+      shortName: `The ${def.noun}`,
+      boardLine: def.boardLine,
+      steps: [
+        {
+          id: "build",
+          name: `Build ${def.name.toLowerCase().replace(/^an? /, "the ")}`,
+          blurb: def.blurb,
+          needs: def.needs,
+          cheer: def.cheer,
+          tonight: def.tonight,
+          builtLine: def.builtLine,
+          note: def.note,
+        },
+      ],
+      opens: def.opens,
+      opening: { title: def.builtLine, note: def.note },
+      finishedWord: "Built",
+      house: { houseId, upgrade },
+    };
+    houseProjects.set(id, project);
+  }
+  return project;
+}
+
+/** True if `id` names a project: the village's, or a house upgrade. Use it to check ids from saves and client messages. */
 export function isProjectId(id: unknown): id is string {
-  return typeof id === "string" && Object.hasOwn(PROJECTS, id);
+  return typeof id === "string" && (Object.hasOwn(PROJECTS, id) || houseProjectOf(id) !== null);
+}
+
+/** The project with this id (the village's, or a house upgrade), or undefined if there's none. */
+export function projectDef(id: string): ProjectDef | undefined {
+  if (Object.hasOwn(PROJECTS, id)) return PROJECTS[id];
+  const house = houseProjectOf(id);
+  return house ? houseProject(house.houseId, house.upgrade) : undefined;
 }
 
 /** A step's built name, as Tiled layers and objects use it: "lighthouse/path". */

@@ -18,6 +18,8 @@ export const FURNITURE_SHEETS = {
   fishNet: { url: `${PACK}Backgrounds/Vehicles/FishNet.png`, mapTileset: null },
   /** Our own seaside pieces (tools/sprites/seaside.ts), one 32×32 frame each. */
   seaside: { url: "/assets/custom/seaside-furniture.png", mapTileset: null },
+  /** Gifts for reaching a skill level (tools/sprites/rewards.ts), one 32×32 frame each. */
+  rewards: { url: "/assets/custom/reward-furniture.png", mapTileset: null },
   house: { url: null, mapTileset: "TilesetHouse" },
   nature: { url: null, mapTileset: "TilesetNature" },
   floorDetail: { url: null, mapTileset: "TilesetFloorDetail" },
@@ -88,6 +90,13 @@ export const FURNITURE_ART: Readonly<Record<FurnitureId, readonly PieceArt[]>> =
   beach_umbrella: [at("seaside", 64, 0, 32, 32)],
   ship_in_bottle: [at("seaside", 104, 16, 16, 16)],
   fish_tank: [at("seaside", 128, 5, 32, 27)],
+  // Inside their 32×32 frames, as in tools/sprites/rewards.ts (a pixel of outline either side).
+  straw_hat: [at("rewards", 7, 14, 18, 18)],
+  mounted_fish: [at("rewards", 39, 12, 18, 20)],
+  shell_wreath: [at("rewards", 71, 8, 18, 24)],
+  golden_can: [at("rewards", 103, 16, 18, 16)],
+  lobster_pot: [at("rewards", 135, 16, 18, 16)],
+  butterfly_jar: [at("rewards", 167, 16, 18, 16)],
 };
 
 /** The picture for a piece turned `turn` times (wrapping round, like footprintOf). */

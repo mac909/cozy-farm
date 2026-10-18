@@ -1,5 +1,7 @@
 import { FISH, FISH_IDS, POINT_NIGHT_FROM, bitesAt, isFishingSpot, type FishId, type FishingSpot } from "../content/fish";
 import { RARITY_WEIGHTS, type Rarity } from "../content/rarity";
+import { PERK } from "../content/skills";
+import { hasPerk, type FarmerProgress } from "../progress/farmerProgress";
 import {
   pickWeighted,
   randomBetween,
@@ -78,6 +80,32 @@ export function reelFeel(fishId: FishId): ReelFeel {
 }
 
 /**
+ * How a farmer's fishing perks (Milestone 7) change a line, carried in its state so the device
+ * plays it out the same way the server would: longer to hook (Steady hands), sooner bites (Quick
+ * bites), bigger fish (Big ones), gentler tugs (Gentle reel). Missing: none of them.
+ */
+export interface LinePerks {
+  /** Extra time to press after the bite, in ms. */
+  readonly hookMs?: number;
+  /** The wait for a bite is this much of what it would be. */
+  readonly biteFactor?: number;
+  /** Sizes come this much of the fish's range bigger (never past its biggest). */
+  readonly bigger?: number;
+  /** Holding through a tug loses ground this many times more slowly. */
+  readonly tugEase?: number;
+}
+
+/** What a farmer's fishing perks do to a cast: rare fish more often (Lucky line), and the line's own perks. */
+export function fishingPerks(progress: FarmerProgress | undefined): { rareWeight: number; line: LinePerks } {
+  const line: { -readonly [K in keyof LinePerks]: LinePerks[K] } = {};
+  if (hasPerk(progress, "steadyHands")) line.hookMs = PERK.steadyHandsMs;
+  if (hasPerk(progress, "quickBites")) line.biteFactor = PERK.quickBites;
+  if (hasPerk(progress, "bigOnes")) line.bigger = PERK.bigOnes;
+  if (hasPerk(progress, "gentleReel")) line.tugEase = PERK.gentleReel;
+  return { rareWeight: hasPerk(progress, "luckyLine") ? PERK.luckyLine : 1, line };
+}
+
+/**
  * Fish biting at `spot` at `minute` (game minutes after midnight), in FISH order. By day the point
  * fishes like the shore; from POINT_NIGHT_FROM its own night fish bite there.
  */
@@ -86,16 +114,23 @@ export function fishAvailable(spot: FishingSpot, minute: number): FishId[] {
   return FISH_IDS.filter((id) => FISH[id].spots.includes(fishesLike) && bitesAt(FISH[id], minute));
 }
 
-/** Picks a fish biting at `spot` at `minute`, rarer ones less often. null if nothing is biting. */
-export function chooseFish(spot: FishingSpot, minute: number, random: RandomSource): FishId | null {
-  const fishId = pickWeighted(random, fishAvailable(spot, minute), (id) => RARITY_WEIGHTS[FISH[id].rarity]);
+/**
+ * Picks a fish biting at `spot` at `minute`, rarer ones less often (`rareWeight` times as often for
+ * rare ones: Lucky line). null if nothing is biting.
+ */
+export function chooseFish(spot: FishingSpot, minute: number, random: RandomSource, rareWeight = 1): FishId | null {
+  const weight = (id: FishId) => RARITY_WEIGHTS[FISH[id].rarity] * (FISH[id].rarity === "rare" ? rareWeight : 1);
+  const fishId = pickWeighted(random, fishAvailable(spot, minute), weight);
   return fishId ?? null;
 }
 
-/** A length for a caught fish, in whole centimetres. Middling sizes are likeliest, so a big one is worth showing off. */
-export function rollSize(fishId: FishId, random: RandomSource): number {
+/**
+ * A length for a caught fish, in whole centimetres. Middling sizes are likeliest, so a big one is
+ * worth showing off. `bigger` (Big ones) moves it up that much of the fish's range.
+ */
+export function rollSize(fishId: FishId, random: RandomSource, bigger = 0): number {
   const { min, max } = FISH[fishId].sizeCm;
-  const middling = (random.next() + random.next()) / 2;
+  const middling = Math.min(1, (random.next() + random.next()) / 2 + bigger);
   return Math.min(max, Math.floor(min + middling * (max - min + 1)));
 }
 
@@ -107,6 +142,8 @@ interface Line {
   readonly random: number;
   /** Time spent in the current phase, in ms. */
   readonly phaseMs: number;
+  /** The caster's fishing perks (Milestone 7). Missing: none. */
+  readonly perks?: LinePerks;
 }
 
 /** The line is flying out. */
@@ -199,14 +236,16 @@ export type CastResult =
 /**
  * Casts a line at `spot` at `minute` (game minutes after midnight). `seed` is
  * any number; the same seed always plays out the same way. The fish is picked
- * now, from what's biting at this spot and time.
+ * now, from what's biting at this spot and time. `perks`: the caster's fishing
+ * perks (fishingPerks), which the line carries with it.
  */
-export function cast(spot: string, minute: number, seed: number): CastResult {
+export function cast(spot: string, minute: number, seed: number, perks?: { rareWeight: number; line: LinePerks }): CastResult {
   if (!isFishingSpot(spot)) return { ok: false, reason: "unknown-spot" };
   const random = randomSource(seed);
-  const fishId = chooseFish(spot, minute, random);
+  const fishId = chooseFish(spot, minute, random, perks?.rareWeight ?? 1);
   if (fishId === null) return { ok: false, reason: "nothing-biting" };
-  return { ok: true, state: { phase: "casting", spot, fishId, random: random.state, phaseMs: 0 } };
+  const line = perks && Object.keys(perks.line).length > 0 ? { perks: perks.line } : {};
+  return { ok: true, state: { phase: "casting", spot, fishId, random: random.state, phaseMs: 0, ...line } };
 }
 
 /** True once the cast is over, caught or missed. Ticking a finished state changes nothing. */
@@ -276,7 +315,7 @@ function advanceCasting(
 ): Advanced {
   const need = FISHING.castMs - state.phaseMs;
   if (ms < need) return { state: { ...state, phaseMs: state.phaseMs + ms }, usedMs: ms };
-  const biteAtMs = randomBetween(random, FISHING.biteDelayMs);
+  const biteAtMs = randomBetween(random, FISHING.biteDelayMs) * (state.perks?.biteFactor ?? 1);
   const nibbleCount = randomInt(random, FISHING.nibbles);
   const latestNibble = biteAtMs - FISHING.nibbleClearMs;
   const nibblesAtMs =
@@ -286,7 +325,7 @@ function advanceCasting(
   events.push({ type: "landed" });
   const { spot, fishId } = state;
   return {
-    state: { phase: "waiting", spot, fishId, random: random.state, phaseMs: 0, biteAtMs, nibblesAtMs },
+    state: { phase: "waiting", spot, fishId, random: random.state, phaseMs: 0, biteAtMs, nibblesAtMs, ...perksOf(state) },
     usedMs: need,
   };
 }
@@ -300,11 +339,16 @@ function advanceWaiting(state: WaitingState, ms: number, events: FishingEvent[])
   if (until < state.biteAtMs) return { state: { ...state, phaseMs: until }, usedMs: used };
   events.push({ type: "bite" });
   const { spot, fishId, random } = state;
-  return { state: { phase: "bite", spot, fishId, random, phaseMs: 0 }, usedMs: used };
+  return { state: { phase: "bite", spot, fishId, random, phaseMs: 0, ...perksOf(state) }, usedMs: used };
+}
+
+/** A line's perks, to carry on into its next phase. */
+function perksOf(state: Line): { perks?: LinePerks } {
+  return state.perks ? { perks: state.perks } : {};
 }
 
 function advanceBite(state: BiteState, ms: number, events: FishingEvent[]): Advanced {
-  const window = reelFeel(state.fishId).biteWindowMs;
+  const window = reelFeel(state.fishId).biteWindowMs + (state.perks?.hookMs ?? 0);
   const need = window - state.phaseMs;
   if (ms < need) return { state: { ...state, phaseMs: state.phaseMs + ms }, usedMs: ms };
   return { state: miss(state, "too-late", events), usedMs: need };
@@ -323,11 +367,11 @@ function advanceReeling(
   const tugsOn = tugs !== null && state.untilTugChangeMs !== null;
   const untilTugChange = tugsOn ? Math.max(0, state.untilTugChangeMs ?? 0) : Infinity;
   const span = Math.min(ms, untilTugChange);
-  const rate = reelRate(feel, holding, tugsOn && state.tugging);
+  const rate = reelRate(feel, holding, tugsOn && state.tugging, state.perks?.tugEase ?? 1);
 
   // Landed or lost part way through this span?
   if (rate > 0 && state.progress + rate * span >= 1) {
-    const sizeCm = rollSize(state.fishId, random);
+    const sizeCm = rollSize(state.fishId, random, state.perks?.bigger ?? 0);
     events.push({ type: "caught", fishId: state.fishId, sizeCm });
     const caught: CaughtState = { phase: "caught", spot: state.spot, fishId: state.fishId, sizeCm };
     return { state: caught, usedMs: (1 - state.progress) / rate };
@@ -352,9 +396,12 @@ function advanceReeling(
   return { state: reeled, usedMs: span };
 }
 
-/** How fast the reel moves, in progress per ms: up while holding, down while not, and the other way round during a tug. */
-function reelRate(feel: ReelFeel, holding: boolean, tugging: boolean): number {
-  if (tugging && feel.tugs !== null) return holding ? -1 / feel.tugs.slipMs : 0;
+/**
+ * How fast the reel moves, in progress per ms: up while holding, down while not, and the other way
+ * round during a tug (`tugEase` times more slowly with Gentle reel).
+ */
+function reelRate(feel: ReelFeel, holding: boolean, tugging: boolean, tugEase = 1): number {
+  if (tugging && feel.tugs !== null) return holding ? -1 / (feel.tugs.slipMs * tugEase) : 0;
   return holding ? 1 / feel.reelMs : -1 / feel.slipMs;
 }
 
@@ -372,6 +419,7 @@ function press(state: ActiveState, random: RandomSource, events: FishingEvent[])
         fishId,
         random: random.state,
         phaseMs: 0,
+        ...perksOf(state),
         progress: FISHING.reelStartProgress,
         tugging: false,
         untilTugChangeMs: tugs === null ? null : randomBetween(random, tugs.gapMs),

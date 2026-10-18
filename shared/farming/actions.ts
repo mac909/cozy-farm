@@ -2,8 +2,11 @@ import type { BugId } from "../content/bugs";
 import { CROPS, isCropId, type CropId } from "../content/crops";
 import type { FishingSpot } from "../content/fish";
 import { goesIn, type FurnitureId, type PlaceKind } from "../content/furniture";
-import { FISHING_ROD, ITEMS, cropItemId, furnitureOf, isItemId, type ItemId } from "../content/items";
-import { addItems, countOf, isSlotIndex, removeFromSlot, roomFor, type ItemStack } from "../inventory/inventory";
+import { FISHING_ROD, ITEMS, cropItemId, furnitureOf, goldenItemId, isItemId, seedItemId, type ItemId } from "../content/items";
+import { PERK } from "../content/skills";
+import { addItems, countOf, isSlotIndex, removeFromSlot, roomFor, type Inventory, type ItemStack } from "../inventory/inventory";
+import { hasPerk } from "../progress/farmerProgress";
+import type { RandomSource } from "../random/random";
 import type { PlaceId } from "../world/places";
 import { farmTileAt, farmerOf, setFarmTile, setFarmerBag, type FarmerId, type World } from "../world/world";
 import { harvest, isRipe, plant, ripeStage, till, water, type FarmTile, type PlantedTile } from "./farming";
@@ -346,6 +349,28 @@ export function hintFor(tile: FarmTile, isFarmland: boolean, held: ItemId | null
   return { reason: "not-a-tool" };
 }
 
+/**
+ * A pick's extras from a farmer's farming perks, rolled in a fixed order so the same random numbers
+ * always give the same: golden (Golden crops), one more (A little extra, or Bumper crop), a seed
+ * back (Seed saver). No `random`, no extras.
+ */
+function pickExtras(
+  progress: Parameters<typeof hasPerk>[0],
+  cropId: CropId,
+  random: RandomSource | undefined,
+): { golden: boolean; more: boolean; seeds: ItemStack[] } {
+  if (!random) return { golden: false, more: false, seeds: [] };
+  const goldenRoll = random.next();
+  const moreRoll = random.next();
+  const seedRoll = random.next();
+  const moreChance = hasPerk(progress, "bumperCrop") ? PERK.bumperCrop : hasPerk(progress, "littleExtra") ? PERK.littleExtra : 0;
+  return {
+    golden: hasPerk(progress, "goldenCrops") && goldenRoll < PERK.goldenCrops,
+    more: moreRoll < moreChance,
+    seeds: hasPerk(progress, "seedSaver") && seedRoll < PERK.seedSaver ? [{ itemId: seedItemId(cropId), count: 1 }] : [],
+  };
+}
+
 /** A farmer asking to change a farm tile. The caller has already checked the tile is within reach. */
 export interface FarmRequest {
   farmerId: FarmerId;
@@ -357,7 +382,16 @@ export interface FarmRequest {
 }
 
 export type FarmActionResult =
-  | { ok: true; world: World; harvested?: ItemStack; tile: FarmTile }
+  | {
+      ok: true;
+      world: World;
+      tile: FarmTile;
+      /** A pick: what it gave, and whether the plant had grown back after an earlier pick. */
+      harvested?: ItemStack;
+      regrown?: boolean;
+      /** A pick's little extras from the farmer's perks (one more, a seed back). */
+      bonus?: ItemStack[];
+    }
   | { ok: false; hint: Hint };
 
 const refuse = (reason: HintReason): FarmActionResult => ({ ok: false, hint: { reason } });
@@ -366,11 +400,16 @@ const refuse = (reason: HintReason): FarmActionResult => ({ ok: false, hint: { r
  * Carries out a farm action for one farmer, joining the farming rules and the bag rules: digging
  * needs a hoe and farmland, planting takes one seed from the given slot, watering needs the can,
  * picking needs room in the bag. All or nothing: a refusal leaves the world as it was and says why.
+ *
+ * The farmer's farming perks (Milestone 7) come in here: planting waters the tile too, or gives it
+ * a day's start; and with `random`, a pick may be golden, give one more, or give a seed back, each
+ * only if the bag has room for it (a pick never fails for an extra).
  */
 export function applyFarmAction(
   world: World,
   map: { farmland: readonly (readonly boolean[])[] },
   { farmerId, action, col, row, slot }: FarmRequest,
+  random?: RandomSource,
 ): FarmActionResult {
   const farmer = farmerOf(world, farmerId);
   if (!farmer) return refuse("gone");
@@ -389,7 +428,7 @@ export function applyFarmAction(
       if (!isSlotIndex(bag, slot)) return refuse("no-seeds");
       const cropId = seedCrop(bag[slot]?.itemId ?? null);
       if (!cropId) return refuse("no-seeds");
-      const result = plant(tile, cropId);
+      const result = plant(tile, cropId, { water: hasPerk(farmer.progress, "plantAndWater"), headStart: hasPerk(farmer.progress, "earlyRiser") });
       if (!result.ok) return refuse(result.reason === "has-crop" ? "has-crop" : "dig-first");
       const taken = removeFromSlot(bag, slot, 1);
       if (!taken.ok) return refuse("no-seeds");
@@ -405,14 +444,26 @@ export function applyFarmAction(
     case "harvest": {
       if (tile.kind !== "planted") return refuse("gone");
       if (!isRipe(tile)) return { ok: false, hint: { reason: "growing", cropId: tile.cropId, days: daysLeft(tile), watered: tile.watered } };
-      const itemId = cropItemId(tile.cropId);
-      if (roomFor(bag, itemId) < CROPS[tile.cropId].harvestAmount) return refuse("bag-full");
+      const amount = CROPS[tile.cropId].harvestAmount;
+      if (roomFor(bag, cropItemId(tile.cropId)) < amount) return refuse("bag-full");
       const result = harvest(tile);
       if (!result.ok) return refuse("gone");
-      const added = addItems(bag, itemId, result.harvested.amount);
+      const extras = pickExtras(farmer.progress, tile.cropId, random);
+      // A golden one instead, if there's room for it.
+      const itemId = extras.golden && roomFor(bag, goldenItemId(tile.cropId)) >= amount ? goldenItemId(tile.cropId) : cropItemId(tile.cropId);
+      const added = addItems(bag, itemId, amount);
       if (!added.ok || added.leftover > 0) return refuse("bag-full");
-      const next = setFarmerBag(setFarmTile(world, col, row, result.tile), farmerId, added.inventory);
-      return { ok: true, world: next, tile: result.tile, harvested: { itemId, count: result.harvested.amount } };
+      let after: Inventory = added.inventory;
+      const bonus: ItemStack[] = [];
+      for (const extra of extras.more ? [{ itemId, count: 1 }, ...extras.seeds] : extras.seeds) {
+        if (roomFor(after, extra.itemId) < extra.count) continue;
+        const more = addItems(after, extra.itemId, extra.count);
+        if (!more.ok) continue;
+        after = more.inventory;
+        bonus.push(extra);
+      }
+      const next = setFarmerBag(setFarmTile(world, col, row, result.tile), farmerId, after);
+      return { ok: true, world: next, tile: result.tile, harvested: { itemId, count: amount }, regrown: tile.regrown === true, ...(bonus.length ? { bonus } : {}) };
     }
   }
 }

@@ -13,6 +13,7 @@ import { newClock, type GameClock } from "../time/clock";
 import type { ForageId } from "../content/forage";
 import type { Forage } from "../foraging/forage";
 import { EMPTY_VILLAGE, type BuiltStep, type Village } from "../village/village";
+import { EMPTY_PROGRESS, type FarmerProgress } from "../progress/farmerProgress";
 
 /**
  * The whole shared world, as plain data. The server keeps one of these as the source of truth: the
@@ -69,11 +70,13 @@ export interface House {
   readonly furniture: readonly PlacedPiece[];
 }
 
-/** A person who plays: their look and their own bag. Bags belong to farmers, not devices. */
+/** A person who plays: their look, their own bag, and their own skills and badges. Bags belong to farmers, not devices. */
 export interface Farmer {
   readonly name: string;
   readonly character: CharacterId;
   readonly bag: Inventory;
+  /** Skills, the counts badges go by, and badges earned (Milestone 7). */
+  readonly progress: FarmerProgress;
 }
 
 /** Made by the server (never the client), kept on the device, and sent when joining. */
@@ -165,10 +168,10 @@ export function farmerOf(world: World, id: FarmerId): Farmer | undefined {
   return Object.hasOwn(world.farmers, id) ? world.farmers[id] : undefined;
 }
 
-/** A new farmer with the starter bag. A farmer who already exists is left as they are. */
+/** A new farmer with the starter bag, at level 1 in everything. A farmer who already exists is left as they are. */
 export function addFarmer(world: World, id: FarmerId, look: Look): World {
   if (farmerOf(world, id)) return world;
-  const farmer: Farmer = { name: look.name, character: look.character, bag: starterInventory() };
+  const farmer: Farmer = { name: look.name, character: look.character, bag: starterInventory(), progress: EMPTY_PROGRESS };
   return { ...world, farmers: { ...world.farmers, [id]: farmer } };
 }
 
@@ -195,6 +198,13 @@ export function setFarmerBag(world: World, id: FarmerId, bag: Inventory): World 
   const farmer = farmerOf(world, id);
   if (!farmer) return world;
   return { ...world, farmers: { ...world.farmers, [id]: { ...farmer, bag } } };
+}
+
+/** Replaces a farmer's progress (skills, counts, badges). */
+export function setFarmerProgress(world: World, id: FarmerId, progress: FarmerProgress): World {
+  const farmer = farmerOf(world, id);
+  if (!farmer) return world;
+  return { ...world, farmers: { ...world.farmers, [id]: { ...farmer, progress } } };
 }
 
 /** Everyone who has played, in the order they first joined: for the Who's playing screen. */

@@ -1,7 +1,10 @@
 import type { CollectResult } from "../collection/collect";
 import { FORAGE, FORAGE_IDS, type ForageGround, type ForageId } from "../content/forage";
 import { coveredTiles } from "../decor/pieces";
+import { PERK } from "../content/skills";
 import { addItems, roomFor } from "../inventory/inventory";
+import { hasPerk } from "../progress/farmerProgress";
+import type { RandomSource } from "../random/random";
 import { mixSeed, randomInt, randomSource, shuffled } from "../random/random";
 import type { TilePos } from "../world/map";
 import { farmerOf, setFarmerBag, type FarmerId, type World } from "../world/world";
@@ -92,16 +95,19 @@ export function forageAt(items: Forage, col: number, row: number): ForageItem | 
 /**
  * Picks up the driftwood or branch lying on (col, row) into the farmer's bag. All or nothing: with
  * no room it stays where it is. The caller has checked it's within reach. Materials aren't in the
- * collection book, so there are never any book events.
+ * collection book, so there are never any book events. With `random`, a farmer with Armful
+ * (Foraging level 7) now and then picks up two, if there's room.
  */
-export function collectForage(world: World, farmerId: FarmerId, col: number, row: number): CollectResult {
+export function collectForage(world: World, farmerId: FarmerId, col: number, row: number, random?: RandomSource): CollectResult {
   const farmer = farmerOf(world, farmerId);
   const found = forageAt(world.forage.items, col, row);
   if (!farmer || !found) return { ok: false, hint: { reason: "gone" } };
   if (roomFor(farmer.bag, found.itemId) < 1) return { ok: false, hint: { reason: "bag-full" } };
-  const added = addItems(farmer.bag, found.itemId, 1);
+  const armful = random !== undefined && hasPerk(farmer.progress, "armful") && random.next() < PERK.armful;
+  const count = armful && roomFor(farmer.bag, found.itemId) >= 2 ? 2 : 1;
+  const added = addItems(farmer.bag, found.itemId, count);
   if (!added.ok || added.leftover > 0) return { ok: false, hint: { reason: "bag-full" } };
   const items = world.forage.items.filter((item) => item !== found);
   const next = { ...setFarmerBag(world, farmerId, added.inventory), forage: { ...world.forage, items } };
-  return { ok: true, world: next, itemId: found.itemId, events: [] };
+  return { ok: true, world: next, itemId: found.itemId, count, events: [] };
 }

@@ -3,7 +3,8 @@ import { CROPS } from "../../../shared/content/crops";
 import { seedItemId } from "../../../shared/content/items";
 import { ripeStage } from "../../../shared/farming/farming";
 import { INVENTORY_SLOTS, newInventory, starterInventory } from "../../../shared/inventory/inventory";
-import { addFarmer, newWorld, setFarmTile, type World } from "../../../shared/world/world";
+import { EMPTY_PROGRESS } from "../../../shared/progress/farmerProgress";
+import { addFarmer, newWorld, setFarmTile, setFarmerProgress, type World } from "../../../shared/world/world";
 import type { SaveJson } from "./saveFormat";
 import { WORLD_SAVE, newWorldSave, worldFromSave, worldToSave, type WorldSave } from "./worldSave";
 
@@ -14,6 +15,15 @@ function busyWorld(): World {
   world = setFarmTile(world, 5, 6, { kind: "tilled", watered: true });
   world = setFarmTile(world, 4, 6, { kind: "planted", watered: false, cropId: "potato", stage: 1, daysInStage: 1 });
   world = setFarmTile(world, 12, 4, { kind: "planted", watered: true, cropId: "radish", stage: 3, daysInStage: 0 });
+  world = setFarmTile(world, 13, 4, { kind: "planted", watered: false, cropId: "strawberry", stage: 2, daysInStage: 1, regrown: true });
+  world = setFarmerProgress(world, "farmer-1", {
+    xp: { farming: 95, fishing: 31, foraging: 0 },
+    today: { day: 4, xp: { farming: 12, fishing: 0, foraging: 0 } },
+    stats: { crops: 20, fish: 6, given: 14 },
+    kinds: ["radish", "sardine", "potato"],
+    badges: { first_harvest: 2, first_catch: 3, moved_in: 2 },
+    gifts: [],
+  });
   return {
     ...world,
     houses: {
@@ -60,6 +70,7 @@ function busyWorld(): World {
       keeperDay: 2,
       projects: {
         lighthouse: { gathered: 1, built: 1, given: { driftwood: 4, "any:fish": 2, coins: 150 }, helpers: ["farmer-2", "farmer-1"], doneDay: null },
+        "house1:porch": { gathered: 0, built: 0, given: { driftwood: 5, coins: 500 }, helpers: ["farmer-2"], doneDay: null },
       },
     },
     forage: {
@@ -85,10 +96,10 @@ describe("the world save", () => {
     expect(loaded).toEqual(world);
   });
 
-  it("is version 4 and lists dug tiles in reading order", () => {
+  it("is version 5 and lists dug tiles in reading order", () => {
     const save = worldToSave(busyWorld());
-    expect(save.version).toBe(4);
-    expect(save.farm.map(({ col, row }) => `${col},${row}`)).toEqual(["12,4", "4,6", "5,6"]);
+    expect(save.version).toBe(5);
+    expect(save.farm.map(({ col, row }) => `${col},${row}`)).toEqual(["12,4", "13,4", "4,6", "5,6"]);
     expect(save.farmers["farmer-1"].bag).toHaveLength(INVENTORY_SLOTS);
   });
 
@@ -158,6 +169,15 @@ describe("the world save", () => {
       { forage: { day: 1, items: [{ itemId: "branch", col: 1, row: 1 }, { itemId: "driftwood", col: 1, row: 1 }] } },
       /two things on tile 1,1/,
     ],
+    ["a farmer without progress", { farmers: { a: { name: "x", character: "boy", bag: newInventory() } } }, /farmers.a.progress should be an object/],
+    ["a badge the game doesn't know", { farmers: { a: { name: "x", character: "boy", bag: newInventory(), progress: { ...EMPTY_PROGRESS, badges: { gold_star: 2 } } } } }, /badge the game doesn't know/],
+    ["a skill the game doesn't know", { farmers: { a: { name: "x", character: "boy", bag: newInventory(), progress: { ...EMPTY_PROGRESS, xp: { ...EMPTY_PROGRESS.xp, sailing: 3 } } } } }, /skill the game doesn't know/],
+    ["experience that isn't a whole number", { farmers: { a: { name: "x", character: "boy", bag: newInventory(), progress: { ...EMPTY_PROGRESS, xp: { ...EMPTY_PROGRESS.xp, fishing: -1 } } } } }, /progress.xp.fishing/],
+    ["a count the game doesn't know", { farmers: { a: { name: "x", character: "boy", bag: newInventory(), progress: { ...EMPTY_PROGRESS, stats: { naps: 3 } } } } }, /count the game doesn't know/],
+    ["a kind of thing that isn't an item", { farmers: { a: { name: "x", character: "boy", bag: newInventory(), progress: { ...EMPTY_PROGRESS, kinds: ["unicorn"] } } } }, /progress.kinds\[0\]/],
+    ["a regrown flag that isn't true or false", { farm: [{ col: 1, row: 1, kind: "planted", watered: false, cropId: "radish", stage: 0, daysInStage: 0, regrown: "yes" }] }, /regrown/],
+    ["an upgrade for a cottage the game doesn't know", { village: { keeperDay: 2, projects: { "house9:porch": { gathered: 0, built: 0, given: {}, helpers: [], doneDay: null } } } }, /village.projects has a project/],
+    ["an upgrade the game doesn't know", { village: { keeperDay: 2, projects: { "house1:pool": { gathered: 0, built: 0, given: {}, helpers: [], doneDay: null } } } }, /village.projects has a project/],
     [
       "a morning that built a step that isn't",
       { lastMorning: { day: 2, grew: 0, ready: 0, coins: 0, sale: { lines: [], total: 0 }, washedUp: [], foraged: [], built: [{ project: "lighthouse", step: 7 }] } },
@@ -168,7 +188,7 @@ describe("the world save", () => {
   });
 
   it("tidies an odd name or character instead of refusing the save", () => {
-    const save = WORLD_SAVE.validate(withPart({ farmers: { a: { name: "  ", character: "dragon", bag: starterInventory() } }, houses: {} }));
+    const save = WORLD_SAVE.validate(withPart({ farmers: { a: { name: "  ", character: "dragon", bag: starterInventory(), progress: EMPTY_PROGRESS } }, houses: {} }));
     expect(save.farmers.a).toMatchObject({ name: "Farmer", character: "villager4" });
   });
 

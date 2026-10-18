@@ -1,7 +1,8 @@
 import { BUGS, BUG_IDS, type BugId } from "./bugs";
 import { CROPS, type CropId } from "./crops";
 import { FISH, FISH_IDS, type FishId } from "./fish";
-import { FURNITURE, FURNITURE_IDS, FURNITURE_SELL_FRACTION, type FurnitureId } from "./furniture";
+import { FURNITURE, FURNITURE_IDS, FURNITURE_SELL_FRACTION, isGift, type FurnitureId } from "./furniture";
+import { PERK } from "./skills";
 
 /**
  * Everything a player can carry. Every number here is a first guess, meant to be tuned by playing.
@@ -39,6 +40,8 @@ export interface CropItemDef extends BaseItemDef {
   category: "crop";
   /** The crop this was harvested from. */
   cropId: CropId;
+  /** A golden one (Farming level 10's perk): it sells for more. */
+  golden?: boolean;
 }
 
 export interface ToolItemDef extends BaseItemDef {
@@ -100,6 +103,13 @@ export function cropItemId(cropId: CropId): CropId {
   return cropId;
 }
 
+export type GoldenCropId = `golden_${CropId}`;
+
+/** The golden crop a pick of `cropId` can give (Farming level 10). */
+export function goldenItemId(cropId: CropId): GoldenCropId {
+  return `golden_${cropId}`;
+}
+
 /** The furniture an item is, or null if it isn't furniture. */
 export function furnitureOf(itemId: string | null | undefined): FurnitureId | null {
   if (!isItemId(itemId)) return null;
@@ -153,6 +163,25 @@ const cropItems = Object.fromEntries(
     ];
   }),
 ) as Record<CropId, CropItemDef>;
+
+/** Golden crops: now and then a pick is golden, for a farmer at Farming level 10. Never bought. */
+const goldenItems = Object.fromEntries(
+  CROP_IDS.map((cropId): [GoldenCropId, CropItemDef] => {
+    const crop = CROPS[cropId];
+    return [
+      goldenItemId(cropId),
+      {
+        id: goldenItemId(cropId),
+        name: `Golden ${crop.name}`,
+        category: "crop",
+        cropId,
+        golden: true,
+        maxStack: STACK,
+        sellPrice: crop.sellPrice * PERK.goldenPrice,
+      },
+    ];
+  }),
+) as Record<GoldenCropId, CropItemDef>;
 
 const toolData = {
   hoe: { id: "hoe", name: "Hoe", category: "tool", maxStack: 1, buyPrice: 100 },
@@ -232,7 +261,10 @@ const bugItems = Object.fromEntries(
   }),
 ) as Record<BugId, BugItemDef>;
 
-/** Bought at the general store, put down in your house or on the farm. They ship back for about half. */
+/**
+ * Bought at the general store, put down in your house or on the farm. They ship back for about half.
+ * A skill's gifts aren't sold at the store, so they have no buyPrice.
+ */
 const furnitureItems = Object.fromEntries(
   FURNITURE_IDS.map((furnitureId): [FurnitureId, FurnitureItemDef] => {
     const piece = FURNITURE[furnitureId];
@@ -244,7 +276,7 @@ const furnitureItems = Object.fromEntries(
         category: "furniture",
         furnitureId,
         maxStack: STACK,
-        buyPrice: piece.price,
+        ...(isGift(furnitureId) ? {} : { buyPrice: piece.price }),
         sellPrice: Math.floor(piece.price * FURNITURE_SELL_FRACTION),
       },
     ];
@@ -254,6 +286,7 @@ const furnitureItems = Object.fromEntries(
 export type ItemId =
   | SeedItemId
   | CropId
+  | GoldenCropId
   | keyof typeof toolData
   | keyof typeof beachData
   | keyof typeof materialData
@@ -261,10 +294,11 @@ export type ItemId =
   | BugId
   | FurnitureId;
 
-/** Every item, grouped seeds, crops, tools, beach finds, materials, fish, bugs, furniture. Shop and bag listings follow this order. */
+/** Every item, grouped seeds, crops (then golden ones), tools, beach finds, materials, fish, bugs, furniture. Shop and bag listings follow this order. */
 export const ITEMS: Readonly<Record<ItemId, ItemDef>> = {
   ...seedItems,
   ...cropItems,
+  ...goldenItems,
   ...toolData,
   ...beachData,
   ...materialData,

@@ -15,11 +15,13 @@ import { FISH_ART } from "./fish";
 import { FISHING_FRAMES, fishingFrames } from "./fishing";
 import { crateClosed, crateOpen } from "./crate";
 import { CROP_ART, CROP_LEGEND, PACKET, PACKET_PICTURE, SEEDS } from "./crops";
+import { golden } from "./golden";
 import { PACK_EMOTES, emoteFrames } from "./emotes";
 import { Img, fromGrid, outline, packRows } from "./lib/image";
 import { MARKERS } from "./markers";
 import { seedStand } from "./seedStand";
 import { FRAME, SEASIDE, SEASIDE_FRAMES } from "./seaside";
+import { REWARDS, REWARD_FRAMES } from "./rewards";
 import { SAND_GRASS, SAND_WATER, recolourBlock } from "./sand";
 import { soilTile } from "./soil";
 import { UI_ICONS } from "./ui";
@@ -67,6 +69,12 @@ function renderCrops(): void {
     frameHeight: T,
     layout: "One row per crop. Columns 0..n-1: growth stages, seed to ripe. Column 5: harvested item. Column 6: seed packet.",
     crops,
+  });
+  save("golden-crops", packRows([rows.map((frames) => golden(frames[ITEM_COL]!))], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    frames: Object.fromEntries(Object.keys(CROP_ART).map((id, i) => [`golden_${id}`, i])),
+    note: "Golden crops (Farming level 10): each crop's harvested item in gold, one row in crops.ts order.",
   });
 }
 
@@ -172,6 +180,25 @@ function renderSeaside(): void {
   });
 }
 
+function renderRewards(): void {
+  const names = Object.keys(REWARDS) as (keyof typeof REWARDS)[];
+  const frames = names.map((n) => outline(REWARDS[n]()));
+  // Every pixel must be inside the rectangle the game cuts the picture out by.
+  frames.forEach((img, i) => {
+    const r = REWARD_FRAMES[names[i]];
+    for (let y = 0; y < img.h; y++)
+      for (let x = 0; x < img.w; x++) {
+        if (img.opaque(x, y) && (x < r.x || y < r.y || x >= r.x + r.w || y >= r.y + r.h)) throw new Error(`${names[i]}: pixel ${x},${y} is outside its rectangle`);
+      }
+  });
+  save("reward-furniture", packRows([frames], FRAME, FRAME), {
+    frameWidth: FRAME,
+    frameHeight: FRAME,
+    frames: Object.fromEntries(names.map((n, i) => [n, { frame: i, ...REWARD_FRAMES[n] }])),
+    note: "Gifts for reaching a skill level. Each picture sits inside its 32×32 frame at the given rectangle; client/src/art/furnitureArt.ts cuts them out.",
+  });
+}
+
 function renderFish(): void {
   const frames = FISH_IDS.map((id) => outline(fromGrid(FISH_ART[id].grid, FISH_ART[id].legend)));
   save("fish", packRows([frames], T, T), {
@@ -242,6 +269,7 @@ renderMarkers();
 renderEmotes();
 renderUiIcons();
 renderSeaside();
+renderRewards();
 renderFish();
 renderBugs();
 renderFishing();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FURNITURE, FURNITURE_IDS, blocksWalking, footprintOf, goesIn, isFurnitureId, nextTurn } from "./furniture";
+import { FURNITURE, FURNITURE_IDS, blocksWalking, footprintOf, goesIn, isFurnitureId, isGift, nextTurn } from "./furniture";
 import { ITEMS, furnitureOf } from "./items";
 
 describe("furniture data", () => {
@@ -22,11 +22,11 @@ describe("furniture data", () => {
     });
   }
 
-  it("is an item each, sold at the store and shipped back for half", () => {
+  it("is an item each, sold at the store (but for a skill's gifts) and shipped back for half", () => {
     for (const id of FURNITURE_IDS) {
       const item = ITEMS[id];
       expect(item.category).toBe("furniture");
-      expect(item.buyPrice).toBe(FURNITURE[id].price);
+      expect(item.buyPrice).toBe(isGift(id) ? undefined : FURNITURE[id].price);
       expect(item.sellPrice).toBe(Math.floor(FURNITURE[id].price / 2));
       expect(furnitureOf(id)).toBe(id);
     }

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { currentVersion, upgradeSave } from "./saveFormat";
 import { SAVE_FILE, SaveStore } from "./saveStore";
 import { WORLD_ID, WORLD_SAVE, worldFromSave } from "./worldSave";
+import { EMPTY_PROGRESS } from "../../../shared/progress/farmerProgress";
 
 /**
  * Every save shape that has ever reached the real farm, kept as a fixture in fixtures/ and loaded
@@ -217,6 +218,60 @@ describe("version 4 (Milestone 6: Marlow, the board and the lighthouse)", () => 
     expect(loaded.forage.items.filter((i) => i.itemId === "branch")).toHaveLength(2);
     expect(loaded.lastMorning?.built).toEqual([{ project: "lighthouse", step: 0 }]);
     expect(loaded.farmers[PIP].bag[6]).toEqual({ itemId: "driftwood", count: 3 });
+  });
+});
+
+describe("every save from before Milestone 7", () => {
+  for (const name of ["world-v1.json", "world-v2.json", "world-v3.json", "world-v4.json"]) {
+    it(`${name} comes through with every farmer at level 1, nothing counted and no badges, and everything else as it was`, () => {
+      const before = worldFromSave(upgradeSave(readFixture(name), WORLD_SAVE, name).save);
+      for (const farmer of Object.values(before.farmers)) expect(farmer.progress).toEqual(EMPTY_PROGRESS);
+      // Nothing on the farm is marked as grown back: the first pick of an old strawberry counts in full.
+      for (const tile of Object.values(before.farm)) expect("regrown" in tile).toBe(false);
+      const raw = JSON.parse(readFixture(name));
+      for (const id of Object.keys(raw.farmers)) {
+        expect(before.farmers[id].name).toBe(raw.farmers[id].name);
+        expect(before.farmers[id].bag.filter((slot) => slot && slot.itemId !== "fishing_rod")).toEqual(
+          (raw.farmers[id].bag as unknown[]).filter((slot) => slot && (slot as { itemId: string }).itemId !== "fishing_rod"),
+        );
+      }
+      if (raw.village) expect(before.village).toEqual(raw.village);
+    });
+  }
+});
+
+describe("version 5 (Milestone 7: skills, badges and porches)", () => {
+  const world = () => worldFromSave(upgradeSave(readFixture("world-v5.json"), WORLD_SAVE, "world-v5.json").save);
+
+  it("keeps each farmer's skills, counts, kinds, badges and gifts", () => {
+    const loaded = world();
+    expect(loaded.farmers[PIP].progress.xp).toEqual({ farming: 212, fishing: 96, foraging: 41 });
+    expect(loaded.farmers[PIP].progress.badges.helping_hand).toBe(14);
+    expect(loaded.farmers[PIP].progress.gifts).toEqual(["straw_hat"]);
+    expect(loaded.farmers[JUNO].progress.stats).toMatchObject({ fish: 44, nightFish: 3, sleepovers: 1 });
+    expect(loaded.farmers[JUNO].progress.kinds).toContain("lanternfish");
+    expect(loaded.farmers[JUNO].progress.today).toEqual({ day: 16, xp: { farming: 0, fishing: 21, foraging: 0 } });
+  });
+
+  it("keeps both porches, one built and one half given, and the morning that built it", () => {
+    const loaded = world();
+    expect(loaded.village.projects["house2:porch"]).toMatchObject({ gathered: 1, built: 1, doneDay: 17 });
+    expect(loaded.village.projects["house1:porch"]).toEqual({
+      gathered: 0,
+      built: 0,
+      given: { driftwood: 7, branch: 8, coins: 900 },
+      helpers: [JUNO],
+      doneDay: null,
+    });
+    expect(loaded.lastMorning?.built).toEqual([{ project: "house2:porch", step: 0 }]);
+  });
+
+  it("keeps a regrown strawberry, a golden radish and the gifts", () => {
+    const loaded = world();
+    expect(loaded.farm["9,6"]).toEqual({ kind: "planted", watered: false, cropId: "strawberry", stage: 2, daysInStage: 0, regrown: true });
+    expect(loaded.farmers[PIP].bag[13]).toEqual({ itemId: "golden_radish", count: 1 });
+    expect(loaded.farmers[PIP].bag[12]).toEqual({ itemId: "straw_hat", count: 1 });
+    expect(loaded.houses.house2.furniture).toContainEqual({ itemId: "mounted_fish", col: 4, row: 0, turn: 0 });
   });
 });
 

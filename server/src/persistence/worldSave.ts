@@ -4,7 +4,10 @@ import { isBugId } from "../../../shared/content/bugs";
 import { CROPS, isCropId } from "../../../shared/content/crops";
 import { isFishId } from "../../../shared/content/fish";
 import { isForageId, type ForageId } from "../../../shared/content/forage";
-import { PROJECTS, isProjectId, needKey, type ProjectDef } from "../../../shared/content/projects";
+import { isProjectId, needKey, projectDef, type ProjectDef } from "../../../shared/content/projects";
+import { isBadgeId } from "../../../shared/content/badges";
+import { SKILL_IDS } from "../../../shared/content/skills";
+import { isStatId, type FarmerProgress } from "../../../shared/progress/farmerProgress";
 import type { BuiltStep } from "../../../shared/village/village";
 import { FURNITURE, isFurnitureId } from "../../../shared/content/furniture";
 import type { PlacedPiece } from "../../../shared/decor/pieces";
@@ -38,6 +41,8 @@ export type SavedFarmTile = { col: number; row: number } & Exclude<FarmTile, { k
  * JSON. Version 2: version 1 (Milestone 2) plus the houses and the farm's decorations (Milestone 4).
  * Version 3: plus the world seed, the beach and the collection book (Milestone 5).
  * Version 4: plus the village (Marlow and the projects) and the driftwood and branches lying about (Milestone 6).
+ * Version 5: plus each farmer's progress (skills, the counts badges go by, badges and gifts), house
+ * upgrades among the projects ("house1:porch"), and regrown crops marked on the farm (Milestone 7).
  *
  * To change this shape once it has reached the real farm: add a migration below that turns the
  * previous version into the new one, then update this type, `validate` and the converters.
@@ -50,7 +55,7 @@ export interface WorldSave {
   crate: { itemId: ItemId; count: number }[];
   /** Dug tiles only, sorted by row then column. */
   farm: SavedFarmTile[];
-  farmers: Record<string, { name: string; character: string; bag: Slot[] }>;
+  farmers: Record<string, { name: string; character: string; bag: Slot[]; progress: FarmerProgress }>;
   lastMorning: MorningReport | null;
   /** The cottages someone has moved into, by house id: who lives there and their furniture (in floor tiles). Since version 2. */
   houses: Record<string, { owner: string; furniture: SavedPiece[] }>;
@@ -103,6 +108,33 @@ const migrations: Migration[] = [
     village: { keeperDay: 0, projects: {} },
     forage: { day: 0, items: [] },
     lastMorning: isJsonObject(save.lastMorning) ? { ...save.lastMorning, foraged: [], built: [] } : save.lastMorning,
+  }),
+  // 4 → 5 (Milestone 7): every farmer starts at level 1 in every skill, with nothing counted, no
+  // badges and no gifts: nobody gets experience for play before skills existed. Badges that follow
+  // from the world as it is (a cottage of your own, the lighthouse lit) come on first joining, not
+  // here. Everything else comes through untouched.
+  (save) => ({
+    ...save,
+    farmers: isJsonObject(save.farmers)
+      ? Object.fromEntries(
+          Object.entries(save.farmers).map(([id, farmer]) => [
+            id,
+            isJsonObject(farmer)
+              ? {
+                  ...farmer,
+                  progress: {
+                    xp: { farming: 0, fishing: 0, foraging: 0 },
+                    today: { day: 0, xp: { farming: 0, fishing: 0, foraging: 0 } },
+                    stats: {},
+                    kinds: [],
+                    badges: {},
+                    gifts: [],
+                  },
+                }
+              : farmer,
+          ]),
+        )
+      : save.farmers,
   }),
 ];
 
@@ -210,7 +242,7 @@ export function worldToSave(world: World): WorldSave {
     farmers: Object.fromEntries(
       Object.entries(world.farmers).map(([id, farmer]) => [
         id,
-        { name: farmer.name, character: farmer.character, bag: farmer.bag.map((slot) => slot && { ...slot }) },
+        { name: farmer.name, character: farmer.character, bag: farmer.bag.map((slot) => slot && { ...slot }), progress: progressToSave(farmer.progress) },
       ]),
     ),
     lastMorning: world.lastMorning,
@@ -236,6 +268,18 @@ export function worldToSave(world: World): WorldSave {
 
 const pieceToSave = ({ itemId, col, row, turn }: PlacedPiece): SavedPiece => ({ itemId, col, row, turn });
 
+/** A farmer's progress as plain JSON (copies, so the save never shares objects with the world). */
+function progressToSave(progress: FarmerProgress): FarmerProgress {
+  return {
+    xp: { ...progress.xp },
+    today: { day: progress.today.day, xp: { ...progress.today.xp } },
+    stats: { ...progress.stats },
+    kinds: [...progress.kinds],
+    badges: { ...progress.badges },
+    gifts: [...progress.gifts],
+  };
+}
+
 /** A saved piece as the rules see it (it has passed `validate`, so its item is furniture). */
 const pieceFromSave = (piece: SavedPiece): PlacedPiece => piece as PlacedPiece;
 
@@ -245,7 +289,7 @@ export function worldFromSave(save: WorldSave): World {
   for (const { col, row, ...tile } of save.farm) farm[tileKey(col, row)] = tile as FarmTile;
   const farmers: Record<string, Farmer> = {};
   for (const [id, farmer] of Object.entries(save.farmers)) {
-    farmers[id] = { ...lookFrom(farmer), bag: farmer.bag };
+    farmers[id] = { ...lookFrom(farmer), bag: farmer.bag, progress: farmer.progress };
   }
   return {
     clock: { ...save.clock },
@@ -326,12 +370,13 @@ function farmTile(value: unknown, path: string): SavedFarmTile {
   const row = whole(tile.row, `${path}.row`, 0, MAX_TILE);
   const watered = boolean(tile.watered, `${path}.watered`);
   if (tile.kind === "tilled") return { col, row, kind: "tilled", watered };
+  const regrown = tile.regrown === undefined ? false : boolean(tile.regrown, `${path}.regrown`);
   if (tile.kind !== "planted") throw new Error(`${path}.kind should be "tilled" or "planted", not ${JSON.stringify(tile.kind)}`);
   if (!isCropId(tile.cropId)) throw new Error(`${path}.cropId isn't a crop the game knows: ${JSON.stringify(tile.cropId)}`);
   const crop = CROPS[tile.cropId];
   const stage = Math.min(whole(tile.stage, `${path}.stage`, 0), ripeStage(crop));
   const daysInStage = Math.min(whole(tile.daysInStage, `${path}.daysInStage`, 0), crop.daysPerStage - 1);
-  return { col, row, kind: "planted", watered, cropId: tile.cropId, stage, daysInStage };
+  return { col, row, kind: "planted", watered, cropId: tile.cropId, stage, daysInStage, ...(regrown ? { regrown: true as const } : {}) };
 }
 
 function savedFarmer(value: unknown, path: string): WorldSave["farmers"][string] {
@@ -340,7 +385,45 @@ function savedFarmer(value: unknown, path: string): WorldSave["farmers"][string]
   if (bag.length !== INVENTORY_SLOTS) throw new Error(`${path}.bag should have ${INVENTORY_SLOTS} slots, not ${bag.length}`);
   // An odd name or character never blocks the farm: they're tidied up like any other look.
   const look = lookFrom(farmer);
-  return { name: look.name, character: look.character, bag: bag.map((slot, i) => bagStack(slot, `${path}.bag[${i}]`)) };
+  return {
+    name: look.name,
+    character: look.character,
+    bag: bag.map((slot, i) => bagStack(slot, `${path}.bag[${i}]`)),
+    progress: savedProgress(farmer.progress, `${path}.progress`),
+  };
+}
+
+/**
+ * A farmer's progress (since version 5). Unknown skills, counts, badges and items stop the load,
+ * like an unknown item in a bag: renaming one is a migration.
+ */
+function savedProgress(value: unknown, path: string): FarmerProgress {
+  const progress = object(value, path);
+  const skills = (raw: unknown, at: string) => {
+    const xp = object(raw, at);
+    for (const key of Object.keys(xp)) if (!(SKILL_IDS as readonly string[]).includes(key)) throw new Error(`${at} has a skill the game doesn't know: ${JSON.stringify(key)}`);
+    return { farming: whole(xp.farming, `${at}.farming`, 0), fishing: whole(xp.fishing, `${at}.fishing`, 0), foraging: whole(xp.foraging, `${at}.foraging`, 0) };
+  };
+  const today = object(progress.today, `${path}.today`);
+  const stats: Record<string, number> = {};
+  for (const [key, count] of Object.entries(object(progress.stats, `${path}.stats`))) {
+    if (!isStatId(key)) throw new Error(`${path}.stats has a count the game doesn't know: ${JSON.stringify(key)}`);
+    stats[key] = whole(count, `${path}.stats.${key}`, 0);
+  }
+  const badges: Record<string, number> = {};
+  for (const [key, day] of Object.entries(object(progress.badges, `${path}.badges`))) {
+    if (!isBadgeId(key)) throw new Error(`${path}.badges has a badge the game doesn't know: ${JSON.stringify(key)}`);
+    badges[key] = whole(day, `${path}.badges.${key}`, 1);
+  }
+  const items = (raw: unknown, at: string) => [...new Set(array(raw, at).map((id, i) => itemId(id, `${at}[${i}]`)))];
+  return {
+    xp: skills(progress.xp, `${path}.xp`),
+    today: { day: whole(today.day, `${path}.today.day`, 0), xp: skills(today.xp, `${path}.today.xp`) },
+    stats,
+    kinds: items(progress.kinds, `${path}.kinds`),
+    badges,
+    gifts: items(progress.gifts, `${path}.gifts`),
+  };
 }
 
 /**
@@ -471,14 +554,14 @@ function morningReport(value: unknown, path: string): MorningReport {
       const at = `${path}.built[${i}]`;
       const built = object(entry, at);
       if (!isProjectId(built.project)) throw new Error(`${at}.project isn't a project the game knows: ${JSON.stringify(built.project)}`);
-      return { project: built.project, step: whole(built.step, `${at}.step`, 0, PROJECTS[built.project].steps.length - 1) };
+      return { project: built.project, step: whole(built.step, `${at}.step`, 0, projectDef(built.project)!.steps.length - 1) };
     }),
   };
 }
 
 /**
  * The village. An unknown project stops the load, like an unknown item (renaming one is a
- * migration). Its numbers are kept within today's project data rather than refused, so tuning a
+ * migration); house upgrades ("house1:porch", since version 5) are projects too. Its numbers are kept within today's project data rather than refused, so tuning a
  * step never stops a save loading: steps past the end are dropped, gifts to needs a step no longer
  * has are dropped, and a step whose needs are now all in counts as gathered (to be built tonight).
  * Helpers who aren't farmers in this save are left out.
@@ -491,7 +574,7 @@ function savedVillage(value: unknown, path: string, farmers: SaveJson): WorldSav
       Object.entries(object(village.projects, `${path}.projects`)).map(([id, entry]) => {
         const at = `${path}.projects.${id}`;
         if (!isProjectId(id)) throw new Error(`${path}.projects has a project the game doesn't know: ${JSON.stringify(id)}`);
-        return [id, savedProject(PROJECTS[id], object(entry, at), at, farmers)];
+        return [id, savedProject(projectDef(id)!, object(entry, at), at, farmers)];
       }),
     ),
   };

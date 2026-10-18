@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EMPTY_PROGRESS } from "../progress/farmerProgress";
 import { STARTING_COINS } from "../economy/wallet";
 import { UNTILLED } from "../farming/farming";
 import { starterInventory } from "../inventory/inventory";
@@ -71,7 +72,7 @@ describe("farmers", () => {
 
   it("start with the starter bag", () => {
     const world = addFarmer(newWorld(), "a1", pip);
-    expect(farmerOf(world, "a1")).toEqual({ name: "Pip", character: "woman", bag: starterInventory() });
+    expect(farmerOf(world, "a1")).toEqual({ name: "Pip", character: "woman", bag: starterInventory(), progress: EMPTY_PROGRESS });
   });
 
   it("aren't replaced by adding them again", () => {
@@ -82,7 +83,7 @@ describe("farmers", () => {
   it("keep their bag when their look changes", () => {
     const world = setFarmerBag(addFarmer(newWorld(), "a1", pip), "a1", []);
     const changed = setFarmerLook(world, "a1", { name: "Juno", character: "boy" });
-    expect(farmerOf(changed, "a1")).toEqual({ name: "Juno", character: "boy", bag: [] });
+    expect(farmerOf(changed, "a1")).toEqual({ name: "Juno", character: "boy", bag: [], progress: EMPTY_PROGRESS });
     expect(setFarmerLook(changed, "a1", { name: "Juno", character: "boy" })).toBe(changed);
   });
 

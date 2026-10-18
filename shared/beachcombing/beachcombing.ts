@@ -50,6 +50,8 @@ export interface Tide {
    * many times as often as usual. Invisible, and it can't be gamed.
    */
   luck?: { finds: readonly BeachFindId[]; times: number };
+  /** This many more than the morning's usual (Extra tide, Foraging level 5), never past the most the beach holds. */
+  extra?: number;
 }
 
 /** How much more often a find the board is waiting for washes up (Marlow's luck). */
@@ -72,7 +74,7 @@ function key(col: number, row: number): string {
  * come in. Never more than one find per tile, never on a blocked tile, and
  * never more than BEACHCOMBING.maxOnBeach on the sand in all.
  */
-export function washUpFinds({ day, worldSeed, sandTiles, blocked = [], beach, luck }: Tide): WashedUp {
+export function washUpFinds({ day, worldSeed, sandTiles, blocked = [], beach, luck, extra = 0 }: Tide): WashedUp {
   const weight = (id: BeachFindId) => RARITY_WEIGHTS[BEACH_FINDS[id].rarity] * (luck?.finds.includes(id) ? luck.times : 1);
   const room = BEACHCOMBING.maxOnBeach - beach.length;
   if (room <= 0) return { beach, washedUp: [] };
@@ -87,7 +89,7 @@ export function washUpFinds({ day, worldSeed, sandTiles, blocked = [], beach, lu
   const freeTiles = [...free.values()].sort((a, b) => a.row - b.row || a.col - b.col);
 
   const random = randomSource(mixSeed(worldSeed, day, BEACH_SALT));
-  const count = Math.min(randomInt(random, BEACHCOMBING.perMorning), room, freeTiles.length);
+  const count = Math.min(randomInt(random, BEACHCOMBING.perMorning) + Math.max(0, extra), room, freeTiles.length);
   const washedUp: BeachFind[] = [];
   for (const { col, row } of shuffled(random, freeTiles).slice(0, count)) {
     const findId = pickWeighted(random, BEACH_FIND_IDS, weight);

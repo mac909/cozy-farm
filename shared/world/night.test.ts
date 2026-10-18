@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EMPTY_PROGRESS } from "../progress/farmerProgress";
 import { CROPS } from "../content/crops";
 import { ripeStage, type FarmTile, type PlantedTile } from "../farming/farming";
 import { DAY_START_MINUTE } from "../time/clock";
@@ -102,7 +103,7 @@ describe("endNight", () => {
   });
 
   it("leaves the farmers alone", () => {
-    const before: World = { ...newWorld(), farmers: { pip: { name: "Pip", character: "woman", bag: [] } } };
+    const before: World = { ...newWorld(), farmers: { pip: { name: "Pip", character: "woman", bag: [], progress: EMPTY_PROGRESS } } };
     expect(endNight(before).world.farmers).toBe(before.farmers);
   });
 });

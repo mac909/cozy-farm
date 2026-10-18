@@ -1,10 +1,12 @@
 import type { BeachFindId } from "../content/beachFinds";
 import { isBeachFindId } from "../content/beachFinds";
 import { ITEMS, type ItemId } from "../content/items";
-import { PROJECTS, PROJECT_IDS, isProjectId, needKey, type Need, type NeedKey, type ProjectDef } from "../content/projects";
+import { HOUSE_UPGRADE_IDS, HOUSE_UPGRADES } from "../content/houseUpgrades";
+import { PROJECTS, PROJECT_IDS, houseProject, isProjectId, needKey, projectDef, type Need, type NeedKey, type ProjectDef } from "../content/projects";
 import type { Hint, HintReason } from "../farming/actions";
 import { isSlotIndex, removeFromSlot, removeItems, type Inventory } from "../inventory/inventory";
-import { farmerOf, setFarmerBag, type FarmerId, type World } from "../world/world";
+import { farmerOf, setFarmerBag, type FarmerId, type House, type World } from "../world/world";
+import { builtThings } from "./built";
 import { NOT_STARTED, type BuiltStep, type ProjectProgress, type Village } from "./village";
 
 /**
@@ -66,6 +68,41 @@ export function openProjects(world: Pick<World, "village" | "clock">): ProjectDe
   return open;
 }
 
+/** Who lives where, enough to know which cottages can have upgrades. */
+type Owners = Readonly<Record<string, Pick<House, "owner">>>;
+
+/**
+ * The house upgrades up on the board's Your home tab now (Milestone 7): for every cottage someone
+ * lives in, each upgrade whose village project is built ("after the lighthouse") and that isn't
+ * built yet. `first`: that farmer's own cottage comes first. Several can be up at once.
+ */
+export function openUpgrades(world: Pick<World, "village" | "clock"> & { houses: Owners }, first?: FarmerId): ProjectDef[] {
+  if (!keeperHere(world)) return [];
+  const built = builtThings(world);
+  const houses = Object.keys(world.houses).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (first !== undefined) houses.sort((a, b) => Number(world.houses[b].owner === first) - Number(world.houses[a].owner === first));
+  const open: ProjectDef[] = [];
+  for (const houseId of houses) {
+    for (const upgrade of HOUSE_UPGRADE_IDS) {
+      if (!built.has(HOUSE_UPGRADES[upgrade].after)) continue;
+      const project = houseProject(houseId, upgrade);
+      if (!isFinished(project, progressOf(world.village, project.id))) open.push(project);
+    }
+  }
+  return open;
+}
+
+/** Whether a project takes gifts now: the village's one up on the board, or a house upgrade that's up. */
+export function isOpen(world: Pick<World, "village" | "clock"> & { houses?: Owners }, projectId: string): boolean {
+  if (openProjects(world).some((p) => p.id === projectId)) return true;
+  return world.houses !== undefined && openUpgrades({ ...world, houses: world.houses }).some((p) => p.id === projectId);
+}
+
+/** Everything taking gifts at the board: the village's project, then the house upgrades (`first`'s own cottage first). */
+export function everythingOpen(world: Pick<World, "village" | "clock"> & { houses?: Owners }, first?: FarmerId): ProjectDef[] {
+  return [...openProjects(world), ...(world.houses ? openUpgrades({ ...world, houses: world.houses }, first) : [])];
+}
+
 /** Projects with every step built, in order. */
 export function finishedProjects(village: Village): ProjectDef[] {
   return PROJECT_IDS.map((id) => PROJECTS[id]).filter((project) => isFinished(project, progressOf(village, project.id)));
@@ -107,9 +144,16 @@ export function canGive(view: NeedView, bag: Inventory, coins: number): number {
   return Math.min(view.left, have);
 }
 
-/** The open project and need that want an item, and how many more of it they'd take, or null. */
-export function wantedFor(world: Pick<World, "village" | "clock">, itemId: ItemId): { project: ProjectDef; key: NeedKey; left: number } | null {
-  for (const project of openProjects(world)) {
+/**
+ * The open project and need that want an item, and how many more of it they'd take, or null. The
+ * village's project first, then the house upgrades (with `houses`), `farmerId`'s own cottage first.
+ */
+export function wantedFor(
+  world: Pick<World, "village" | "clock"> & { houses?: Owners },
+  itemId: ItemId,
+  farmerId?: FarmerId,
+): { project: ProjectDef; key: NeedKey; left: number } | null {
+  for (const project of everythingOpen(world, farmerId)) {
     const progress = progressOf(world.village, project.id);
     const step = givingStep(project, progress);
     if (step === null) continue;
@@ -122,9 +166,9 @@ export function wantedFor(world: Pick<World, "village" | "clock">, itemId: ItemI
 }
 
 /** Beach finds a step being gathered still asks for by name: they wash up more often (Marlow's luck). */
-export function wantedFinds(world: Pick<World, "village" | "clock">): BeachFindId[] {
+export function wantedFinds(world: Pick<World, "village" | "clock"> & { houses?: Owners }): BeachFindId[] {
   const finds: BeachFindId[] = [];
-  for (const project of openProjects(world)) {
+  for (const project of everythingOpen(world)) {
     const progress = progressOf(world.village, project.id);
     const step = givingStep(project, progress);
     if (step === null) continue;
@@ -174,9 +218,9 @@ function takeFromBag(bag: Inventory, need: Need, count: number, slot: number | u
  */
 export function giveToProject(world: World, farmerId: FarmerId, projectId: string, key: NeedKey, slot?: number): GiveResult {
   const farmer = farmerOf(world, farmerId);
-  if (!farmer || !isProjectId(projectId)) return refuse("gone");
-  const project = PROJECTS[projectId];
-  if (!openProjects(world).includes(project)) return refuse("not-open");
+  const project = isProjectId(projectId) ? projectDef(projectId) : undefined;
+  if (!farmer || !project) return refuse("gone");
+  if (!isOpen(world, projectId)) return refuse("not-open");
   const progress = progressOf(world.village, projectId);
   const step = givingStep(project, progress);
   if (step === null) return refuse("step-waiting");
@@ -214,8 +258,8 @@ export function giveToProject(world: World, farmerId: FarmerId, projectId: strin
  * of a kind" (so the sea glass goes to the sea glass). Never coins: they have their own button.
  */
 export function giveEverything(world: World, farmerId: FarmerId, projectId: string): GiveResult {
-  if (!isProjectId(projectId)) return refuse("gone");
-  const project = PROJECTS[projectId];
+  const project = isProjectId(projectId) ? projectDef(projectId) : undefined;
+  if (!project) return refuse("gone");
   const progress = progressOf(world.village, projectId);
   const step = givingStep(project, progress);
   if (step === null) return giveToProject(world, farmerId, projectId, "coins");
@@ -249,9 +293,10 @@ export function buildOvernight(world: World): { world: World; built: BuiltStep[]
   const built: BuiltStep[] = [];
   const projects: Record<string, ProjectProgress> = { ...world.village.projects };
   for (const [id, progress] of Object.entries(world.village.projects)) {
-    if (!isProjectId(id) || progress.gathered <= progress.built) continue;
+    const project = isProjectId(id) ? projectDef(id) : undefined;
+    if (!project || progress.gathered <= progress.built) continue;
     for (let step = progress.built; step < progress.gathered; step++) built.push({ project: id, step });
-    const finished = progress.gathered >= PROJECTS[id].steps.length;
+    const finished = progress.gathered >= project.steps.length;
     projects[id] = { ...progress, built: progress.gathered, doneDay: finished ? world.clock.day : progress.doneDay };
   }
   if (built.length === 0) return { world, built };
@@ -259,11 +304,13 @@ export function buildOvernight(world: World): { world: World; built: BuiltStep[]
 }
 
 /**
- * For testing (the dev command, and tests): the open project's step gets everything it asks for,
- * from nowhere, given by `farmerId`. Real play never calls this.
+ * For testing (the dev command, and tests): a project's step gets everything it asks for, from
+ * nowhere, given by `farmerId`: `projectId`'s, or the village's open project, or else the farmer's
+ * own cottage's upgrade (or anyone's). Real play never calls this.
  */
-export function fillStep(world: World, farmerId: FarmerId): GiveResult {
-  const project = openProjects(world)[0];
+export function fillStep(world: World, farmerId: FarmerId, projectId?: string): GiveResult {
+  const open = everythingOpen(world, farmerId);
+  const project = projectId === undefined ? open[0] : open.find((p) => p.id === projectId);
   if (!project) return refuse("not-open");
   const progress = progressOf(world.village, project.id);
   const step = givingStep(project, progress);

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { isForSale } from "../economy/shop";
-import { FURNITURE_IDS } from "./furniture";
+import { FURNITURE_IDS, isGift } from "./furniture";
 import { ITEMS } from "./items";
 import { GENERAL_STORE_STOCK, STORE_SHELVES } from "./generalStore";
 
 describe("the general store", () => {
-  it("sells every piece of furniture, once each", () => {
+  it("sells every piece of furniture but a skill's gifts, once each", () => {
     expect(new Set(GENERAL_STORE_STOCK).size).toBe(GENERAL_STORE_STOCK.length);
-    expect([...GENERAL_STORE_STOCK].sort()).toEqual([...FURNITURE_IDS].sort());
+    expect([...GENERAL_STORE_STOCK].sort()).toEqual(FURNITURE_IDS.filter((id) => !isGift(id)).sort());
     for (const id of GENERAL_STORE_STOCK) {
       expect(ITEMS[id].category).toBe("furniture");
       expect(isForSale(id)).toBe(true);

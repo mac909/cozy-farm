@@ -1,5 +1,6 @@
 import type Phaser from "phaser";
 import { BUG_IDS } from "../../../shared/content/bugs";
+import { CROPS, type CropId } from "../../../shared/content/crops";
 import { FISH_IDS } from "../../../shared/content/fish";
 import { ITEMS, type ItemId } from "../../../shared/content/items";
 import {
@@ -9,6 +10,7 @@ import {
   BUGS_KEY,
   CROPS_KEY,
   FISH_ICONS_KEY,
+  GOLDEN_CROPS_KEY,
   FISHING_FRAME,
   FISHING_KEY,
   furnitureIconKey,
@@ -64,6 +66,7 @@ export function itemIcon(itemId: ItemId): Icon {
     case "seed":
       return { key: CROPS_KEY, frame: seedPacketFrame(item.cropId) };
     case "crop":
+      if (item.golden) return { key: GOLDEN_CROPS_KEY, frame: (Object.keys(CROPS) as CropId[]).indexOf(item.cropId) };
       return { key: CROPS_KEY, frame: cropItemFrame(item.cropId) };
     case "tool":
       if (itemId === "fishing_rod") return { key: FISHING_KEY, frame: FISHING_FRAME.rod };

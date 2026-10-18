@@ -71,6 +71,22 @@
       }
     }
   },
+  "golden-crops": {
+    "file": "golden-crops.png",
+    "width": 96,
+    "height": 16,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "frames": {
+      "golden_radish": 0,
+      "golden_carrot": 1,
+      "golden_samphire": 2,
+      "golden_potato": 3,
+      "golden_strawberry": 4,
+      "golden_pumpkin": 5
+    },
+    "note": "Golden crops (Farming level 10): each crop's harvested item in gold, one row in crops.ts order."
+  },
   "soil": {
     "file": "soil.png",
     "width": 256,
@@ -224,6 +240,58 @@
       }
     },
     "note": "Each picture sits inside its 32×32 frame at the given rectangle; client/src/art/furnitureArt.ts cuts them out."
+  },
+  "reward-furniture": {
+    "file": "reward-furniture.png",
+    "width": 192,
+    "height": 32,
+    "frameWidth": 32,
+    "frameHeight": 32,
+    "frames": {
+      "straw_hat": {
+        "frame": 0,
+        "x": 7,
+        "y": 14,
+        "w": 18,
+        "h": 18
+      },
+      "mounted_fish": {
+        "frame": 1,
+        "x": 7,
+        "y": 12,
+        "w": 18,
+        "h": 20
+      },
+      "shell_wreath": {
+        "frame": 2,
+        "x": 7,
+        "y": 8,
+        "w": 18,
+        "h": 24
+      },
+      "golden_can": {
+        "frame": 3,
+        "x": 7,
+        "y": 16,
+        "w": 18,
+        "h": 16
+      },
+      "lobster_pot": {
+        "frame": 4,
+        "x": 7,
+        "y": 16,
+        "w": 18,
+        "h": 16
+      },
+      "butterfly_jar": {
+        "frame": 5,
+        "x": 7,
+        "y": 16,
+        "w": 18,
+        "h": 16
+      }
+    },
+    "note": "Gifts for reaching a skill level. Each picture sits inside its 32×32 frame at the given rectangle; client/src/art/furnitureArt.ts cuts them out."
   },
   "fish": {
     "file": "fish.png",

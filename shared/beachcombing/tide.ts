@@ -4,6 +4,8 @@ import type { TilePos, WorldMap } from "../world/map";
 import { beachSand } from "../world/terrain";
 import type { World } from "../world/world";
 import { wantedFinds } from "../village/projects";
+import { PERK } from "../content/skills";
+import { hasPerk } from "../progress/farmerProgress";
 import { MARLOWS_LUCK, washUpFinds, type BeachFind } from "./beachcombing";
 
 /**
@@ -29,7 +31,8 @@ export function shoreOf(map: WorldMap): Shore {
 /**
  * If the tide hasn't come yet today, it brings a few finds: never onto a decoration or driftwood,
  * never more than the beach holds. A find the board is waiting for comes more often (Marlow's
- * luck). Returns the world (with the day of this tide) and what washed up.
+ * luck), and one more washes up while anyone has Extra tide (Foraging level 5), for everyone.
+ * Returns the world (with the day of this tide) and what washed up.
  */
 export function tideIn(world: World, shore: Shore): { world: World; washedUp: BeachFind[] } {
   if (world.beach.day >= world.clock.day) return { world, washedUp: [] };
@@ -41,6 +44,7 @@ export function tideIn(world: World, shore: Shore): { world: World; washedUp: Be
     blocked,
     beach: world.beach.finds,
     luck: { finds: wantedFinds(world), times: MARLOWS_LUCK },
+    extra: Object.values(world.farmers).some((farmer) => hasPerk(farmer.progress, "extraTide")) ? PERK.extraTide : 0,
   });
   return { world: { ...world, beach: { day: world.clock.day, finds: beach } }, washedUp };
 }

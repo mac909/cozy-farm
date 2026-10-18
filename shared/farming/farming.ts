@@ -20,6 +20,8 @@ export interface PlantedTile {
   readonly stage: number;
   /** Watered days spent in the current stage so far. */
   readonly daysInStage: number;
+  /** It's grown back after a pick (strawberries, samphire): picking it again counts for less (Milestone 7). Missing: grown from seed. */
+  readonly regrown?: true;
 }
 
 /** The state of one tile of the shared farm. Tiles are never changed in place; the actions below return new ones. */
@@ -62,18 +64,22 @@ export function till(tile: FarmTile): FarmResult<"already-tilled" | "has-crop"> 
   return { ok: true, tile: { kind: "tilled", watered: false } };
 }
 
-/** Plant one seed of `cropId` in empty tilled soil. Watered soil stays watered. */
+/**
+ * Plant one seed of `cropId` in empty tilled soil. Watered soil stays watered. `perks` (Milestone
+ * 7): `water` waters it too (Plant and water); `headStart` gives it a day's growth now (Early
+ * riser), never as far as ripe.
+ */
 export function plant(
   tile: FarmTile,
   cropId: string,
+  perks: { water?: boolean; headStart?: boolean } = {},
 ): FarmResult<"unknown-crop" | "not-tilled" | "has-crop"> {
   if (!isCropId(cropId)) return fail("unknown-crop");
   if (tile.kind === "untilled") return fail("not-tilled");
   if (tile.kind === "planted") return fail("has-crop");
-  return {
-    ok: true,
-    tile: { kind: "planted", watered: tile.watered, cropId, stage: 0, daysInStage: 0 },
-  };
+  const planted: PlantedTile = { kind: "planted", watered: tile.watered || perks.water === true, cropId, stage: 0, daysInStage: 0 };
+  const grown = perks.headStart ? grow(planted) : planted;
+  return { ok: true, tile: isRipe(grown) ? planted : grown };
 }
 
 /** Water tilled soil, with or without a crop. Once a day is enough. */
@@ -95,7 +101,7 @@ export function harvest(
   if (tile.stage < ripeStage(crop)) return fail("not-ripe");
   const harvested = { cropId: tile.cropId, amount: crop.harvestAmount };
   const after: FarmTile = crop.regrows
-    ? { ...tile, stage: ripeStage(crop) - 1, daysInStage: 0 }
+    ? { ...tile, stage: ripeStage(crop) - 1, daysInStage: 0, regrown: true }
     : { kind: "tilled", watered: tile.watered };
   return { ok: true, tile: after, harvested };
 }

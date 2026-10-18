@@ -40,6 +40,11 @@ export interface FurnitureDef {
   walkable?: boolean;
   /** You can sleep in it, like the tent. */
   bed?: boolean;
+  /**
+   * A gift for reaching a skill level (Milestone 7, shared/content/skills.ts): it comes to your bag,
+   * the store never sells it, and it ships back for half its price like the rest.
+   */
+  gift?: boolean;
 }
 
 const ONE: Footprint = { width: 1, height: 1 };
@@ -112,11 +117,19 @@ const furnitureData = {
   life_ring: { id: "life_ring", name: "Life Ring", price: 70, where: ANYWHERE, turns: [ONE] },
   anchor: { id: "anchor", name: "Anchor", price: 90, where: ANYWHERE, turns: [ONE] },
   beach_umbrella: { id: "beach_umbrella", name: "Beach Umbrella", price: 150, where: FARM, turns: [ONE] },
+
+  // ---------- Gifts for reaching a skill level (Milestone 7, tools/sprites/rewards.ts) ----------
+  straw_hat: { id: "straw_hat", name: "Straw Hat", price: 300, where: ANYWHERE, turns: [ONE], gift: true },
+  mounted_fish: { id: "mounted_fish", name: "Mounted Fish", price: 300, where: ANYWHERE, turns: [ONE], gift: true },
+  shell_wreath: { id: "shell_wreath", name: "Shell Wreath", price: 300, where: ANYWHERE, turns: [ONE], gift: true },
+  golden_can: { id: "golden_can", name: "Golden Can Planter", price: 500, where: ANYWHERE, turns: [ONE], gift: true },
+  lobster_pot: { id: "lobster_pot", name: "Lobster Pot", price: 500, where: ANYWHERE, turns: [ONE], gift: true },
+  butterfly_jar: { id: "butterfly_jar", name: "Butterfly Jar", price: 500, where: ANYWHERE, turns: [ONE], gift: true },
 } satisfies Record<string, FurnitureDef>;
 
 export type FurnitureId = keyof typeof furnitureData;
 
-/** Every piece, in the general store's shelf order: the house first, then the farm. */
+/** Every piece, in the general store's shelf order (the house first, then the farm), then a skill's gifts. */
 export const FURNITURE: Readonly<Record<FurnitureId, FurnitureDef>> = furnitureData;
 
 export const FURNITURE_IDS = Object.keys(FURNITURE) as FurnitureId[];
@@ -143,6 +156,12 @@ export function nextTurn(id: FurnitureId, turn: number): number {
 /** Whether a piece can go in `kind` of place. */
 export function goesIn(id: FurnitureId, kind: PlaceKind): boolean {
   return FURNITURE[id].where.includes(kind);
+}
+
+/** Whether a piece is a skill's gift, never sold at the store. */
+export function isGift(id: FurnitureId): boolean {
+  const piece: FurnitureDef = FURNITURE[id];
+  return piece.gift === true;
 }
 
 /** Whether a piece stops people walking through it. */
