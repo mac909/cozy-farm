@@ -4,6 +4,12 @@ export const TILE_SIZE = 16;
 /** Walking speed in pixels per second. */
 export const WALK_SPEED = 72;
 
+/**
+ * A character's feet are this many pixels below its position (the middle of its 16×16 sprite).
+ * The client's collision box is centred there, and the rules use it for the tile you stand on.
+ */
+export const FEET_OFFSET = 5;
+
 /** How often a client reports its position to the server, in milliseconds. */
 export const POSITION_SEND_MS = 100;
 
