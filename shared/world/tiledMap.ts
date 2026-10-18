@@ -1,5 +1,5 @@
 import { TILE_SIZE } from "../constants";
-import { type Rect, tileAt, type WorldMap } from "./map";
+import { type HousePlan, type Rect, tileAt, type WorldMap } from "./map";
 
 /**
  * Reads a map saved by Tiled (JSON format, see "Editing the map" in CLAUDE.md).
@@ -96,6 +96,18 @@ export function parseTiledMap(input: unknown): WorldMap {
     return { x, y, width, height };
   };
 
+  // Each cottage ("house1") has its room ("interior1"), at least 3 × 3 tiles with its walls.
+  const houses: HousePlan[] = [];
+  for (const object of objectLayer.objects ?? []) {
+    const match = /^house(\d+)$/.exec(object.name);
+    if (!match) continue;
+    const id = object.name;
+    const interior = area(`interior${match[1]}`);
+    if (interior.width < 3 * TILE_SIZE || interior.height < 3 * TILE_SIZE) throw new Error(`"interior${match[1]}" is smaller than 3 × 3 tiles`);
+    houses.push({ id, building: area(id), interior });
+  }
+  houses.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+
   return {
     width,
     height,
@@ -106,6 +118,7 @@ export function parseTiledMap(input: unknown): WorldMap {
     tent: area("tent"),
     seedStand: area("seedStand"),
     store: area("store"),
+    houses,
   };
 }
 

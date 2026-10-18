@@ -1,4 +1,5 @@
 import type { CharacterId } from "../content/characters";
+import type { PlacedPiece } from "../decor/pieces";
 import { EMPTY_CRATE, type Crate, type CrateSale } from "../economy/shop";
 import { STARTING_COINS } from "../economy/wallet";
 import { UNTILLED, type FarmTile } from "../farming/farming";
@@ -23,6 +24,20 @@ export interface World {
   readonly farmers: Readonly<Record<FarmerId, Farmer>>;
   /** What happened on the last night, for whoever wasn't there to see it. */
   readonly lastMorning: MorningReport | null;
+  /** The cottages someone has moved into, by house id ("house1"), with what's inside. */
+  readonly houses: Readonly<Record<HouseId, House>>;
+  /** Decorations on the shared farm, in map tiles. */
+  readonly decorations: readonly PlacedPiece[];
+}
+
+/** A cottage's name in the map ("house1"). */
+export type HouseId = string;
+
+/** A cottage someone lives in: theirs to arrange, anyone's to visit. */
+export interface House {
+  readonly owner: FarmerId;
+  /** In tiles from the room's top-left floor tile. Later pieces draw over earlier ones. */
+  readonly furniture: readonly PlacedPiece[];
 }
 
 /** A person who plays: their look and their own bag. Bags belong to farmers, not devices. */
@@ -52,7 +67,7 @@ export interface MorningReport {
   readonly coins: number;
 }
 
-/** Day 1, 6 am, the starting coins, an empty farm and crate, and nobody yet. */
+/** Day 1, 6 am, the starting coins, an empty farm and crate, nobody yet, and every cottage empty. */
 export function newWorld(): World {
   return {
     clock: newClock(),
@@ -61,6 +76,8 @@ export function newWorld(): World {
     farm: {},
     farmers: {},
     lastMorning: null,
+    houses: {},
+    decorations: [],
   };
 }
 

@@ -1,11 +1,13 @@
 import type { ArraySchema, MapSchema } from "@colyseus/schema";
 import { isCropId } from "./content/crops";
+import { isFurnitureId } from "./content/furniture";
 import { isItemId } from "./content/items";
+import type { PlacedPiece } from "./decor/pieces";
 import type { FarmTile } from "./farming/farming";
 import type { Inventory, Slot } from "./inventory/inventory";
 import type { Crate } from "./economy/shop";
-import { BagSlot, type Clock, CrateEntry, FarmPlot } from "./schema";
-import type { TileKey } from "./world/world";
+import { BagSlot, type Clock, CrateEntry, FarmPlot, HouseState, PieceState } from "./schema";
+import type { Farmer, FarmerId, House, TileKey } from "./world/world";
 import { HUD_MINUTE_STEP, type GameClock } from "./time/clock";
 
 /**
@@ -118,4 +120,60 @@ export function readFarm(source: MapSchema<FarmPlot>): Record<TileKey, FarmTile>
     farm[key as TileKey] = readPlot(plot);
   });
   return farm;
+}
+
+/** Copies a list of pieces in, piece by piece, writing only what changed. */
+export function writePieces(target: ArraySchema<PieceState>, pieces: readonly PlacedPiece[]): void {
+  while (target.length > pieces.length) target.pop();
+  pieces.forEach((piece, i) => {
+    let cell = target[i];
+    if (!cell) {
+      cell = new PieceState();
+      target.push(cell);
+    }
+    if (cell.itemId !== piece.itemId) cell.itemId = piece.itemId;
+    if (cell.col !== piece.col) cell.col = piece.col;
+    if (cell.row !== piece.row) cell.row = piece.row;
+    if (cell.turn !== piece.turn) cell.turn = piece.turn;
+  });
+}
+
+/** Pieces as the rules see them. Pieces that don't make sense are left out. */
+export function readPieces(source: Iterable<PieceState>): PlacedPiece[] {
+  return Array.from(source).flatMap((cell) => (isFurnitureId(cell.itemId) ? [{ itemId: cell.itemId, col: cell.col, row: cell.row, turn: cell.turn }] : []));
+}
+
+/** Copies the houses in, with each owner's name for the sign over the door. */
+export function writeHouses(
+  target: MapSchema<HouseState>,
+  houses: Readonly<Record<string, House>>,
+  farmers: Readonly<Record<FarmerId, Farmer>>,
+): void {
+  for (const id of [...target.keys()]) {
+    if (!Object.hasOwn(houses, id)) target.delete(id);
+  }
+  for (const [id, house] of Object.entries(houses)) {
+    let cell = target.get(id);
+    const isNew = !cell;
+    if (!cell) cell = new HouseState();
+    const ownerName = Object.hasOwn(farmers, house.owner) ? farmers[house.owner].name : "";
+    if (cell.owner !== house.owner) cell.owner = house.owner;
+    if (cell.ownerName !== ownerName) cell.ownerName = ownerName;
+    writePieces(cell.furniture, house.furniture);
+    if (isNew) target.set(id, cell);
+  }
+}
+
+/** A house as the client sees it: who lives there (and their name) and what's inside. */
+export interface HouseView extends House {
+  readonly ownerName: string;
+}
+
+/** The houses as the rules see them. */
+export function readHouses(source: MapSchema<HouseState>): Record<string, HouseView> {
+  const houses: Record<string, HouseView> = {};
+  source.forEach((cell, id) => {
+    houses[id] = { owner: cell.owner, ownerName: cell.ownerName, furniture: readPieces(cell.furniture) };
+  });
+  return houses;
 }

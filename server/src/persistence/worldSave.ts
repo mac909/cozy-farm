@@ -1,4 +1,6 @@
 import { CROPS, isCropId } from "../../../shared/content/crops";
+import { FURNITURE, isFurnitureId } from "../../../shared/content/furniture";
+import type { PlacedPiece } from "../../../shared/decor/pieces";
 import { ITEMS, isItemId, type ItemId } from "../../../shared/content/items";
 import type { SaleLine } from "../../../shared/economy/shop";
 import { ripeStage, type FarmTile } from "../../../shared/farming/farming";
@@ -11,6 +13,7 @@ import {
   parseTileKey,
   tileKey,
   type Farmer,
+  type House,
   type MorningReport,
   type TileKey,
   type World,
@@ -25,7 +28,7 @@ export type SavedFarmTile = { col: number; row: number } & Exclude<FarmTile, { k
 
 /**
  * Everything about the shared world that survives a restart: the World (shared/world/world.ts) as
- * JSON. Version 1.
+ * JSON. Version 2: version 1 (Milestone 2) plus the houses and the farm's decorations (Milestone 4).
  *
  * To change this shape once it has reached the real farm: add a migration below that turns the
  * previous version into the new one, then update this type, `validate` and the converters.
@@ -40,12 +43,23 @@ export interface WorldSave {
   farm: SavedFarmTile[];
   farmers: Record<string, { name: string; character: string; bag: Slot[] }>;
   lastMorning: MorningReport | null;
+  /** The cottages someone has moved into, by house id: who lives there and their furniture (in floor tiles). Since version 2. */
+  houses: Record<string, { owner: string; furniture: SavedPiece[] }>;
+  /** Decorations on the farm, in map tiles. Since version 2. */
+  decorations: SavedPiece[];
 }
 
-/** Upgrades for old world saves, oldest first: the first turns version 1 into 2. */
+/** A piece of furniture or a decoration in a save. */
+export type SavedPiece = { itemId: string; col: number; row: number; turn: number };
+
+/**
+ * Upgrades for old world saves, oldest first: the first turns version 1 into 2. Never edit one
+ * that has shipped; add another. Each has its fixture in fixtures/ (oldSaves.test.ts).
+ */
 const migrations: Migration[] = [
-  // For example, version 1 → 2 adding beach finds:
-  // (save) => ({ ...save, beach: [] }),
+  // 1 → 2 (Milestone 4): houses and decorations. Every cottage starts empty, ready for whoever
+  // moves in, and the farm has no decorations yet. Nothing else changes.
+  (save) => ({ ...save, houses: {}, decorations: [] }),
 ];
 
 /** Biggest farm tile column or row a save may hold. The map is far smaller; this just catches nonsense. */
@@ -58,6 +72,7 @@ export const WORLD_SAVE: SaveFormat<WorldSave> = {
     const farmers = object(save.farmers, "farmers");
     const seenTiles = new Set<string>();
     const seenCrate = new Set<string>();
+    const owners = new Set<string>();
     return {
       version: save.version as number,
       clock: {
@@ -85,6 +100,16 @@ export const WORLD_SAVE: SaveFormat<WorldSave> = {
         }),
       ),
       lastMorning: save.lastMorning === null ? null : morningReport(save.lastMorning, "lastMorning"),
+      houses: Object.fromEntries(
+        Object.entries(object(save.houses, "houses")).map(([id, house]) => {
+          if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) throw new Error(`houses has an id that isn't one: ${JSON.stringify(id)}`);
+          const checked = savedHouse(house, `houses.${id}`, farmers);
+          if (owners.has(checked.owner)) throw new Error(`houses.${id}: ${checked.owner} already has another house`);
+          owners.add(checked.owner);
+          return [id, checked];
+        }),
+      ),
+      decorations: array(save.decorations, "decorations").map((piece, i) => savedPiece(piece, `decorations[${i}]`)),
     };
   },
 };
@@ -115,8 +140,17 @@ export function worldToSave(world: World): WorldSave {
       ]),
     ),
     lastMorning: world.lastMorning,
+    houses: Object.fromEntries(
+      Object.entries(world.houses).map(([id, house]) => [id, { owner: house.owner, furniture: house.furniture.map(pieceToSave) }]),
+    ),
+    decorations: world.decorations.map(pieceToSave),
   };
 }
+
+const pieceToSave = ({ itemId, col, row, turn }: PlacedPiece): SavedPiece => ({ itemId, col, row, turn });
+
+/** A saved piece as the rules see it (it has passed `validate`, so its item is furniture). */
+const pieceFromSave = (piece: SavedPiece): PlacedPiece => piece as PlacedPiece;
 
 /** The world from a save that has passed `validate`. */
 export function worldFromSave(save: WorldSave): World {
@@ -133,6 +167,10 @@ export function worldFromSave(save: WorldSave): World {
     farm,
     farmers,
     lastMorning: save.lastMorning,
+    houses: Object.fromEntries(
+      Object.entries(save.houses).map(([id, house]): [string, House] => [id, { owner: house.owner, furniture: house.furniture.map(pieceFromSave) }]),
+    ),
+    decorations: save.decorations.map(pieceFromSave),
   };
 }
 
@@ -211,6 +249,31 @@ function savedFarmer(value: unknown, path: string): WorldSave["farmers"][string]
   // An odd name or character never blocks the farm: they're tidied up like any other look.
   const look = lookFrom(farmer);
   return { name: look.name, character: look.character, bag: bag.map((slot, i) => bagStack(slot, `${path}.bag[${i}]`)) };
+}
+
+/**
+ * A piece of furniture or a decoration. A turn the piece no longer has (its art was changed in
+ * furniture.ts) goes back to its first, rather than stopping the save from loading.
+ */
+function savedPiece(value: unknown, path: string): SavedPiece {
+  const piece = object(value, path);
+  if (!isFurnitureId(piece.itemId)) throw new Error(`${path}.itemId isn't furniture the game knows: ${JSON.stringify(piece.itemId)}`);
+  const turn = whole(piece.turn, `${path}.turn`, 0);
+  return {
+    itemId: piece.itemId,
+    col: whole(piece.col, `${path}.col`, 0, MAX_TILE),
+    row: whole(piece.row, `${path}.row`, 0, MAX_TILE),
+    turn: turn < FURNITURE[piece.itemId].turns.length ? turn : 0,
+  };
+}
+
+/** A house: whose it is (a farmer in this save) and what's in it. */
+function savedHouse(value: unknown, path: string, farmers: SaveJson): WorldSave["houses"][string] {
+  const house = object(value, path);
+  if (!isFarmerId(house.owner) || !Object.hasOwn(farmers, house.owner)) {
+    throw new Error(`${path}.owner isn't a farmer in this save: ${JSON.stringify(house.owner)}`);
+  }
+  return { owner: house.owner, furniture: array(house.furniture, `${path}.furniture`).map((piece, i) => savedPiece(piece, `${path}.furniture[${i}]`)) };
 }
 
 function morningReport(value: unknown, path: string): MorningReport {

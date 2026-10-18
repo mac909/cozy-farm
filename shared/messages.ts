@@ -156,3 +156,10 @@ export interface BuyMessage {
   count: number;
   at?: "seedStand" | "store";
 }
+
+// ---------- Houses ----------
+
+/** Client → server ("moveIn"), at an empty cottage's door: it's mine now. Going in and out is the client's own move. */
+export interface MoveInMessage {
+  house: string;
+}

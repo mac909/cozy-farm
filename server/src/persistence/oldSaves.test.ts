@@ -71,6 +71,30 @@ describe("old saves", () => {
       expect(loaded.farmers[PIP].bag[2]).toEqual({ itemId: "radish_seeds", count: 7 });
       expect(loaded.farmers[JUNO].bag).toHaveLength(24);
     });
+
+    it("gets every cottage empty, ready to move into, and no decorations yet", () => {
+      const loaded = world();
+      expect(loaded.houses).toEqual({});
+      expect(loaded.decorations).toEqual([]);
+    });
+  });
+
+  describe("version 2 (Milestone 4: houses and decorations)", () => {
+    const world = () => worldFromSave(upgradeSave(readFixture("world-v2.json"), WORLD_SAVE, "world-v2.json").save);
+
+    it("keeps who lives where and what's in each house", () => {
+      const loaded = world();
+      expect(loaded.houses.house1.owner).toBe(PIP);
+      expect(loaded.houses.house1.furniture).toContainEqual({ itemId: "red_bed", col: 0, row: 0, turn: 0 });
+      expect(loaded.houses.house2.owner).toBe(JUNO);
+      expect(loaded.houses.house2.furniture.some((piece) => piece.itemId === "cream_rug" && piece.turn === 1)).toBe(true);
+    });
+
+    it("keeps the decorations on the farm", () => {
+      const loaded = world();
+      expect(loaded.decorations).toContainEqual({ itemId: "fence", col: 23, row: 7, turn: 2 });
+      expect(loaded.decorations.length).toBe(6);
+    });
   });
 });
 

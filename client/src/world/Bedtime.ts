@@ -21,6 +21,8 @@ const ZZZ_DEPTH = 1_000_000;
 
 export interface BedtimeOptions {
   room(): Room<FarmState> | null;
+  /** Whether a player is out in the village (the tent's Zzz is for them; beds in houses have their own). */
+  inVillage(player: { x: number; y: number }): boolean;
   me: Character;
   /** Puts your own character somewhere (clients own their position), facing down. */
   wakeAt(x: number, y: number): void;
@@ -107,10 +109,12 @@ export class Bedtime {
     const inBed = me?.inBed ?? false;
     const asleep: string[] = [];
     const awake: string[] = [];
+    let inTent = 0;
     state.players.forEach((player, sessionId) => {
+      if (player.inBed && this.options.inVillage(player)) inTent++;
       if (sessionId !== mySessionId) (player.inBed ? asleep : awake).push(player.name);
     });
-    this.zzz.setVisible(inBed || asleep.length > 0);
+    this.zzz.setVisible(inTent > 0);
 
     if (inBed !== this.inBed) {
       this.inBed = inBed;

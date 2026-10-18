@@ -34,9 +34,32 @@ const YOUNG_RADISH = crop("radish", 1);
 describe("chooseAction", () => {
   // The Action button table in docs/plans/milestone-2.md, row by row.
   it("is Sleep next to the tent, Crate next to the crate, Seeds next to the stand, whatever else", () => {
-    expect(chooseAction(RIPE_RADISH, true, HOE, "tent")).toEqual({ kind: "sleep" });
-    expect(chooseAction(UNTILLED, false, null, "crate")).toEqual({ kind: "crate" });
-    expect(chooseAction(DRY, true, WATERING_CAN, "seedStand")).toEqual({ kind: "seeds" });
+    expect(chooseAction(RIPE_RADISH, true, HOE, { kind: "place", place: "tent" })).toEqual({ kind: "sleep" });
+    expect(chooseAction(UNTILLED, false, null, { kind: "place", place: "crate" })).toEqual({ kind: "crate" });
+    expect(chooseAction(DRY, true, WATERING_CAN, { kind: "place", place: "seedStand" })).toEqual({ kind: "seeds" });
+    expect(chooseAction(DRY, true, WATERING_CAN, { kind: "place", place: "store" })).toEqual({ kind: "shop" });
+  });
+
+  it("goes in at a door, out at the way out, and to bed by a bed", () => {
+    expect(chooseAction(UNTILLED, false, HOE, { kind: "door", houseId: "house1", how: "moveIn" })).toEqual({ kind: "enter", houseId: "house1", how: "moveIn" });
+    expect(actionWord({ kind: "enter", houseId: "house1", how: "home" })).toBe("Home");
+    expect(actionWord({ kind: "enter", houseId: "house1", how: "visit" })).toBe("Visit");
+    expect(actionWord({ kind: "enter", houseId: "house1", how: "moveIn" })).toBe("Move in");
+    expect(chooseAction(UNTILLED, false, null, { kind: "exit", houseId: "house2" })).toEqual({ kind: "leave", houseId: "house2" });
+    expect(actionWord({ kind: "leave", houseId: "house2" })).toBe("Leave");
+    expect(chooseAction(UNTILLED, false, "sofa", { kind: "bed" })).toEqual({ kind: "sleep" });
+  });
+
+  it("puts furniture down where it can go", () => {
+    expect(chooseAction(UNTILLED, false, "sofa", null, "house")).toEqual({ kind: "place", itemId: "sofa" });
+    expect(chooseAction(UNTILLED, false, "fence", null, "farm")).toEqual({ kind: "place", itemId: "fence" });
+    expect(actionWord({ kind: "place", itemId: "fence" })).toBe("Place");
+    // A sofa outside, a fence inside, or anything in someone else's house: nothing.
+    expect(chooseAction(UNTILLED, false, "sofa", null, "farm")).toEqual({ kind: "none" });
+    expect(chooseAction(UNTILLED, false, "fence", null, "house")).toEqual({ kind: "none" });
+    expect(chooseAction(UNTILLED, false, "sofa", null, null)).toEqual({ kind: "none" });
+    // Seeds and tools don't care where you are.
+    expect(chooseAction(UNTILLED, true, HOE, null, "farm")).toEqual({ kind: "till" });
   });
 
   it("picks a ripe crop with anything in hand", () => {
@@ -110,6 +133,12 @@ describe("hintFor", () => {
     expect(hintFor(DRY, true, RADISH_SEEDS)).toBeNull();
     expect(hintFor(DRY, true, WATERING_CAN)).toBeNull();
     expect(hintFor(RIPE_RADISH, true, null)).toBeNull();
+  });
+
+  it("says where furniture goes", () => {
+    expect(hintText(hintFor(UNTILLED, false, "sofa", "farm")!)).toBe("That goes inside your house.");
+    expect(hintText(hintFor(UNTILLED, false, "fence", "house")!)).toBe("That goes outside, on the farm.");
+    expect(hintText(hintFor(UNTILLED, false, "sofa", null)!)).toBe("Only whoever lives here can arrange it.");
   });
 
   it("says where digging works", () => {

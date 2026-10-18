@@ -1,7 +1,9 @@
 import type { Client } from "colyseus";
 import type { MorningMessage, WakeUpMessage } from "../../../shared/messages";
 import type { Player } from "../../../shared/schema";
+import { bedNear } from "../../../shared/decor/beds";
 import { nightStarts, recentDrops, type Dropped } from "../../../shared/world/bedtime";
+import { houseAt } from "../../../shared/world/houses";
 import { tileCenter } from "../../../shared/world/map";
 import { endNight } from "../../../shared/world/night";
 import { placeNear, SERVER_NEAR_TILES, wakeSpots } from "../../../shared/world/places";
@@ -10,7 +12,7 @@ import { liveWorld } from "../world/liveWorld";
 import type { FarmRoom } from "./FarmRoom";
 
 /**
- * The tent, going to bed, and the night: "sleep" and "wake" messages, and the check after every
+ * The tent and the beds, going to bed, and the night: "sleep" and "wake" messages, and the check after every
  * clock tick, sleep, wake and leave. The night starts when everyone online is in bed (waiting
  * DROP_WAIT_MS for anyone who dropped while still up), or at midnight.
  */
@@ -65,10 +67,17 @@ export class Bedtime {
     liveWorld().saveNow();
     console.log(`Night: day ${report.day} begins. ${report.grew} crops grew, ${report.ready} ripe, the crate sold for ${report.sale.total}.`);
 
-    // Where to wake up first, so the client knows the morning card waits for its fade.
+    // Where to wake up first, so the client knows the morning card waits for its fade. Anyone
+    // in a house wakes up where they are (by their bed); everyone else in front of the tent.
     const spots = wakeSpots(VILLAGE_MAP.tent, Math.max(1, this.room.clients.length));
-    this.room.clients.forEach((client, i) => {
-      const spot = spots[i % spots.length];
+    let outside = 0;
+    this.room.clients.forEach((client) => {
+      const player = this.room.state.players.get(client.sessionId);
+      if (player && houseAt(VILLAGE_MAP, player)) {
+        client.send("wakeUp", { x: player.x, y: player.y } satisfies WakeUpMessage);
+        return;
+      }
+      const spot = spots[outside++ % spots.length];
       client.send("wakeUp", tileCenter(spot.col, spot.row) satisfies WakeUpMessage);
     });
     this.room.broadcast("morning", report satisfies MorningMessage);
@@ -77,12 +86,14 @@ export class Bedtime {
   private sleep(client: Client) {
     const player = this.room.state.players.get(client.sessionId);
     if (!player || player.inBed) return;
-    if (placeNear(VILLAGE_MAP, player, SERVER_NEAR_TILES, ["tent"]) !== "tent") {
-      this.room.hint(client, { reason: "not-near-tent" });
+    const inTent = placeNear(VILLAGE_MAP, player, SERVER_NEAR_TILES, ["tent"]) === "tent";
+    const bed = inTent ? null : bedNear(VILLAGE_MAP, this.room.world.houses, player, SERVER_NEAR_TILES);
+    if (!inTent && !bed) {
+      this.room.hint(client, { reason: "not-near-bed" });
       return;
     }
     player.inBed = true;
-    console.log(`${player.name} went to bed`);
+    console.log(`${player.name} went to bed ${bed ? `in ${bed.plan.id}` : "in the tent"}`);
     this.check();
   }
 

@@ -11,9 +11,12 @@ import {
   hintText,
   seedCrop,
   type Action,
+  type DoorKind,
   type FarmActionKind,
   type Hint,
+  type Spot,
 } from "../../../shared/farming/actions";
+import type { FurnitureId, PlaceKind } from "../../../shared/content/furniture";
 import type { FarmTile } from "../../../shared/farming/farming";
 import { roomFor, type Inventory } from "../../../shared/inventory/inventory";
 import type { FarmActionMessage } from "../../../shared/messages";
@@ -21,11 +24,12 @@ import { facingFor, type Facing } from "../../../shared/movement";
 import type { FarmState } from "../../../shared/schema";
 import { readFarm } from "../../../shared/stateSync";
 import type { TilePos } from "../../../shared/world/map";
-import { CLIENT_NEAR_TILES, feetTile, isNeighbour, placeNear, targetTile, type PlaceId } from "../../../shared/world/places";
+import { CLIENT_NEAR_TILES, feetTile, isNeighbour, placeNear, targetTile, type Point } from "../../../shared/world/places";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { tileKey, type TileKey } from "../../../shared/world/world";
 import { TILE_SIZE } from "../../../shared/constants";
-import { CAMP_KEY, SHIPPING_CRATE_KEY, TENT_FRAME } from "../art/assets";
+import { CAMP_KEY, HOUSE_SHEET_KEY, SHIPPING_CRATE_KEY, TENT_FRAME } from "../art/assets";
+import { DOOR_FRAME } from "../art/houseArt";
 import { iconScale, itemIcon } from "../art/itemIcons";
 import { playSound, type SoundId } from "../audio/sounds";
 import type { ActionView } from "../ui/ActionButton";
@@ -63,7 +67,20 @@ interface Aim {
   tile: FarmTile;
   farmland: boolean;
   held: ItemId | null;
-  place: PlaceId | null;
+  spot: Spot | null;
+  /** What kind of furniture can go down where you are. */
+  placing: PlaceKind | null;
+}
+
+/** What tapping the Action button does at each place, door and bed, and with furniture in hand. */
+export interface ActionHandlers {
+  sleep(): void;
+  crate(): void;
+  seeds(): void;
+  shop(): void;
+  enter(houseId: string, how: DoorKind): void;
+  leave(houseId: string): void;
+  place(itemId: FurnitureId): void;
 }
 
 export interface FarmingOptions {
@@ -80,8 +97,12 @@ export interface FarmingOptions {
   showAction(view: ActionView): void;
   /** True while you can't act (in bed, a panel open). */
   busy(): boolean;
-  /** The places that take over the Action button when you're next to them, and what tapping it there does. */
-  places: Partial<Record<PlaceId, () => void>>;
+  /** A cottage door, a room's way out or a bed you're next to (map places are found here). */
+  spot(position: Point): Spot | null;
+  /** What kind of furniture can go down where you are: "house" in your own, "farm" outdoors, null in someone else's. */
+  placing(): PlaceKind | null;
+  /** What tapping the Action button does, beyond farming. */
+  on: ActionHandlers;
   /** Whether the Action button or Space is being held down (hold to repeat). */
   holding(): boolean;
   /** You dug, planted, watered or picked (asked the server to): for the first-day tips. */
@@ -169,11 +190,11 @@ export class Farming {
       this.act();
       aim = this.aim();
     }
-    const { action, held, target, place } = aim;
+    const { action, held, target, spot } = aim;
     const faded = action.kind === "none";
     const holdingTool = held === HOE || held === WATERING_CAN || seedCrop(held) !== null;
     // The outline shows while you hold a tool or seeds, or face something ripe, so walking around town stays clean.
-    if (!place && !this.options.busy() && (holdingTool || action.kind === "harvest")) this.outlineHost.show(target, faded);
+    if (!spot && !this.options.busy() && (holdingTool || action.kind === "harvest")) this.outlineHost.show(target, faded);
     else this.outlineHost.hide();
     this.options.showAction(this.viewFor(aim));
   }
@@ -183,14 +204,26 @@ export class Farming {
     if (this.options.busy()) return;
     this.holdArmed = true;
     const aim = this.aim();
-    const { action, target, place } = aim;
-    if (action.kind === "none") {
-      this.hint(hintFor(aim.tile, aim.farmland, aim.held) ?? { reason: "empty-hand" });
-      return;
-    }
-    if (action.kind === "sleep" || action.kind === "crate" || action.kind === "seeds" || action.kind === "shop") {
-      if (place) this.options.places[place]?.();
-      return;
+    const { action, target } = aim;
+    const on = this.options.on;
+    switch (action.kind) {
+      case "none":
+        this.hint(hintFor(aim.tile, aim.farmland, aim.held, aim.placing) ?? { reason: "empty-hand" });
+        return;
+      case "sleep":
+        return on.sleep();
+      case "crate":
+        return on.crate();
+      case "seeds":
+        return on.seeds();
+      case "shop":
+        return on.shop();
+      case "enter":
+        return on.enter(action.houseId, action.how);
+      case "leave":
+        return on.leave(action.houseId);
+      case "place":
+        return on.place(action.itemId);
     }
     // Even if it's refused below, holding the button doesn't try this tile again every frame.
     this.repeatFrom = tileKey(target.col, target.row);
@@ -243,10 +276,11 @@ export class Farming {
     const farmland = VILLAGE_MAP.farmland[target.row]?.[target.col] ?? false;
     const bag = this.options.bag();
     const held = bag?.[this.options.selectedSlot()]?.itemId ?? null;
-    const open = Object.keys(this.options.places) as PlaceId[];
     // Places win even with the mouse over a tile (they're never next to the farm field).
-    const place = placeNear(VILLAGE_MAP, position, CLIENT_NEAR_TILES, open);
-    return { action: chooseAction(tile, farmland, held, place), target, tile, farmland, held, place };
+    const place = placeNear(VILLAGE_MAP, position, CLIENT_NEAR_TILES);
+    const spot: Spot | null = place ? { kind: "place", place } : this.options.spot(position);
+    const placing = this.options.placing();
+    return { action: chooseAction(tile, farmland, held, spot, placing), target, tile, farmland, held, spot, placing };
   }
 
   /** The tile under the mouse, if it's one of the 8 around you. */
@@ -257,10 +291,12 @@ export class Farming {
     return isNeighbour(feetTile(this.options.me.sprite), tile) ? tile : null;
   }
 
-  private viewFor({ action, held }: Aim): ActionView {
+  private viewFor({ action, held, spot }: Aim): ActionView {
     const word = actionWord(action);
     switch (action.kind) {
       case "sleep":
+        // A bed in a house, or the tent.
+        if (spot?.kind === "bed") return { ...this.heldView("red_bed"), word, faded: false };
         return { icon: { key: CAMP_KEY, frame: TENT_FRAME }, iconScale: 1, word, faded: false };
       case "crate":
         return { icon: { key: SHIPPING_CRATE_KEY, frame: 0 }, iconScale: 1, word, faded: false };
@@ -268,6 +304,11 @@ export class Farming {
         return { icon: itemIcon("carrot_seeds"), iconScale: 3, word, faded: false };
       case "shop":
         return { ...this.heldView("potted_fern"), word, faded: false };
+      case "enter":
+      case "leave":
+        return { icon: { key: HOUSE_SHEET_KEY, frame: DOOR_FRAME }, iconScale: 3, word, faded: false };
+      case "place":
+        return { ...this.heldView(action.itemId), word, faded: false };
       case "harvest":
         return { icon: itemIcon(cropItemId(action.cropId)), iconScale: 3, word, faded: false };
       case "plant":

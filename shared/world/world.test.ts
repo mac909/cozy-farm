@@ -25,6 +25,8 @@ describe("newWorld", () => {
       farm: {},
       farmers: {},
       lastMorning: null,
+      houses: {},
+      decorations: [],
     });
   });
 });

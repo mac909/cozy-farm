@@ -31,7 +31,7 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Farming rules | Crops never die; six starter crops, two of which regrow; the day ends when everyone online is in bed. Details under Time and Farming. | 2026-10-17 |
 | Art pack | Ninja Adventure (pixel-boy, CC0) as the base, plus our own matching sprites for crops, beach and shells. | 2026-10-17 |
 | Map | Painted in Tiled (`shared/world/village.json`). Hidden layers mark where nobody can walk and where farming is allowed; objects mark the spawn point and the spots for the shipping crate, tent and seed stand. The server reads the same file. | 2026-10-18 |
-| Places | The tent stands on the grass just left of the farm field's gate, and you appear (and wake up) at its door. The seed stand is beside the top of the sandy path down to the beach. The shipping crate is on the dock. Decided by Claude while the developer was away; easy to move in Tiled. | 2026-10-18 |
+| Places | The tent stands on the grass just left of the farm field's gate, and you appear (and wake up) at its door. The seed stand is beside the top of the sandy path down to the beach. The shipping crate is on the dock. The general store is just left of the seed stand, and the two cottages are in the meadow above it. Decided by Claude while the developer was away; easy to move in Tiled. | 2026-10-18 |
 | Music | "Calm Village" from the pack loops softly, starting at the first tap or key press. A music button next to the look button mutes it, remembered on that device. | 2026-10-18 |
 | Controls | An Action button for the tile in front of you (the plan's scheme A), saying what it will do; ripe crops get picked whatever you're holding; places (tent, crate, seed stand) take over the button; hold to repeat; a light joystick push turns on the spot. The game never switches tools for you, for now: watch how she plays. Details under Controls. | 2026-10-18 |
 | Phone held | Both upright and sideways work; the layout starts from upright with one thumb. Still to find out: how she holds it on the first evening. | 2026-10-18 |
@@ -40,6 +40,9 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Shop in Milestone 2 | The shipping crate and a seed stand came into Milestone 2, so the radishes have somewhere to go and the coins something to buy. Milestone 3 becomes the general store with furniture. | 2026-10-18 |
 | First-day tips | Four one-time tips per device (dig; plant and water; the tent ends the day; the crate), on top of the Action button's hints. | 2026-10-18 |
 | Digging up crops | Left out of Milestone 2. Crops never die, so a wrong one just ripens. Add it if she asks. | 2026-10-18 |
+| Houses | Two empty cottages in the meadow above the farm, the pack's 4 × 3 cottages (an orange one and a cream one). The first time a farmer walks up to a free one, Action says **Move in**; one tap makes it theirs, with a bed and a fern waiting inside. After that the door says **Home** to them and **Visit** to anyone else. Claiming on the spot, rather than handing out houses in the order farmers first joined, because the real save may hold a test farmer or two. A sign over each cottage says whose it is and who's in. Decided by Claude (Milestone 4). | 2026-10-18 |
+| Rooms | One room each, 9 × 6 tiles of floor inside the pack's interior walls, drawn in the same Tiled map, out of sight below the sea: going through a door moves you there, and the camera shows just the room with the pack's dark background round it. You only see people in the same place as you. One map keeps everything the server already checks (positions, reach, places) working unchanged. Decided by Claude (Milestone 4). | 2026-10-18 |
+| Beds | Any bed in any house works like the tent (Action says **Sleep** next to it), and the tent stays. In a house you wake up where you slept; outdoors, in front of the tent. Decided by Claude (Milestone 4). | 2026-10-18 |
 | General store | A little green-roofed shop (the pack's) just above the sandy path, two steps left of the seed stand, so the two make a small market. It sells furniture and farm decorations; the seed stand keeps the seeds. Same card as the seed stand, in two shelves ("For your house", "For the farm"), starting at 1 with quick buttons 1 and 10. Decided by Claude (Milestone 3). | 2026-10-18 |
 
 ## Controls
@@ -75,14 +78,14 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 - The clock runs only while someone is connected.
 - A day runs 6am to midnight and lasts about 15 real minutes. The clock card in the top left shows it in 10-minute steps; from 6 pm the sun becomes a moon, from 10 pm the card turns amber ("It's getting late"), and at 11:30 pm a bubble says "Nearly midnight. Time for bed!". From 5:30 pm a soft blue tint deepens over the world until midnight.
 - The day ends when everyone online has gone to bed, so one player playing alone can end it. If nobody is online, the day never ends on its own.
-- Still up at midnight? Everyone falls asleep where they stand and wakes up by the tent, with no penalty.
+- Still up at midnight? Everyone falls asleep where they stand and wakes up by the tent (or where they are, if they're in a house), with no penalty.
 
-### Bedtime: the tent
+### Bedtime: the tent and the beds
 
-- Until the houses arrive (Milestone 4), you both sleep in a shared tent on the grass just left of the farm gate. Walk up to its door and the Action button says **Sleep**.
-- In bed your character disappears into the tent and a "Zzz" floats over it for everyone. Your screen dims, the controls go, and a banner says "Sleeping… waiting for Juno to go to bed" with **Get up**. Moving (joystick or keys) or Esc gets you up too.
+- There's a shared tent on the grass just left of the farm gate, and a bed in every house. Walk up to the tent's door, or next to a bed, and the Action button says **Sleep**. Any bed works, yours or not.
+- In bed your character disappears into the tent (or under the covers) and a "Zzz" floats over the tent or the bed for everyone there. Your screen dims, the controls go, and a banner says "Sleeping… waiting for Juno to go to bed" with **Get up**. Moving (joystick or keys) or Esc gets you up too.
 - The other player's clock card shows a chip, "Pip is asleep", and time keeps going for them.
-- When everyone online is in bed, the night starts: both screens fade to dark for a second. Overnight, watered crops grow, the soil dries, the shipping crate sells, the day moves on and the world is saved. Everyone wakes up side by side in front of the tent.
+- When everyone online is in bed, the night starts: both screens fade to dark for a second. Overnight, watered crops grow, the soil dries, the shipping crate sells, the day moves on and the world is saved. Everyone in a house wakes up where they slept; everyone else side by side in front of the tent.
 - If someone's phone locks or drops while they're still up, the night waits 30 seconds in case they come back, then starts. Someone whose phone locks while they're in bed just isn't online any more.
 - After a server restart everyone's awake again and taps Sleep again.
 
@@ -114,7 +117,17 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ## Decorating
 
-- Each player has their own house, starting as one room, and can visit the other's.
+### Houses
+
+- Two empty cottages stand in the meadow above the farm. Walk up to a free one's door and the Action button says **Move in**: tap it and it's yours, and you're inside, with a bed and a potted fern waiting ("Welcome home!"). One house each.
+- Your own door says **Home**; the other's says **Visit**. Tapping it, or just walking into the door, takes you in. Inside you arrive on the mat by the door; **Leave** on the mat, or walking down off it, takes you back out in front of the door.
+- Inside, the camera shows just the room, dark all round. You see whoever's in the same room; people outside see you vanish and come back out.
+- A sign floats over each cottage: "Pip's house" (or "Empty cottage"), and while anyone's in, who: "Pip is home, Juno is visiting".
+- Only the owner rearranges their house; anyone can visit and sleep in its bed.
+- Each house's furniture is saved in tiles from the room's top-left floor tile, so the room can be moved in Tiled. The floor tile just inside the door is always kept clear, so nobody's ever shut in or out.
+
+### Furniture and decorations
+
 - Furniture sits on a grid and can be placed, rotated, and picked up freely.
 - Outdoor decorations (fences, paths, lamps, flower beds) go on the shared farm.
 

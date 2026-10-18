@@ -4,7 +4,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SaveLoadError } from "./errors";
-import type { SaveFormat, VersionedSave } from "./saveFormat";
+import { currentVersion, type SaveFormat, type VersionedSave } from "./saveFormat";
 import { SAVE_FILE, SaveStore, checkSaveFile, snapshotSaves } from "./saveStore";
 import { WORLD_ID, WORLD_SAVE, type WorldSave, newWorldSave } from "./worldSave";
 
@@ -100,10 +100,9 @@ describe("SaveStore", () => {
   });
 
   it("upgrades an old save through each migration and archives the original", () => {
-    openStore(WORLD_SAVE).save(WORLD_ID, onDay(4));
-    const original = readRawSave(WORLD_ID);
-
     const store = openStore(v3Format);
+    const original = JSON.stringify({ version: 1, clock: { day: 4, minute: 360 } });
+    writeRawSave(WORLD_ID, original);
     expect(store.load(WORLD_ID)).toMatchObject({
       status: "loaded",
       save: { version: 3, dayNumber: 4, coins: 0 },
@@ -124,7 +123,7 @@ describe("SaveStore", () => {
 
   it("refuses a save from a newer version of the game", () => {
     openStore(WORLD_SAVE);
-    const newer = JSON.stringify({ version: 2, day: 3, coins: 50 });
+    const newer = JSON.stringify({ version: currentVersion(WORLD_SAVE) + 1, day: 3, coins: 50 });
     writeRawSave(WORLD_ID, newer);
     expectLoadError(() => stores[0].load(WORLD_ID), "newer-version");
     expect(readRawSave(WORLD_ID)).toBe(newer);
@@ -152,7 +151,8 @@ describe("SaveStore", () => {
   });
 
   it("reports a migration that fails, without archiving or changing anything", () => {
-    openStore(WORLD_SAVE).save(WORLD_ID, newWorldSave());
+    openStore(WORLD_SAVE);
+    writeRawSave(WORLD_ID, JSON.stringify({ version: 1, clock: { day: 2, minute: 360 } }));
     const original = readRawSave(WORLD_ID);
     const broken: SaveFormat<VersionedSave> = {
       migrations: [
@@ -176,7 +176,7 @@ describe("SaveStore", () => {
     const store = openStore(WORLD_SAVE);
     store.save(WORLD_ID, onDay(3));
     expect(() => store.save(WORLD_ID, { ...onDay(3), coins: Number.NaN })).toThrow(/wouldn't load back/);
-    expect(() => store.save(WORLD_ID, { ...onDay(4), version: 0 })).toThrow(/saves are written as version 1/);
+    expect(() => store.save(WORLD_ID, { ...onDay(4), version: 0 })).toThrow(new RegExp(`saves are written as version ${currentVersion(WORLD_SAVE)}`));
     expect(store.load(WORLD_ID)).toMatchObject({ save: { clock: { day: 3 } } });
   });
 
@@ -203,7 +203,7 @@ describe("snapshotSaves", () => {
     const dest = path.join(dataDir, "backup.sqlite");
 
     const worlds = snapshotSaves(dataDir, dest, WORLD_SAVE);
-    expect(worlds).toEqual([{ worldId: WORLD_ID, version: 1, savedAt: expect.any(String) }]);
+    expect(worlds).toEqual([{ worldId: WORLD_ID, version: currentVersion(WORLD_SAVE), savedAt: expect.any(String) }]);
 
     // Restoring a backup is putting the copy back as saves.sqlite.
     const restoredDir = path.join(dataDir, "restored");
@@ -230,7 +230,7 @@ describe("checkSaveFile", () => {
     const file = path.join(dataDir, SAVE_FILE);
     const before = readFileSync(file);
 
-    expect(checkSaveFile(file, WORLD_SAVE)).toEqual([{ worldId: WORLD_ID, version: 1, savedAt: expect.any(String) }]);
+    expect(checkSaveFile(file, WORLD_SAVE)).toEqual([{ worldId: WORLD_ID, version: currentVersion(WORLD_SAVE), savedAt: expect.any(String) }]);
     expect(readFileSync(file).equals(before)).toBe(true);
   });
 

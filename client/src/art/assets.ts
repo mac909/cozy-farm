@@ -6,6 +6,7 @@ import type { Facing } from "../../../shared/movement";
 import { tilesetImageUrl } from "../../../shared/world/tiledMap";
 import { VILLAGE_TILED } from "../../../shared/world/villageMap";
 import { allPieceArt, FURNITURE_ART, FURNITURE_SHEETS, pieceFrame, type SheetId } from "./furnitureArt";
+import { COTTAGES, cottageFrame, DOOR_FRAME, DOOR_ON_SHEET } from "./houseArt";
 
 /** Art lives in client/public/assets/: the Ninja Adventure pack, plus our own sprites in custom/. */
 const PACK = "/assets/ninja-adventure/";
@@ -143,7 +144,12 @@ function createTextures(scene: Phaser.Scene): void {
   dot.generateTexture(PARTICLE_KEY, 2, 2);
   dot.destroy();
 
-  scene.textures.get(HOUSE_SHEET_KEY).add(STORE_FRAME, 0, STORE_ON_SHEET.x, STORE_ON_SHEET.y, STORE_ON_SHEET.width, STORE_ON_SHEET.height);
+  const houseSheet = scene.textures.get(HOUSE_SHEET_KEY);
+  houseSheet.add(STORE_FRAME, 0, STORE_ON_SHEET.x, STORE_ON_SHEET.y, STORE_ON_SHEET.width, STORE_ON_SHEET.height);
+  for (const [style, { x: cx, y: cy, width: cw, height: ch }] of Object.entries(COTTAGES)) {
+    houseSheet.add(cottageFrame(style as keyof typeof COTTAGES), 0, cx, cy, cw, ch);
+  }
+  houseSheet.add(DOOR_FRAME, 0, DOOR_ON_SHEET.x, DOOR_ON_SHEET.y, DOOR_ON_SHEET.width, DOOR_ON_SHEET.height);
   for (const { id, turn, art } of allPieceArt()) {
     scene.textures.get(sheetKey(art.sheet)).add(pieceFrame(id, turn), 0, art.x, art.y, art.w, art.h);
   }

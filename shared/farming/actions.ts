@@ -1,5 +1,6 @@
 import { CROPS, isCropId, type CropId } from "../content/crops";
-import { ITEMS, cropItemId, isItemId, type ItemId } from "../content/items";
+import { goesIn, type FurnitureId, type PlaceKind } from "../content/furniture";
+import { ITEMS, cropItemId, furnitureOf, isItemId, type ItemId } from "../content/items";
 import { addItems, countOf, isSlotIndex, removeFromSlot, roomFor, type ItemStack } from "../inventory/inventory";
 import type { PlaceId } from "../world/places";
 import { farmTileAt, farmerOf, setFarmTile, setFarmerBag, type FarmerId, type World } from "../world/world";
@@ -11,12 +12,28 @@ import { harvest, isRipe, plant, ripeStage, till, water, type FarmTile, type Pla
  * uses applyFarmAction to carry the action out. One set of rules, so they always agree.
  */
 
+/** Which way you go in at a cottage's door: your own home, a visit, or moving into an empty one. */
+export type DoorKind = "home" | "visit" | "moveIn";
+
+/**
+ * Something you're standing next to that takes over the Action button: a place on the map, a
+ * cottage's door, the way out of a room, or a bed.
+ */
+export type Spot =
+  | { kind: "place"; place: PlaceId }
+  | { kind: "door"; houseId: string; how: DoorKind }
+  | { kind: "exit"; houseId: string }
+  | { kind: "bed" };
+
 /** What the Action button does. */
 export type Action =
   | { kind: "sleep" }
   | { kind: "crate" }
   | { kind: "seeds" }
   | { kind: "shop" }
+  | { kind: "enter"; houseId: string; how: DoorKind }
+  | { kind: "leave"; houseId: string }
+  | { kind: "place"; itemId: FurnitureId }
   | { kind: "harvest"; cropId: CropId }
   | { kind: "till" }
   | { kind: "plant"; cropId: CropId }
@@ -47,7 +64,8 @@ export function seedCrop(itemId: ItemId | null): CropId | null {
 
 /**
  * What the Action button does, checked in this order:
- * next to a place (tent, crate, seed stand, store) → that place;
+ * next to a place (tent, crate, seed stand, store), a door, the way out or a bed → that;
+ * holding furniture where it can go (`placing`: your own house, or the farm) → put it down;
  * a ripe crop in front → pick it, whatever you're holding;
  * the hoe on farmland grass → dig;
  * seeds on bare dug soil → plant;
@@ -55,15 +73,19 @@ export function seedCrop(itemId: ItemId | null): CropId | null {
  * otherwise nothing.
  *
  * `tile` is the tile in front of you; `isFarmland` whether the map allows digging there; `held` the
- * item in your selected hotbar slot; `nearby` the place you're next to, if any.
+ * item in your selected hotbar slot; `spot` what you're next to, if anything; `placing` what kind
+ * of furniture can be put down where you are (null in someone else's house).
  */
 export function chooseAction(
   tile: FarmTile,
   isFarmland: boolean,
   held: ItemId | null,
-  nearby: PlaceId | null,
+  spot: Spot | null,
+  placing: PlaceKind | null = null,
 ): Action {
-  if (nearby) return PLACE_ACTION[nearby];
+  if (spot) return spotAction(spot);
+  const furniture = furnitureOf(held);
+  if (furniture && placing && goesIn(furniture, placing)) return { kind: "place", itemId: furniture };
   if (tile.kind === "planted" && isRipe(tile)) return { kind: "harvest", cropId: tile.cropId };
   if (held === HOE && tile.kind === "untilled" && isFarmland) return { kind: "till" };
   const seed = seedCrop(held);
@@ -72,11 +94,29 @@ export function chooseAction(
   return { kind: "none" };
 }
 
-const ACTION_WORD: Record<Action["kind"], string | null> = {
+/** What being next to a spot does. */
+export function spotAction(spot: Spot): Action {
+  switch (spot.kind) {
+    case "place":
+      return PLACE_ACTION[spot.place];
+    case "door":
+      return { kind: "enter", houseId: spot.houseId, how: spot.how };
+    case "exit":
+      return { kind: "leave", houseId: spot.houseId };
+    case "bed":
+      return { kind: "sleep" };
+  }
+}
+
+const DOOR_WORD: Record<DoorKind, string> = { home: "Home", visit: "Visit", moveIn: "Move in" };
+
+const ACTION_WORD: Record<Exclude<Action["kind"], "enter">, string | null> = {
   sleep: "Sleep",
   crate: "Crate",
   seeds: "Seeds",
   shop: "Shop",
+  leave: "Leave",
+  place: "Place",
   harvest: "Pick",
   till: "Dig",
   plant: "Plant",
@@ -86,7 +126,7 @@ const ACTION_WORD: Record<Action["kind"], string | null> = {
 
 /** The word on the Action button's tag, or null when it's faded. */
 export function actionWord(action: Action): string | null {
-  return ACTION_WORD[action.kind];
+  return action.kind === "enter" ? DOOR_WORD[action.how] : ACTION_WORD[action.kind];
 }
 
 /** Why an action can't happen. Each one has a line of text in HINT_TEXT. */
@@ -114,6 +154,16 @@ export type HintReason =
   | "not-enough-coins"
   | "not-for-sale"
   | "not-near-store"
+  | "not-near-door"
+  | "not-near-bed"
+  | "house-taken"
+  | "has-house"
+  | "not-your-house"
+  | "not-furniture"
+  | "house-only"
+  | "farm-only"
+  | "cant-go-here"
+  | "someone-there"
   | "coming-soon";
 
 /** A hint, with the details some of them need. */
@@ -148,6 +198,16 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "not-enough-coins": "Not enough coins for that.",
   "not-for-sale": "That isn't sold here.",
   "not-near-store": "Walk up to the store first.",
+  "not-near-door": "Walk up to the door first.",
+  "not-near-bed": "Walk up to a bed or the tent first.",
+  "house-taken": "Someone already lives here.",
+  "has-house": "You already have a house.",
+  "not-your-house": "Only whoever lives here can arrange it.",
+  "not-furniture": "Pick some furniture from your bag.",
+  "house-only": "That goes inside your house.",
+  "farm-only": "That goes outside, on the farm.",
+  "cant-go-here": "It won't fit there.",
+  "someone-there": "Someone's standing there.",
   "coming-soon": "Coming soon!",
 };
 
@@ -175,10 +235,15 @@ export function daysLeft(tile: PlantedTile): number {
 /**
  * Why the Action button does nothing here: the hint it shows when tapped while faded. Null when
  * it does do something (see chooseAction). Places are left out: when you're next to one, the
- * button is never faded.
+ * button is never faded. `placing` is as for chooseAction.
  */
-export function hintFor(tile: FarmTile, isFarmland: boolean, held: ItemId | null): Hint | null {
-  if (chooseAction(tile, isFarmland, held, null).kind !== "none") return null;
+export function hintFor(tile: FarmTile, isFarmland: boolean, held: ItemId | null, placing: PlaceKind | null = null): Hint | null {
+  if (chooseAction(tile, isFarmland, held, null, placing).kind !== "none") return null;
+  const furniture = furnitureOf(held);
+  if (furniture && !(tile.kind === "planted")) {
+    if (!placing) return { reason: "not-your-house" };
+    return { reason: goesIn(furniture, "house") ? "house-only" : "farm-only" };
+  }
   const seed = seedCrop(held);
   if (tile.kind === "planted") {
     if (seed) return { reason: "has-crop" };

@@ -39,6 +39,25 @@ export class CrateEntry extends Schema {
   @type("uint32") count = 0;
 }
 
+/** A piece of furniture or a decoration put down: in a house, in floor tiles; on the farm, in map tiles. */
+export class PieceState extends Schema {
+  /** A FurnitureId. */
+  @type("string") itemId = "";
+  @type("uint16") col = 0;
+  @type("uint16") row = 0;
+  /** Which way round: an index into the piece's turns. */
+  @type("uint8") turn = 0;
+}
+
+/** A cottage someone has moved into. */
+export class HouseState extends Schema {
+  /** The farmer who lives here. */
+  @type("string") owner = "";
+  /** Their name, for the sign over the door (they may not be online). */
+  @type("string") ownerName = "";
+  @type([PieceState]) furniture = new ArraySchema<PieceState>();
+}
+
 /** One person in the world. Positions are in world pixels. */
 export class Player extends Schema {
   @type("number") x = 0;
@@ -51,7 +70,7 @@ export class Player extends Schema {
   @type("string") character = "";
   /** Which farmer this is: whose bag they carry. */
   @type("string") farmerId = "";
-  /** In the tent, asleep: hidden from view until they get up or the morning comes. Never saved. */
+  /** In bed (the tent or a bed in a house), asleep: hidden from view until they get up or the morning comes. Never saved. */
   @type("boolean") inBed = false;
   /** The farmer's bag: INVENTORY_SLOTS slots, the first HOTBAR_SLOTS of them the hotbar. */
   @type([BagSlot]) bag = new ArraySchema<BagSlot>();
@@ -67,4 +86,8 @@ export class FarmState extends Schema {
   @type({ map: FarmPlot }) farm = new MapSchema<FarmPlot>();
   /** The shipping crate on the dock, shared, in the order things were first put in. It sells overnight. */
   @type([CrateEntry]) crate = new ArraySchema<CrateEntry>();
+  /** The cottages someone has moved into, keyed by house id ("house1"). */
+  @type({ map: HouseState }) houses = new MapSchema<HouseState>();
+  /** Decorations on the farm. */
+  @type([PieceState]) decorations = new ArraySchema<PieceState>();
 }

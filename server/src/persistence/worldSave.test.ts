@@ -16,6 +16,20 @@ function busyWorld(): World {
   world = setFarmTile(world, 12, 4, { kind: "planted", watered: true, cropId: "radish", stage: 3, daysInStage: 0 });
   return {
     ...world,
+    houses: {
+      house1: {
+        owner: "farmer-1",
+        furniture: [
+          { itemId: "red_bed", col: 0, row: 0, turn: 0 },
+          { itemId: "straw_rug", col: 2, row: 1, turn: 0 },
+          { itemId: "sofa", col: 3, row: 1, turn: 0 },
+        ],
+      },
+    },
+    decorations: [
+      { itemId: "fence", col: 25, row: 8, turn: 2 },
+      { itemId: "sunflower", col: 26, row: 8, turn: 0 },
+    ],
     clock: { day: 4, minute: 1234.5678 },
     coins: 640,
     crate: [{ itemId: "radish", count: 120 }, { itemId: seedItemId("carrot"), count: 2 }],
@@ -42,9 +56,9 @@ describe("the world save", () => {
     expect(loaded).toEqual(world);
   });
 
-  it("is version 1 and lists dug tiles in reading order", () => {
+  it("is version 2 and lists dug tiles in reading order", () => {
     const save = worldToSave(busyWorld());
-    expect(save.version).toBe(1);
+    expect(save.version).toBe(2);
     expect(save.farm.map(({ col, row }) => `${col},${row}`)).toEqual(["12,4", "4,6", "5,6"]);
     expect(save.farmers["farmer-1"].bag).toHaveLength(INVENTORY_SLOTS);
   });
@@ -72,12 +86,22 @@ describe("the world save", () => {
     ["an overfull stack", { farmers: { a: { name: "x", character: "boy", bag: [{ itemId: "hoe", count: 2 }, ...newInventory().slice(1)] } } }, /count/],
     ["a morning report with a bad sale", { lastMorning: { day: 2, grew: 0, ready: 0, coins: 0, sale: { lines: [{}], total: 0 } } }, /lastMorning.sale.lines\[0\]/],
     ["a missing part", { farm: undefined }, /farm should be a list/],
+    ["a house with an odd id", { houses: { "": { owner: "farmer-1", furniture: [] } } }, /houses has an id/],
+    ["a house nobody in the save owns", { houses: { house1: { owner: "farmer-9", furniture: [] } } }, /houses.house1.owner/],
+    [
+      "two houses for one farmer",
+      { houses: { house1: { owner: "farmer-1", furniture: [] }, house2: { owner: "farmer-1", furniture: [] } } },
+      /already has another house/,
+    ],
+    ["furniture that isn't", { houses: { house1: { owner: "farmer-1", furniture: [{ itemId: "radish", col: 0, row: 0, turn: 0 }] } } }, /isn't furniture/],
+    ["a decoration off the edge", { decorations: [{ itemId: "fence", col: -1, row: 0, turn: 0 }] }, /decorations\[0\].col/],
+    ["decorations that aren't a list", { decorations: {} }, /decorations should be a list/],
   ])("refuses %s", (_what, part, message) => {
     expect(() => WORLD_SAVE.validate(withPart(part))).toThrow(message);
   });
 
   it("tidies an odd name or character instead of refusing the save", () => {
-    const save = WORLD_SAVE.validate(withPart({ farmers: { a: { name: "  ", character: "dragon", bag: starterInventory() } } }));
+    const save = WORLD_SAVE.validate(withPart({ farmers: { a: { name: "  ", character: "dragon", bag: starterInventory() } }, houses: {} }));
     expect(save.farmers.a).toMatchObject({ name: "Farmer", character: "villager4" });
   });
 
@@ -86,6 +110,11 @@ describe("the world save", () => {
       withPart({ farm: [{ col: 1, row: 1, kind: "planted", watered: false, cropId: "radish", stage: 9, daysInStage: 5 }] }),
     );
     expect(save.farm[0]).toMatchObject({ stage: ripeStage(CROPS.radish), daysInStage: CROPS.radish.daysPerStage - 1 });
+  });
+
+  it("turns a piece back to its first way round if it can't turn that way any more", () => {
+    const save = WORLD_SAVE.validate(withPart({ decorations: [{ itemId: "sofa", col: 3, row: 3, turn: 4 }] }));
+    expect(save.decorations[0].turn).toBe(0);
   });
 
   it("drops anything it doesn't know about", () => {

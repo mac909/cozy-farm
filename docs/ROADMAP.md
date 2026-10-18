@@ -39,7 +39,7 @@ Every milestone ends with something playable. Tick items off as they land.
 
 ## Milestone 4: Decorating
 
-- [ ] A house interior for each player; visiting each other
+- [x] A house interior for each player; visiting each other (and a bed in each that works like the tent)
 - [ ] Place, rotate, and pick up furniture
 - [ ] Outdoor decorations on the farm
 

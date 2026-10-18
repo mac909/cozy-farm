@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { isWalkable, type Rect, tileAt, type TilePos, type WorldMap } from "./map";
+import { exitTile, frontOfDoor } from "./houses";
 import { parseTiledMap, type TiledMapJson, tilesetImageUrl } from "./tiledMap";
 import { VILLAGE_MAP, VILLAGE_TILED } from "./villageMap";
 
@@ -148,6 +149,23 @@ describe("the village map", () => {
     };
     for (const spot of ["shippingCrate", "tent", "seedStand", "store"] as const) {
       expect(around(map[spot]).some((tile) => walk.has(tile)), spot).toBe(true);
+    }
+  });
+
+  it("lets you walk up to every cottage's door", () => {
+    const walk = reachable(map, map.spawn);
+    expect(map.houses.length).toBeGreaterThanOrEqual(2);
+    for (const plan of map.houses) {
+      const front = frontOfDoor(plan);
+      expect(walk.has(`${front.col},${front.row}`), plan.id).toBe(true);
+    }
+  });
+
+  it("keeps the rooms apart from the village: no walking in without a door", () => {
+    const walk = reachable(map, map.spawn);
+    for (const plan of map.houses) {
+      const exit = exitTile(plan);
+      expect(walk.has(`${exit.col},${exit.row}`), plan.id).toBe(false);
     }
   });
 

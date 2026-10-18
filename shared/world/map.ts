@@ -20,6 +20,18 @@ export interface WorldMap {
   seedStand: Rect;
   /** The general store (Milestone 3), by the path just left of the seed stand. Its door is on its bottom row. */
   store: Rect;
+  /** The cottages (Milestone 4), each with its room: `house1` and `interior1` in Tiled, and so on. */
+  houses: HousePlan[];
+}
+
+/** A cottage on the map and its one room, drawn out of sight at the bottom of the map. */
+export interface HousePlan {
+  /** The Tiled object's name, "house1": also how the save knows the house. */
+  id: string;
+  /** The building in the village; its door is on its bottom row. */
+  building: Rect;
+  /** The room, walls included; the way out is the gap in the middle of its bottom wall. */
+  interior: Rect;
 }
 
 /** An area in world pixels: top left corner and size. */

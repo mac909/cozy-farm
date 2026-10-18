@@ -16,7 +16,7 @@ import type {
 import { isFacing } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import { FarmState, Player } from "../../../shared/schema";
-import { steppedMinute, writeBag, writeClock, writeCrate, writeFarm } from "../../../shared/stateSync";
+import { steppedMinute, writeBag, writeClock, writeCrate, writeFarm, writeHouses, writePieces } from "../../../shared/stateSync";
 import { tickClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
@@ -26,6 +26,7 @@ import { registerBag } from "./bag";
 import { registerCrate } from "./crate";
 import { registerDevCommands } from "./dev";
 import { registerFarming } from "./farming";
+import { registerHouses } from "./houses";
 import { Bedtime } from "./night";
 import { registerShop } from "./shop";
 
@@ -60,6 +61,7 @@ export class FarmRoom extends Room<FarmState> {
     registerBag(this);
     registerCrate(this);
     registerShop(this);
+    registerHouses(this);
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
@@ -159,6 +161,8 @@ export class FarmRoom extends Room<FarmState> {
     if (this.state.coins !== world.coins) this.state.coins = world.coins;
     writeFarm(this.state.farm, world.farm);
     writeCrate(this.state.crate, world.crate);
+    writeHouses(this.state.houses, world.houses, world.farmers);
+    writePieces(this.state.decorations, world.decorations);
     this.state.players.forEach((player) => {
       const farmer = farmerOf(world, player.farmerId);
       if (farmer) writeBag(player.bag, farmer.bag);

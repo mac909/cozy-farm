@@ -64,6 +64,8 @@ import { playSound } from "../audio/sounds";
 import { Bedtime } from "../world/Bedtime";
 import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
+import { Homes, type Resident } from "../world/Homes";
+import { areaOf, VILLAGE } from "../../../shared/world/houses";
 import { Outline } from "../world/Outline";
 import type { UIScene } from "./UIScene";
 
@@ -91,6 +93,10 @@ interface RemotePlayer {
   positions: PositionBuffer;
   /** When their drawn position last changed (performance.now()). */
   lastMovedAt: number;
+  /** Who they are and whether they're asleep, as the server last said. */
+  name: string;
+  farmerId: string;
+  inBed: boolean;
 }
 
 /** The village itself: map, characters, camera. */
@@ -110,6 +116,7 @@ export class WorldScene extends Phaser.Scene {
   private lastSent = { x: NaN, y: NaN, facing: "down" as Facing, at: 0 };
   private farming!: Farming;
   private bedtime!: Bedtime;
+  private homes!: Homes;
   private readonly tips = new Tips();
   /** The shipping crate on the dock, and what's in it as the server last said. */
   private crateSprite!: Phaser.GameObjects.Image;
@@ -162,8 +169,18 @@ export class WorldScene extends Phaser.Scene {
     startMusic(this);
     installDevCommands((message) => this.room?.send("dev", message));
 
+    this.homes = new Homes(this, {
+      me: this.me,
+      myFarmerId: () => this.farmerId,
+      room: () => this.room,
+      teleport: (x, y, facing) => this.teleport(x, y, facing),
+    });
+    this.homes.setZoom(this.zoom);
+    this.physics.add.collider(this.player, this.homes.colliders);
+
     this.bedtime = new Bedtime(this, {
       room: () => this.room,
+      inVillage: (player) => areaOf(VILLAGE_MAP, player) === VILLAGE,
       me: this.me,
       wakeAt: (x, y) => this.teleport(x, y, "down"),
       fade: (atDark, done) => this.ui.nightFade(atDark, done),
@@ -187,11 +204,16 @@ export class WorldScene extends Phaser.Scene {
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
       busy: () => this.bedtime.asleep || this.panel?.isOpen === true,
-      places: {
-        tent: () => this.bedtime.sleep(),
+      spot: (position) => this.homes.spot(position),
+      placing: () => this.homes.placing(),
+      on: {
+        sleep: () => this.bedtime.sleep(),
         crate: () => this.openCrate(),
-        seedStand: () => this.openShop(seedStandCatalog(), "seedStand"),
-        store: () => this.openShop(generalStoreCatalog(), "store"),
+        seeds: () => this.openShop(seedStandCatalog(), "seedStand"),
+        shop: () => this.openShop(generalStoreCatalog(), "store"),
+        enter: (houseId, how) => this.homes.enter(houseId, how),
+        leave: (houseId) => this.homes.leave(houseId),
+        place: () => this.me.showHint("Coming soon!"),
       },
       holding: () => this.ui.actionHeld(),
       acted: (kind) => {
@@ -246,6 +268,9 @@ export class WorldScene extends Phaser.Scene {
 
     const now = performance.now();
     const drawAt = now - REMOTE_DELAY_MS;
+    const residents: Resident[] = [
+      { name: this.look.name, farmerId: this.farmerId ?? "", x: this.player.x, y: this.player.y, inBed: this.registry.get("inBed") === true },
+    ];
     for (const remote of this.remotes.values()) {
       const pose = remote.positions.sample(drawAt);
       if (!pose) continue;
@@ -253,6 +278,13 @@ export class WorldScene extends Phaser.Scene {
       if (pose.x !== sprite.x || pose.y !== sprite.y) remote.lastMovedAt = now;
       sprite.setPosition(pose.x, pose.y);
       remote.character.setMotion(pose.facing, now - remote.lastMovedAt < REMOTE_STILL_MS);
+      residents.push({ name: remote.name, farmerId: remote.farmerId, x: pose.x, y: pose.y, inBed: remote.inBed });
+    }
+    this.homes.update(this.player, input, residents);
+    // You only see who's where you are: the village, or the same room. Sleepers are tucked in.
+    for (const remote of this.remotes.values()) {
+      const { sprite } = remote.character;
+      remote.character.setHidden(remote.inBed || areaOf(VILLAGE_MAP, sprite) !== this.homes.currentArea);
     }
   }
 
@@ -344,8 +376,10 @@ export class WorldScene extends Phaser.Scene {
       $(player).onChange(() => {
         this.recordPosition(remote, player);
         remote.character.setLook(lookFrom(player));
-        // Asleep in the tent.
-        remote.character.setHidden(player.inBed);
+        remote.name = player.name;
+        remote.farmerId = player.farmerId;
+        // Asleep in the tent or a bed: hidden (in update()).
+        remote.inBed = player.inBed;
       });
     });
     room.onMessage("wakeUp", (message: WakeUpMessage) => this.bedtime.wakeUp(message));
@@ -403,6 +437,7 @@ export class WorldScene extends Phaser.Scene {
     if (changed) this.refreshPanel();
 
     this.farming.readFarm(state);
+    this.homes.readState(state);
   }
 
   /** "+1 Radish" over your head for whatever just landed in your bag. */
@@ -428,6 +463,9 @@ export class WorldScene extends Phaser.Scene {
       character: new Character(this, sprite, look, this.zoom),
       positions: new PositionBuffer(),
       lastMovedAt: 0,
+      name: player.name,
+      farmerId: player.farmerId,
+      inBed: player.inBed,
     };
     this.recordPosition(remote, player);
     remote.character.setHidden(player.inBed);
@@ -616,5 +654,6 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setZoom(this.zoom);
     this.me?.setZoom(this.zoom);
     for (const { character } of this.remotes.values()) character.setZoom(this.zoom);
+    this.homes?.setZoom(this.zoom);
   }
 }
