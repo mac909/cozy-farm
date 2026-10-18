@@ -1,5 +1,7 @@
 # Milestones 3 and 4 plan: the general store, houses and decorating
 
+**Status:** built (2026-10-18); every step below landed, and `docs/reports/overnight-2026-10-18.md` has what to try.
+
 Written 2026-10-18 by Claude, building autonomously ("I trust you with decisions"). Every decision is also in
 DESIGN.md; this file is the short build plan.
 
