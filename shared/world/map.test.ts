@@ -1,33 +1,154 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { parseMap } from "./map";
-import { isBlocked } from "./tiles";
-import { VILLAGE_MAP } from "./villageMap";
+import { isWalkable, tileAt, type TilePos, type WorldMap } from "./map";
+import { parseTiledMap, type TiledMapJson, tilesetImageUrl } from "./tiledMap";
+import { VILLAGE_MAP, VILLAGE_TILED } from "./villageMap";
 
-describe("parseMap", () => {
-  it("reads the size and the spawn point", () => {
-    const map = parseMap(["T.", ".P"]);
-    expect(map.width).toBe(2);
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+/** A tiny Tiled map: 3×2 tiles, the top-left tile blocked, the bottom-right one farmland. */
+function smallMap(): TiledMapJson {
+  const layer = (name: string, data: number[]) => ({ name, type: "tilelayer", data });
+  return {
+    width: 3,
+    height: 2,
+    tilewidth: 16,
+    tileheight: 16,
+    tilesets: [{ name: "markers", firstgid: 1, image: "../../client/public/assets/custom/map-markers.png" }],
+    layers: [
+      layer("Ground", [1, 1, 1, 1, 1, 1]),
+      layer("Collision", [1, 0, 0, 0, 0, 0]),
+      layer("Farmland", [0, 0, 0, 0, 0, 2]),
+      {
+        name: "Objects",
+        type: "objectgroup",
+        objects: [
+          { name: "spawn", x: 24, y: 8, point: true },
+          { name: "shippingCrate", x: 0, y: 16, width: 32, height: 16 },
+        ],
+      },
+    ],
+  };
+}
+
+describe("parseTiledMap", () => {
+  it("reads the size, collisions, farmland, spawn and crate", () => {
+    const map = parseTiledMap(smallMap());
+    expect(map.width).toBe(3);
     expect(map.height).toBe(2);
-    expect(map.spawn).toEqual({ col: 1, row: 1 });
-  });
-
-  it("rejects rows of different widths", () => {
-    expect(() => parseMap(["..P", ".."])).toThrow(/row 1/);
-  });
-
-  it("rejects unknown characters", () => {
-    expect(() => parseMap([".P?"])).toThrow(/Unknown map character/);
+    expect(map.blocked).toEqual([
+      [true, false, false],
+      [false, false, false],
+    ]);
+    expect(map.farmland[1][2]).toBe(true);
+    expect(map.farmland[0][0]).toBe(false);
+    expect(map.spawn).toEqual({ col: 1, row: 0 });
+    expect(map.shippingCrate).toEqual({ x: 0, y: 16, width: 32, height: 16 });
   });
 
   it("requires exactly one spawn point", () => {
-    expect(() => parseMap([".."])).toThrow(/no spawn/);
-    expect(() => parseMap(["PP"])).toThrow(/more than one/);
+    const none = smallMap();
+    none.layers[3].objects = none.layers[3].objects!.filter((o) => o.name !== "spawn");
+    expect(() => parseTiledMap(none)).toThrow(/no "spawn"/);
+    const two = smallMap();
+    two.layers[3].objects!.push({ name: "spawn", x: 8, y: 8, point: true });
+    expect(() => parseTiledMap(two)).toThrow(/more than one "spawn"/);
+  });
+
+  it("rejects a spawn point off the map", () => {
+    const map = smallMap();
+    map.layers[3].objects![0].x = 100;
+    expect(() => parseTiledMap(map)).toThrow(/outside the map/);
+  });
+
+  it("needs the Collision and Farmland layers at the map's size", () => {
+    const missing = smallMap();
+    missing.layers = missing.layers.filter((l) => l.name !== "Collision");
+    expect(() => parseTiledMap(missing)).toThrow(/"Collision"/);
+    const short = smallMap();
+    short.layers[2].data = [0, 0];
+    expect(() => parseTiledMap(short)).toThrow(/"Farmland" has 2 tiles, expected 6/);
+  });
+
+  it("explains compressed layers and external tilesets", () => {
+    const compressed = smallMap();
+    (compressed.layers[1] as { data: unknown }).data = "eJxjYGBgAAAABAAB";
+    expect(() => parseTiledMap(compressed)).toThrow(/CSV/);
+    const external = smallMap();
+    (external.tilesets[0] as { source?: string }).source = "markers.tsx";
+    expect(() => parseTiledMap(external)).toThrow(/Embed/);
   });
 });
 
-describe("village map", () => {
+describe("tilesetImageUrl", () => {
+  it("turns a path relative to the map into a URL under client/public", () => {
+    expect(tilesetImageUrl("../../client/public/assets/custom/soil.png")).toBe("/assets/custom/soil.png");
+    expect(tilesetImageUrl("..\\..\\client\\public\\assets\\a b.png")).toBe("/assets/a%20b.png");
+    expect(() => tilesetImageUrl("C:/Downloads/tiles.png")).toThrow(/client\/public/);
+  });
+});
+
+/** Every tile you can walk to from `from`, as "col,row". */
+function reachable(map: WorldMap, from: TilePos): Set<string> {
+  const seen = new Set<string>();
+  const queue = [from];
+  while (queue.length) {
+    const { col, row } = queue.pop()!;
+    const key = `${col},${row}`;
+    if (seen.has(key) || !isWalkable(map, col, row)) continue;
+    seen.add(key);
+    queue.push({ col: col + 1, row }, { col: col - 1, row }, { col, row: row + 1 }, { col, row: row - 1 });
+  }
+  return seen;
+}
+
+describe("the village map", () => {
+  const map = VILLAGE_MAP;
+
   it("spawns players on a walkable tile", () => {
-    const { spawn, tiles } = VILLAGE_MAP;
-    expect(isBlocked(tiles[spawn.row][spawn.col])).toBe(false);
+    expect(isWalkable(map, map.spawn.col, map.spawn.row)).toBe(true);
+  });
+
+  it("is tall enough to fill a phone screen standing up", () => {
+    // At zoom 2 a tall phone shows about 27 tiles top to bottom.
+    expect(map.height).toBeGreaterThanOrEqual(27);
+    expect(map.width).toBeGreaterThanOrEqual(27);
+  });
+
+  it("has a farm field you can walk all over", () => {
+    const walk = reachable(map, map.spawn);
+    const field: string[] = [];
+    map.farmland.forEach((row, r) => row.forEach((farm, c) => farm && field.push(`${c},${r}`)));
+    expect(field.length).toBeGreaterThan(40);
+    for (const tile of field) {
+      const [col, row] = tile.split(",").map(Number);
+      expect(map.blocked[row][col], `farmland at ${tile} is blocked`).toBe(false);
+      expect(walk.has(tile), `farmland at ${tile} can't be reached from the spawn point`).toBe(true);
+    }
+  });
+
+  it("lets you walk up to the shipping crate", () => {
+    const walk = reachable(map, map.spawn);
+    const { x, y, width, height } = map.shippingCrate;
+    const first = tileAt(x, y);
+    const last = tileAt(x + width - 1, y + height - 1);
+    const beside: string[] = [];
+    for (let row = first.row - 1; row <= last.row + 1; row++)
+      for (let col = first.col - 1; col <= last.col + 1; col++) beside.push(`${col},${row}`);
+    expect(beside.some((tile) => walk.has(tile))).toBe(true);
+  });
+
+  it("paints the ground everywhere", () => {
+    const ground = VILLAGE_TILED.layers.find((l) => l.name === "Ground")!.data as number[];
+    expect(ground.every((gid) => gid !== 0)).toBe(true);
+  });
+
+  it("only uses tileset images that are in client/public", () => {
+    for (const tileset of VILLAGE_TILED.tilesets) {
+      const url = tilesetImageUrl(tileset.image!);
+      expect(fs.existsSync(path.join(ROOT, "client/public", decodeURI(url))), url).toBe(true);
+    }
   });
 });

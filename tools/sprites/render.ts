@@ -92,17 +92,27 @@ function renderCrate(): void {
 }
 
 function renderSand(): void {
+  const blocks: Img[] = [];
   for (const [name, r] of [
     ["sand-grass", SAND_GRASS],
     ["sand-water", SAND_WATER],
   ] as const) {
     const img = recolourBlock(Img.read(path.join(PACK, r.source)), r);
+    blocks.push(img);
     save(name, img, {
       frameWidth: T,
       frameHeight: T,
       recolouredFrom: `ninja-adventure/${r.source} (block at ${r.x},${r.y}, ${r.w}×${r.h}); same tile layout`,
     });
   }
+  // One sheet for the map, so a single Tiled terrain set covers grass, sand and sea.
+  const [grass, water] = blocks;
+  const terrain = new Img(Math.max(grass.w, water.w), grass.h + water.h).blit(grass).blit(water, 0, grass.h);
+  save("beach-terrain", terrain, {
+    frameWidth: T,
+    frameHeight: T,
+    layout: `sand-grass.png on top (rows 0–${grass.h / T - 1}), sand-water.png below. The map's Ground layer uses it.`,
+  });
 }
 
 function renderMarkers(): void {

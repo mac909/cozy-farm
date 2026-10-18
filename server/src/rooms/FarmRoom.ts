@@ -62,9 +62,9 @@ export class FarmRoom extends Room<FarmState> {
   }
 
   private dress(player: Player, look: unknown) {
-    const { name, color } = lookFrom(look);
+    const { name, character } = lookFrom(look);
     player.name = name;
-    player.color = color;
+    player.character = character;
   }
 
   private emote(client: Client, message: EmoteMessage) {

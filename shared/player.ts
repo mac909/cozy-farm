@@ -1,5 +1,5 @@
+import { CHARACTERS, type CharacterId, DEFAULT_CHARACTER, LEGACY_SHIRT_COLORS } from "./content/characters";
 import { EMOTES, type EmoteId } from "./content/emotes";
-import { DEFAULT_SHIRT_COLOR, SHIRT_COLORS, type ShirtColorId } from "./content/shirtColors";
 
 /** Longest name, in characters (an emoji counts as one). */
 export const NAME_MAX_LENGTH = 12;
@@ -10,7 +10,7 @@ export const DEFAULT_NAME = "Farmer";
 /** What a player picked for themselves. */
 export interface Look {
   name: string;
-  color: ShirtColorId;
+  character: CharacterId;
 }
 
 /** Splits text into the characters a person would count, keeping emoji like 👩‍🌾 whole. */
@@ -26,19 +26,26 @@ export function cleanName(raw: unknown): string {
   return characters(tidy).slice(0, NAME_MAX_LENGTH).join("").trim();
 }
 
-export function isShirtColor(value: unknown): value is ShirtColorId {
-  return SHIRT_COLORS.some((color) => color.id === value);
+export function isCharacter(value: unknown): value is CharacterId {
+  return CHARACTERS.some((character) => character.id === value);
 }
 
 export function isEmote(value: unknown): value is EmoteId {
   return EMOTES.some((emote) => emote.id === value);
 }
 
-/** Turns untrusted input into a valid look, falling back to defaults for anything unusable. */
+/**
+ * Turns untrusted input into a valid look, falling back to defaults for anything unusable.
+ * Looks saved before characters existed have a shirt `color` instead; that picks a matching character.
+ */
 export function lookFrom(raw: unknown): Look {
-  const input = (raw ?? {}) as { name?: unknown; color?: unknown };
+  const input = (raw ?? {}) as { name?: unknown; character?: unknown; color?: unknown };
+  const legacy =
+    typeof input.color === "string" && Object.hasOwn(LEGACY_SHIRT_COLORS, input.color)
+      ? LEGACY_SHIRT_COLORS[input.color]
+      : undefined;
   return {
     name: cleanName(input.name) || DEFAULT_NAME,
-    color: isShirtColor(input.color) ? input.color : DEFAULT_SHIRT_COLOR,
+    character: isCharacter(input.character) ? input.character : (legacy ?? DEFAULT_CHARACTER),
   };
 }

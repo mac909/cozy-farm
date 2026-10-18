@@ -3,9 +3,9 @@ import { EMOTE_SHOW_MS } from "../../../shared/constants";
 import type { EmoteId } from "../../../shared/content/emotes";
 import type { Facing } from "../../../shared/movement";
 import type { Look } from "../../../shared/player";
-import { emoteBubbleKey, PLAYER_FRAMES, playerTextureKey } from "../art/placeholderArt";
+import { characterKey, EMOTES_KEY, emoteFrame, idleFrame, walkAnimKey } from "../art/assets";
 
-/** Name tags and bubbles draw above every character. */
+/** Name tags and bubbles draw above every character, and above tree tops. */
 const OVERHEAD_DEPTH = 1_000_000;
 
 /** Name tag text size in screen pixels, whatever the camera zoom. */
@@ -21,6 +21,7 @@ export class Character {
   private bubbleTween?: Phaser.Tweens.TweenChain;
   private look: Look;
   private facing: Facing = "down";
+  private moving = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -42,21 +43,23 @@ export class Character {
       .setOrigin(0.5, 1)
       .setDepth(OVERHEAD_DEPTH);
     this.setZoom(zoom);
-    this.showFacing();
+    this.showPose();
   }
 
   /** Cheap to call often: it only redraws what changed. */
   setLook(look: Look) {
-    const colorChanged = look.color !== this.look.color;
+    const characterChanged = look.character !== this.look.character;
     if (look.name !== this.look.name) this.nameTag.setText(look.name);
     this.look = look;
-    if (colorChanged) this.showFacing();
+    if (characterChanged) this.showPose();
   }
 
-  setFacing(facing: Facing) {
-    if (facing === this.facing) return;
+  /** Which way the character faces, and whether it's walking (animated) or standing still. */
+  setMotion(facing: Facing, moving: boolean) {
+    if (facing === this.facing && moving === this.moving) return;
     this.facing = facing;
-    this.showFacing();
+    this.moving = moving;
+    this.showPose();
   }
 
   /** The world is zoomed in, so shrink the name tag by the same amount to keep it a steady, crisp size on screen. */
@@ -68,7 +71,7 @@ export class Character {
   showEmote(emote: EmoteId) {
     this.bubbleTween?.stop();
     this.bubble?.destroy();
-    const bubble = this.scene.add.image(0, 0, emoteBubbleKey(emote)).setOrigin(0.5, 1).setDepth(OVERHEAD_DEPTH + 1);
+    const bubble = this.scene.add.image(0, 0, EMOTES_KEY, emoteFrame(emote)).setOrigin(0.5, 1).setDepth(OVERHEAD_DEPTH + 1);
     this.bubble = bubble;
     this.followSprite();
     const fade = 250;
@@ -88,6 +91,7 @@ export class Character {
   /** Call every frame after moving the sprite. */
   followSprite() {
     const { x, y } = this.sprite;
+    // Sorted by where the feet are, so whoever is lower on screen is drawn in front.
     this.sprite.setDepth(y);
     // Rounded to whole world pixels, so the tag and bubble don't shimmer as the character moves.
     const headTop = Math.round(y) - this.sprite.displayHeight / 2;
@@ -102,8 +106,13 @@ export class Character {
     this.sprite.destroy();
   }
 
-  private showFacing() {
-    const { frame, flipX } = PLAYER_FRAMES[this.facing];
-    this.sprite.setTexture(playerTextureKey(this.look.color), frame).setFlipX(flipX);
+  private showPose() {
+    const { character } = this.look;
+    if (this.moving) {
+      this.sprite.play(walkAnimKey(character, this.facing), true);
+    } else {
+      this.sprite.stop();
+      this.sprite.setTexture(characterKey(character), idleFrame(this.facing));
+    }
   }
 }

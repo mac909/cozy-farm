@@ -1,42 +1,10 @@
-import { parseMap } from "./map";
+import { parseTiledMap, type TiledMapJson } from "./tiledMap";
+import villageJson from "./village.json";
 
 /**
- * The seaside village. Edit freely: each character is one tile (see LEGEND in
- * tiles.ts), and every row must be the same width. This moves to Tiled once
- * the art pack is chosen.
+ * The seaside village, painted in Tiled: shared/world/village.json.
+ * See "Editing the map" in CLAUDE.md.
  */
-const ROWS = [
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "T........,....................,........T",
-  "T......................................T",
-  "T..%%%%%%%%%%................TT........T",
-  "T..%%%%%%%%%%.....,.........TTTT.......T",
-  "T..%%%%%%%%%%................TT........T",
-  "T..%%%%%%%%%%.........................,T",
-  "T......................................T",
-  "T.####################################.T",
-  "T..................##..................T",
-  "T..................##.P................T",
-  "T..TT..............##.....,............T",
-  "T.TTTT.............##............TT....T",
-  "T..TT..............##..................T",
-  "T.......,..........##..................T",
-  ":::::::::::::::::::##:::::::::::::::::::",
-  "::::::::::::::::::::::::::::::::::::::::",
-  "~~~:::::::::::::~~~==~~~::::::::::~~~~~~",
-  "~~~~~~~:::::::~~~~~==~~~~~~::::~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~==~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~==~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~====~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~====~~~~~~~~~~~~~~~~~~",
-  // Open sea, so tall phone screens never run past the bottom of the map.
-  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-];
+export const VILLAGE_TILED = villageJson as TiledMapJson;
 
-export const VILLAGE_MAP = parseMap(ROWS);
+export const VILLAGE_MAP = parseTiledMap(VILLAGE_TILED);

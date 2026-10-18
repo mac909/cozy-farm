@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cleanName, DEFAULT_NAME, isEmote, isShirtColor, lookFrom, NAME_MAX_LENGTH } from "./player";
+import { DEFAULT_CHARACTER } from "./content/characters";
+import { cleanName, DEFAULT_NAME, isCharacter, isEmote, lookFrom, NAME_MAX_LENGTH } from "./player";
 
 describe("cleanName", () => {
   it("trims and squeezes spaces", () => {
@@ -30,10 +31,10 @@ describe("cleanName", () => {
   });
 });
 
-describe("isShirtColor / isEmote", () => {
+describe("isCharacter / isEmote", () => {
   it("only allows the preset ids", () => {
-    expect(isShirtColor("mint")).toBe(true);
-    expect(isShirtColor("#ff0000")).toBe(false);
+    expect(isCharacter("pig")).toBe(true);
+    expect(isCharacter("NinjaRed")).toBe(false);
     expect(isEmote("heart")).toBe(true);
     expect(isEmote("explode")).toBe(false);
     expect(isEmote(undefined)).toBe(false);
@@ -42,12 +43,23 @@ describe("isShirtColor / isEmote", () => {
 
 describe("lookFrom", () => {
   it("keeps a valid look", () => {
-    expect(lookFrom({ name: "Mason", color: "sky" })).toEqual({ name: "Mason", color: "sky" });
+    expect(lookFrom({ name: "Mason", character: "maskFrog" })).toEqual({ name: "Mason", character: "maskFrog" });
   });
 
   it("falls back to defaults for missing or bad values", () => {
-    expect(lookFrom({ name: " ", color: "neon" })).toEqual({ name: DEFAULT_NAME, color: "coral" });
-    expect(lookFrom(undefined)).toEqual({ name: DEFAULT_NAME, color: "coral" });
-    expect(lookFrom("nonsense")).toEqual({ name: DEFAULT_NAME, color: "coral" });
+    const fallback = { name: DEFAULT_NAME, character: DEFAULT_CHARACTER };
+    expect(lookFrom({ name: " ", character: "neon" })).toEqual(fallback);
+    expect(lookFrom(undefined)).toEqual(fallback);
+    expect(lookFrom("nonsense")).toEqual(fallback);
+  });
+
+  it("turns a look saved with a shirt colour into a matching character", () => {
+    expect(lookFrom({ name: "Mason", color: "sky" })).toEqual({ name: "Mason", character: "eskimo" });
+    expect(lookFrom({ name: "Mason", color: "coral" }).character).toBe("boy");
+    expect(lookFrom({ name: "Mason", color: "toString" }).character).toBe(DEFAULT_CHARACTER);
+  });
+
+  it("prefers a character over an old shirt colour", () => {
+    expect(lookFrom({ name: "Mason", character: "pig", color: "sky" }).character).toBe("pig");
   });
 });

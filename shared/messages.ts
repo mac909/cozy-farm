@@ -21,7 +21,7 @@ export interface MoveMessage {
   sentAt: number;
 }
 
-/** Client → server ("look"): I changed my name or shirt. */
+/** Client → server ("look"): I changed my name or character. */
 export type LookMessage = Look;
 
 /** Client → server ("emote"): show this above my head. */

@@ -8,8 +8,8 @@ export class Player extends Schema {
   /** The player's own clock (ms) when they reported this position. Others use the spacing between reports to keep the walk smooth. */
   @type("number") sentAt = 0;
   @type("string") name = "";
-  /** A ShirtColorId. */
-  @type("string") color = "";
+  /** A CharacterId. */
+  @type("string") character = "";
 }
 
 /** Everything the server keeps in sync with every player. */

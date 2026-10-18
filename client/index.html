@@ -47,7 +47,7 @@
         display: block;
       }
 
-      /* Name and shirt picker (client/src/ui/LookPicker.ts) */
+      /* Name and character picker (client/src/ui/LookPicker.ts) */
       .picker {
         position: fixed;
         inset: 0;
@@ -104,23 +104,30 @@
         outline: none;
         border-color: #ef7d6d;
       }
-      .picker-swatches {
+      .picker-characters {
         display: grid;
         grid-template-columns: repeat(6, 1fr);
-        gap: 8px;
+        gap: 6px;
         margin-bottom: 20px;
       }
-      .picker-swatch {
+      .picker-character {
+        display: grid;
+        place-items: center;
         width: 100%;
         aspect-ratio: 1;
         padding: 0;
-        border: 3px solid #ffffff;
-        border-radius: 50%;
-        box-shadow: 0 0 0 2px #e2cfa6;
+        border: 2px solid #e2cfa6;
+        border-radius: 12px;
+        background: #adbc3a;
         cursor: pointer;
       }
-      .picker-swatch[aria-pressed="true"] {
-        box-shadow: 0 0 0 3px #4a3b2a;
+      .picker-character img {
+        width: 75%;
+        image-rendering: pixelated;
+      }
+      .picker-character[aria-pressed="true"] {
+        border-color: #4a3b2a;
+        box-shadow: 0 0 0 2px #4a3b2a;
       }
       .picker-actions {
         display: flex;
@@ -161,8 +168,8 @@
         <h1 class="picker-title"></h1>
         <label class="picker-label" for="look-name">Your name</label>
         <input id="look-name" name="name" type="text" enterkeyhint="done" autocapitalize="words" spellcheck="false" />
-        <div class="picker-label">Shirt</div>
-        <div class="picker-swatches"></div>
+        <div class="picker-label">Character</div>
+        <div class="picker-characters"></div>
         <div class="picker-actions">
           <button type="button" class="picker-cancel">Cancel</button>
           <button type="submit" class="picker-go"></button>

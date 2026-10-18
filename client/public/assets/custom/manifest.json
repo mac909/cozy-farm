@@ -124,6 +124,14 @@
     "frameHeight": 16,
     "recolouredFrom": "ninja-adventure/Backgrounds/Tilesets/TilesetWater.png (block at 0,0, 176×96); same tile layout"
   },
+  "beach-terrain": {
+    "file": "beach-terrain.png",
+    "width": 176,
+    "height": 208,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "layout": "sand-grass.png on top (rows 0–6), sand-water.png below. The map's Ground layer uses it."
+  },
   "map-markers": {
     "file": "map-markers.png",
     "width": 32,

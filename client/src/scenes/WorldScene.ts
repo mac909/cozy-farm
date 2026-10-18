@@ -1,17 +1,26 @@
 import Phaser from "phaser";
 import { getStateCallbacks, type Room } from "colyseus.js";
 import { POSITION_SEND_MS, TILE_SIZE, WALK_SPEED } from "../../../shared/constants";
+import { DEFAULT_CHARACTER } from "../../../shared/content/characters";
 import type { EmoteId } from "../../../shared/content/emotes";
-import { DEFAULT_SHIRT_COLOR } from "../../../shared/content/shirtColors";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage } from "../../../shared/messages";
 import { clampMove, type Facing, facingFor, isFacing, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
 import { tileCenter } from "../../../shared/world/map";
-import { BLOCKED_TILES } from "../../../shared/world/tiles";
+import { COLLISION_LAYER, FARMLAND_LAYER, isAboveCharacters, OBJECTS_LAYER } from "../../../shared/world/tiledMap";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
-import { playerTextureKey, TILESET_KEY } from "../art/placeholderArt";
+import {
+  characterKey,
+  RIPPLE_ANIM,
+  RIPPLES_KEY,
+  SHIPPING_CRATE_KEY,
+  tilesetKey,
+  VILLAGE_KEY,
+  walkFrames,
+} from "../art/assets";
+import { startMusic } from "../audio/music";
 import { FarmConnection } from "../net/connection";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
@@ -21,12 +30,21 @@ import type { UIScene } from "./UIScene";
 /** The camera picks the whole-number zoom that shows about this many tiles across the screen's shorter side. */
 const TARGET_VISIBLE_TILES = 12;
 
+/** Map layers draw under the characters (whose depth is their y), except tree tops, which draw over them. */
+const GROUND_DEPTH = -1000;
+const ABOVE_DEPTH = 500_000;
+
+/** A remote player counts as walking until they've stood still this long, so brief pauses between updates don't flicker. */
+const REMOTE_STILL_MS = 150;
+
 type Direction = "up" | "down" | "left" | "right";
 
 /** Another player, drawn a moment behind where the server says they are, so they move smoothly. */
 interface RemotePlayer {
   character: Character;
   positions: PositionBuffer;
+  /** When their drawn position last changed (performance.now()). */
+  lastMovedAt: number;
 }
 
 /** The village itself: map, characters, camera. */
@@ -48,22 +66,20 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create() {
-    const map = this.make.tilemap({ data: VILLAGE_MAP.tiles, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-    const tileset = map.addTilesetImage(TILESET_KEY, TILESET_KEY, TILE_SIZE, TILE_SIZE, 0, 0)!;
-    const ground = map.createLayer(0, tileset, 0, 0)!;
-    ground.setCollision([...BLOCKED_TILES]);
+    const map = this.make.tilemap({ key: VILLAGE_KEY });
+    const collision = this.buildMap(map);
 
     const savedLook = loadLook();
-    this.look = savedLook ?? { name: "", color: DEFAULT_SHIRT_COLOR };
+    this.look = savedLook ?? { name: "", character: DEFAULT_CHARACTER };
     this.registry.set("look", this.look);
 
     const spawn = tileCenter(VILLAGE_MAP.spawn.col, VILLAGE_MAP.spawn.row);
-    this.player = this.physics.add.sprite(spawn.x, spawn.y, playerTextureKey(this.look.color), 0);
-    // Collide with the feet only, so characters can overlap the tops of trees.
-    this.player.body.setSize(10, 5).setOffset(3, 10);
+    this.player = this.physics.add.sprite(spawn.x, spawn.y, characterKey(this.look.character), 0);
+    // Collide with the feet only, so characters can walk up behind trees and fences.
+    this.player.body.setSize(10, 6).setOffset(3, 10);
     this.player.setCollideWorldBounds(true);
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    this.physics.add.collider(this.player, ground);
+    this.physics.add.collider(this.player, collision);
 
     const camera = this.cameras.main;
     camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -87,13 +103,14 @@ export class WorldScene extends Phaser.Scene {
     this.ui = this.scene.get("ui") as UIScene;
     this.ui.events.on("emote", (emote: EmoteId) => this.emote(emote));
     this.ui.events.on("editLook", () => void this.changeLook());
+    startMusic(this);
 
     this.connection = new FarmConnection(() => this.joinOptions(), {
       status: (status) => this.registry.set("netStatus", status),
       joined: (room) => this.onJoined(room),
       lost: () => this.onLost(),
     });
-    // First time on this device: pick a name and shirt before joining, so the other player sees who arrived.
+    // First time on this device: pick a name and character before joining, so the other player sees who arrived.
     if (savedLook) this.connection.start();
     else void this.changeLook(true).then(() => this.connection.start());
 
@@ -108,16 +125,51 @@ export class WorldScene extends Phaser.Scene {
     const move = clampMove(input.x, input.y);
     this.player.setVelocity(move.x * WALK_SPEED, move.y * WALK_SPEED);
     this.facing = facingFor(move.x, move.y, this.facing);
-    this.me.setFacing(this.facing);
+    this.me.setMotion(this.facing, move.x !== 0 || move.y !== 0);
     this.sendPosition(time);
 
-    const drawAt = performance.now() - REMOTE_DELAY_MS;
-    for (const { character, positions } of this.remotes.values()) {
-      const pose = positions.sample(drawAt);
+    const now = performance.now();
+    const drawAt = now - REMOTE_DELAY_MS;
+    for (const remote of this.remotes.values()) {
+      const pose = remote.positions.sample(drawAt);
       if (!pose) continue;
-      character.sprite.setPosition(pose.x, pose.y);
-      character.setFacing(pose.facing);
+      const { sprite } = remote.character;
+      if (pose.x !== sprite.x || pose.y !== sprite.y) remote.lastMovedAt = now;
+      sprite.setPosition(pose.x, pose.y);
+      remote.character.setMotion(pose.facing, now - remote.lastMovedAt < REMOTE_STILL_MS);
     }
+  }
+
+  /**
+   * Draws the Tiled map: every tile layer in Tiled's order, tree tops over the characters,
+   * the shipping crate, and ripples on the sea. Returns the hidden collision layer.
+   */
+  private buildMap(map: Phaser.Tilemaps.Tilemap): Phaser.Tilemaps.TilemapLayer {
+    const tilesets = map.tilesets.map((tileset) => map.addTilesetImage(tileset.name, tilesetKey(tileset.name))!);
+    map.layers.forEach((data, index) => {
+      if (data.name === COLLISION_LAYER || data.name === FARMLAND_LAYER) return;
+      // Always shown, even if it was hidden in Tiled while editing.
+      const layer = map.createLayer(data.name, tilesets, 0, 0)!.setVisible(true).setAlpha(1);
+      layer.setDepth(isAboveCharacters(data) ? ABOVE_DEPTH + index : GROUND_DEPTH + index * 10);
+    });
+    const collision = map.createLayer(COLLISION_LAYER, tilesets, 0, 0)!.setVisible(false);
+    collision.setCollisionByExclusion([-1]);
+
+    const crate = VILLAGE_MAP.shippingCrate;
+    this.add
+      .image(crate.x, crate.y, SHIPPING_CRATE_KEY, 0)
+      .setOrigin(0, 0)
+      .setDepth(crate.y + crate.height);
+
+    // Ripples sit on the water, just above the ground layer.
+    for (const ripple of map.getObjectLayer(OBJECTS_LAYER)?.objects ?? []) {
+      if (ripple.name !== "ripple") continue;
+      this.add
+        .sprite(ripple.x ?? 0, ripple.y ?? 0, RIPPLES_KEY)
+        .setDepth(GROUND_DEPTH + 1)
+        .play({ key: RIPPLE_ANIM, delay: Phaser.Math.Between(0, 2000), repeatDelay: Phaser.Math.Between(500, 3000) });
+    }
+    return collision;
   }
 
   /** The joystick wins while it's held; otherwise WASD or the arrow keys. */
@@ -175,10 +227,12 @@ export class WorldScene extends Phaser.Scene {
 
   private addRemote(sessionId: string, player: Player): RemotePlayer {
     this.removeRemote(sessionId);
-    const sprite = this.add.sprite(player.x, player.y, playerTextureKey(DEFAULT_SHIRT_COLOR), 0);
+    const look = lookFrom(player);
+    const sprite = this.add.sprite(player.x, player.y, characterKey(look.character), 0);
     const remote: RemotePlayer = {
-      character: new Character(this, sprite, lookFrom(player), this.zoom),
+      character: new Character(this, sprite, look, this.zoom),
       positions: new PositionBuffer(),
+      lastMovedAt: 0,
     };
     this.recordPosition(remote, player);
     this.remotes.set(sessionId, remote);
@@ -202,12 +256,13 @@ export class WorldScene extends Phaser.Scene {
     this.room?.send("emote", message);
   }
 
-  /** Opens the name and shirt picker, then remembers the choice on this device and tells the server. */
+  /** Opens the name and character picker, then remembers the choice on this device and tells the server. */
   private async changeLook(firstTime = false) {
     this.input.keyboard?.resetKeys();
     const look = await pickLook({
       current: firstTime ? null : this.look,
-      preview: (color) => this.textures.getBase64(playerTextureKey(color), 0),
+      frame: (character, frame) => this.textures.getBase64(characterKey(character), frame),
+      walkFrames: walkFrames("down"),
     });
     if (!look) return;
     this.look = look;
