@@ -1,6 +1,10 @@
 export type Facing = "up" | "down" | "left" | "right";
 export const FACINGS: readonly Facing[] = ["up", "down", "left", "right"];
 
+export function isFacing(value: unknown): value is Facing {
+  return FACINGS.includes(value as Facing);
+}
+
 export interface Vec {
   x: number;
   y: number;

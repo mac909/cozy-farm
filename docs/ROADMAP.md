@@ -13,10 +13,10 @@ Every milestone ends with something playable. Tick items off as they land.
 
 ## Milestone 1: Together
 
-- [ ] See each other moving around in real time (smoothed)
-- [ ] Name and look picked on first join, remembered on that device
-- [ ] Emotes (wave, heart)
-- [ ] Reconnect automatically after Wi-Fi blips or a server restart
+- [x] See each other moving around in real time (smoothed)
+- [x] Name and look picked on first join, remembered on that device
+- [x] Emotes (wave, heart)
+- [x] Reconnect automatically after Wi-Fi blips or a server restart
 - [ ] Pick the art pack; move the map into Tiled
 
 ## Milestone 2: Farming (the first version to show her)

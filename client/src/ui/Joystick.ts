@@ -6,7 +6,8 @@ const RADIUS = 48;
 
 /**
  * A floating thumbstick for phones: put a thumb down anywhere and drag.
- * It only reacts to touch, so it never gets in the way on a laptop.
+ * It only reacts to touch, so it never gets in the way on a laptop, and it ignores
+ * touches that land on a button.
  */
 export class Joystick {
   /** Current movement direction, length 0–1. */
@@ -27,8 +28,8 @@ export class Joystick {
     scene.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, this.onUp, this);
   }
 
-  private onDown(pointer: Phaser.Input.Pointer) {
-    if (!pointer.wasTouch || this.pointerId !== null) return;
+  private onDown(pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) {
+    if (!pointer.wasTouch || this.pointerId !== null || over.length > 0) return;
     this.pointerId = pointer.id;
     this.originX = pointer.x;
     this.originY = pointer.y;

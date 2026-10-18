@@ -9,6 +9,13 @@
     <meta name="theme-color" content="#2b4a5e" />
     <title>Cozy Farm</title>
     <style>
+      :root {
+        /* Read by the game to keep buttons clear of the notch and home bar. */
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-right: env(safe-area-inset-right, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-left: env(safe-area-inset-left, 0px);
+      }
       html,
       body {
         margin: 0;
@@ -28,10 +35,129 @@
       canvas {
         display: block;
       }
+
+      /* Name and shirt picker (client/src/ui/LookPicker.ts) */
+      .picker {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background: rgba(20, 36, 48, 0.55);
+        font-family: system-ui, sans-serif;
+        color: #4a3b2a;
+        z-index: 10;
+      }
+      .picker[hidden] {
+        display: none;
+      }
+      .picker-card {
+        width: min(100%, 340px);
+        box-sizing: border-box;
+        padding: 20px;
+        border-radius: 18px;
+        background: #fff8e7;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        text-align: center;
+      }
+      .picker-preview {
+        width: 64px;
+        height: 64px;
+        image-rendering: pixelated;
+      }
+      .picker-title {
+        margin: 4px 0 16px;
+        font-size: 22px;
+      }
+      .picker-label {
+        display: block;
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 600;
+        text-align: left;
+      }
+      .picker input {
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border: 2px solid #e2cfa6;
+        border-radius: 12px;
+        background: #ffffff;
+        color: inherit;
+        /* 16px or more, or iOS zooms in when the field is tapped. */
+        font: inherit;
+        font-size: 18px;
+      }
+      .picker input:focus {
+        outline: none;
+        border-color: #ef7d6d;
+      }
+      .picker-swatches {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .picker-swatch {
+        width: 100%;
+        aspect-ratio: 1;
+        padding: 0;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        box-shadow: 0 0 0 2px #e2cfa6;
+        cursor: pointer;
+      }
+      .picker-swatch[aria-pressed="true"] {
+        box-shadow: 0 0 0 3px #4a3b2a;
+      }
+      .picker-actions {
+        display: flex;
+        gap: 10px;
+      }
+      .picker-actions button {
+        flex: 1;
+        min-height: 48px;
+        border: none;
+        border-radius: 12px;
+        font: inherit;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .picker-go {
+        background: #ef7d6d;
+        color: #ffffff;
+      }
+      .picker-go:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .picker-cancel {
+        background: #efe2c4;
+        color: inherit;
+      }
+      .picker-cancel[hidden] {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <form id="look-picker" class="picker" hidden autocomplete="off">
+      <div class="picker-card">
+        <img class="picker-preview" alt="" />
+        <h1 class="picker-title"></h1>
+        <label class="picker-label" for="look-name">Your name</label>
+        <input id="look-name" name="name" type="text" enterkeyhint="done" autocapitalize="words" spellcheck="false" />
+        <div class="picker-label">Shirt</div>
+        <div class="picker-swatches"></div>
+        <div class="picker-actions">
+          <button type="button" class="picker-cancel">Cancel</button>
+          <button type="submit" class="picker-go"></button>
+        </div>
+      </div>
+    </form>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

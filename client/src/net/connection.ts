@@ -1,8 +1,18 @@
 import { Client, type Room } from "colyseus.js";
 import { FARM_ROOM, SERVER_PORT } from "../../../shared/constants";
+import type { JoinOptions } from "../../../shared/messages";
 import type { FarmState } from "../../../shared/schema";
+import { retryDelay } from "./retry";
 
-export type NetStatus = "connecting" | "connected" | "offline";
+export type NetStatus = "connecting" | "connected" | "reconnecting";
+
+export interface ConnectionEvents {
+  status(status: NetStatus): void;
+  /** Called each time we're in the room, including after every reconnect (with a new Room object). */
+  joined(room: Room<FarmState>): void;
+  /** The connection dropped. Everything from the old room is stale. */
+  lost(): void;
+}
 
 /**
  * In dev the page comes from Vite, so the game server is on its own port.
@@ -14,17 +24,82 @@ function serverUrl(): string {
   return `${protocol}//${host}`;
 }
 
-/** Joins the shared world. Resolves to null if the server can't be reached, so the game still runs solo. */
-export async function joinFarm(onStatus: (status: NetStatus) => void): Promise<Room<FarmState> | null> {
-  onStatus("connecting");
-  try {
-    const room = await new Client(serverUrl()).joinOrCreate<FarmState>(FARM_ROOM);
-    onStatus("connected");
-    room.onLeave(() => onStatus("offline"));
-    return room;
-  } catch (error) {
-    console.warn("Could not reach the game server:", error);
-    onStatus("offline");
-    return null;
+/**
+ * Keeps us in the shared world. If the server can't be reached or the connection drops
+ * (a Wi-Fi blip, a phone waking up, the server restarting), it keeps retrying, waiting a
+ * little longer each time. The game stays playable solo in the meantime.
+ *
+ * Rejoining is a fresh join: the server forgets a player as soon as they drop, and the
+ * join options carry our name, look, and where we were standing.
+ */
+export class FarmConnection {
+  private readonly client = new Client(serverUrl());
+  private room: Room<FarmState> | null = null;
+  private attempt = 0;
+  private retryTimer: number | undefined;
+  private stopped = false;
+
+  constructor(
+    private readonly joinOptions: () => JoinOptions,
+    private readonly events: ConnectionEvents,
+  ) {
+    window.addEventListener("online", this.retryNow);
+    document.addEventListener("visibilitychange", this.retryNow);
   }
+
+  start() {
+    this.events.status("connecting");
+    void this.join();
+  }
+
+  /** Leaves for good (no reconnecting). */
+  stop() {
+    this.stopped = true;
+    window.clearTimeout(this.retryTimer);
+    window.removeEventListener("online", this.retryNow);
+    document.removeEventListener("visibilitychange", this.retryNow);
+    void this.room?.leave();
+  }
+
+  private async join() {
+    this.retryTimer = undefined;
+    let room: Room<FarmState>;
+    try {
+      room = await this.client.joinOrCreate<FarmState>(FARM_ROOM, this.joinOptions());
+    } catch (error) {
+      console.warn("Could not reach the game server:", error);
+      this.retryLater();
+      return;
+    }
+    if (this.stopped) {
+      void room.leave();
+      return;
+    }
+    this.room = room;
+    this.attempt = 0;
+    // Colyseus closes with the same code whether we left or the server shut down,
+    // so reconnect unless we asked to stop.
+    room.onLeave(() => {
+      if (this.room !== room) return;
+      this.room = null;
+      this.events.lost();
+      if (!this.stopped) this.retryLater();
+    });
+    room.onError((code, message) => console.warn(`Room error ${code}:`, message));
+    this.events.status("connected");
+    this.events.joined(room);
+  }
+
+  private retryLater() {
+    if (this.stopped) return;
+    this.events.status("reconnecting");
+    this.retryTimer = window.setTimeout(() => void this.join(), retryDelay(this.attempt++));
+  }
+
+  /** Back online, or the tab is visible again: skip the rest of the wait. */
+  private readonly retryNow = () => {
+    if (this.retryTimer === undefined || document.visibilityState === "hidden") return;
+    window.clearTimeout(this.retryTimer);
+    void this.join();
+  };
 }

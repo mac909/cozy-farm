@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampMove, facingFor, stickToMove } from "./movement";
+import { clampMove, facingFor, isFacing, stickToMove } from "./movement";
 
 describe("clampMove", () => {
   it("keeps diagonal movement as fast as straight movement", () => {
@@ -37,5 +37,13 @@ describe("facingFor", () => {
   it("faces along the stronger direction", () => {
     expect(facingFor(0.9, -0.2, "down")).toBe("right");
     expect(facingFor(0.1, -0.8, "down")).toBe("up");
+  });
+});
+
+describe("isFacing", () => {
+  it("only accepts the four directions", () => {
+    expect(isFacing("left")).toBe(true);
+    expect(isFacing("sideways")).toBe(false);
+    expect(isFacing(undefined)).toBe(false);
   });
 });

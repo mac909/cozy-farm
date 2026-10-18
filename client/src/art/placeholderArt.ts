@@ -1,9 +1,26 @@
 import Phaser from "phaser";
 import { TILE_SIZE } from "../../../shared/constants";
+import { EMOTES, type EmoteId } from "../../../shared/content/emotes";
+import { SHIRT_COLORS, type ShirtColorId } from "../../../shared/content/shirtColors";
+import type { Facing } from "../../../shared/movement";
 import { TILE_COUNT, Tile, type TileId } from "../../../shared/world/tiles";
 
 export const TILESET_KEY = "tiles";
-export const PLAYER_KEY = "player";
+
+/** One texture per shirt color, each with a front, back, and side frame. */
+export const playerTextureKey = (color: ShirtColorId) => `player-${color}`;
+/** The frame to show for each facing. Left is the side frame flipped. */
+export const PLAYER_FRAMES: Record<Facing, { frame: number; flipX: boolean }> = {
+  down: { frame: 0, flipX: false },
+  up: { frame: 1, flipX: false },
+  right: { frame: 2, flipX: false },
+  left: { frame: 2, flipX: true },
+};
+
+/** Just the emote's icon, for buttons. */
+export const emoteIconKey = (emote: EmoteId) => `emote-${emote}`;
+/** The icon in a speech bubble, shown above a character's head. */
+export const emoteBubbleKey = (emote: EmoteId) => `bubble-${emote}`;
 
 const S = TILE_SIZE;
 type Ctx = CanvasRenderingContext2D;
@@ -20,9 +37,32 @@ export function createPlaceholderArt(scene: Phaser.Scene): void {
   }
   tiles.refresh();
 
-  const player = scene.textures.createCanvas(PLAYER_KEY, S, S)!;
-  drawPlayer(player.getContext());
-  player.refresh();
+  const playerFrames = [drawPlayerFront, drawPlayerBack, drawPlayerSide];
+  for (const { id, hex } of SHIRT_COLORS) {
+    const texture = scene.textures.createCanvas(playerTextureKey(id), S * playerFrames.length, S)!;
+    const pctx = texture.getContext();
+    playerFrames.forEach((draw, frame) => {
+      pctx.save();
+      pctx.translate(frame * S, 0);
+      draw(pctx, hex);
+      pctx.restore();
+      texture.add(frame, 0, frame * S, 0, S, S);
+    });
+    texture.refresh();
+  }
+
+  for (const { id } of EMOTES) {
+    const icon = EMOTE_ICONS[id];
+    const iconTexture = scene.textures.createCanvas(emoteIconKey(id), ICON_W, ICON_H)!;
+    drawGrid(iconTexture.getContext(), icon, 0, 0);
+    iconTexture.refresh();
+
+    const bubbleTexture = scene.textures.createCanvas(emoteBubbleKey(id), BUBBLE_W, BUBBLE_H)!;
+    const bctx = bubbleTexture.getContext();
+    drawBubble(bctx);
+    drawGrid(bctx, icon, 2, 1);
+    bubbleTexture.refresh();
+  }
 }
 
 function px(ctx: Ctx, color: string, x: number, y: number, w = 1, h = 1) {
@@ -88,16 +128,117 @@ function drawTile(ctx: Ctx, id: TileId) {
   }
 }
 
-function drawPlayer(ctx: Ctx) {
-  px(ctx, "rgba(0, 0, 0, 0.2)", 4, 14, 8, 1); // shadow
-  px(ctx, "#6b4429", 4, 1, 8, 4); // hair
-  px(ctx, "#f6d2ae", 5, 3, 6, 4); // face
-  px(ctx, "#2b2b2b", 6, 5); // eyes
-  px(ctx, "#2b2b2b", 9, 5);
-  px(ctx, "#ef7d6d", 4, 7, 8, 4); // shirt
-  px(ctx, "#f6d2ae", 3, 8, 1, 2); // arms
-  px(ctx, "#f6d2ae", 12, 8, 1, 2);
-  px(ctx, "#4f6aa3", 5, 11, 6, 2); // pants
-  px(ctx, "#3b2a20", 5, 13, 2, 1); // shoes
-  px(ctx, "#3b2a20", 9, 13, 2, 1);
+const SKIN = "#f6d2ae";
+const HAIR = "#6b4429";
+const EYES = "#2b2b2b";
+const PANTS = "#4f6aa3";
+const SHOES = "#3b2a20";
+const SHADOW = "rgba(0, 0, 0, 0.2)";
+
+function drawPlayerFront(ctx: Ctx, shirt: string) {
+  px(ctx, SHADOW, 4, 14, 8, 1);
+  px(ctx, HAIR, 4, 1, 8, 4);
+  px(ctx, SKIN, 5, 3, 6, 4); // face
+  px(ctx, EYES, 6, 5);
+  px(ctx, EYES, 9, 5);
+  px(ctx, shirt, 4, 7, 8, 4);
+  px(ctx, SKIN, 3, 8, 1, 2); // arms
+  px(ctx, SKIN, 12, 8, 1, 2);
+  px(ctx, PANTS, 5, 11, 6, 2);
+  px(ctx, SHOES, 5, 13, 2, 1);
+  px(ctx, SHOES, 9, 13, 2, 1);
+}
+
+function drawPlayerBack(ctx: Ctx, shirt: string) {
+  px(ctx, SHADOW, 4, 14, 8, 1);
+  px(ctx, HAIR, 4, 1, 8, 6); // the back of the head is all hair
+  px(ctx, shirt, 4, 7, 8, 4);
+  px(ctx, SKIN, 3, 8, 1, 2);
+  px(ctx, SKIN, 12, 8, 1, 2);
+  px(ctx, PANTS, 5, 11, 6, 2);
+  px(ctx, SHOES, 5, 13, 2, 1);
+  px(ctx, SHOES, 9, 13, 2, 1);
+}
+
+/** Facing right. */
+function drawPlayerSide(ctx: Ctx, shirt: string) {
+  px(ctx, SHADOW, 4, 14, 8, 1);
+  px(ctx, HAIR, 4, 1, 8, 4);
+  px(ctx, HAIR, 4, 5, 3, 1);
+  px(ctx, SKIN, 7, 3, 5, 4); // face
+  px(ctx, EYES, 10, 5);
+  px(ctx, shirt, 5, 7, 6, 4);
+  px(ctx, SKIN, 8, 8, 1, 3); // arm
+  px(ctx, PANTS, 5, 11, 6, 2);
+  px(ctx, SHOES, 5, 13, 2, 1);
+  px(ctx, SHOES, 8, 13, 3, 1);
+}
+
+const ICON_W = 11;
+const ICON_H = 10;
+const BUBBLE_W = 15;
+const BUBBLE_H = 14;
+
+/** Pixel grids for emote icons: one string per row, one character per pixel, "." for empty. */
+interface PixelGrid {
+  rows: string[];
+  colors: Record<string, string>;
+}
+
+const EMOTE_ICONS: Record<EmoteId, PixelGrid> = {
+  wave: {
+    rows: [
+      "...o.o.o...",
+      "..oyoyoyo..",
+      "..oyoyoyoo.",
+      "..oyoyoyoyo",
+      ".ooyyyyyyyo",
+      "oyoyyyyyyyo",
+      "oyyyyyyyyyo",
+      ".oyyyyyyyso",
+      "..oyyyyyso.",
+      "...oooooo..",
+    ],
+    colors: { o: "#7a4e2a", y: "#ffd36b", s: "#e5a83f" },
+  },
+  heart: {
+    rows: [
+      ".ooo...ooo.",
+      "orrro.orrro",
+      "orhhrorrrro",
+      "orhrrrrrrro",
+      "orrrrrrrrro",
+      ".orrrrrrro.",
+      "..orrrrro..",
+      "...orrro...",
+      "....oro....",
+      ".....o.....",
+    ],
+    colors: { o: "#8c2a3c", r: "#e8506a", h: "#ffb3c1" },
+  },
+};
+
+function drawGrid(ctx: Ctx, grid: PixelGrid, ox: number, oy: number) {
+  grid.rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      const color = grid.colors[row[x]];
+      if (color) px(ctx, color, ox + x, oy + y);
+    }
+  });
+}
+
+/** A white speech bubble with rounded corners and a little tail at the bottom. */
+function drawBubble(ctx: Ctx) {
+  const line = "#4a3b2a";
+  px(ctx, "#ffffff", 1, 1, BUBBLE_W - 2, 10);
+  px(ctx, line, 1, 0, BUBBLE_W - 2, 1); // top
+  px(ctx, line, 1, 11, BUBBLE_W - 2, 1); // bottom
+  px(ctx, line, 0, 1, 1, 10); // sides
+  px(ctx, line, BUBBLE_W - 1, 1, 1, 10);
+  const mid = (BUBBLE_W - 1) / 2;
+  px(ctx, "#ffffff", mid, 11); // tail
+  px(ctx, line, mid - 1, 12);
+  px(ctx, "#ffffff", mid, 12);
+  px(ctx, line, mid + 1, 12);
+  px(ctx, line, mid, 13);
 }

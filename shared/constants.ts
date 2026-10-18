@@ -12,3 +12,6 @@ export const SERVER_PORT = 2567;
 
 /** Name of the Colyseus room that holds the one shared world. */
 export const FARM_ROOM = "farm";
+
+/** How long an emote bubble stays above a character's head, in milliseconds. */
+export const EMOTE_SHOW_MS = 2000;

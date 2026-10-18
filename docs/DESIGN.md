@@ -25,10 +25,18 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Time | Only passes while playing (Stardew-style days) | 2026-10-17 |
 | Sharing | Shared farm and wallet; each player has their own house | 2026-10-17 |
 | Setting | Seaside village | 2026-10-17 |
+| Look | A name (up to 12 characters) and one of six preset shirt colors, picked on first join and remembered on that device. Change it any time from the button in the top right. | 2026-10-17 |
+| Emotes | Wave and heart, as buttons in the bottom right (keys 1 and 2). A bubble shows above your head for 2 seconds, for everyone. | 2026-10-17 |
 
 ## Setting
 
 A small seaside village: a farm on the grassy bluff, a path down to the beach, a wooden dock out over the water. Later: tide pools, a lighthouse, a boardwalk with shops.
+
+## Together
+
+- Each player's name floats above their head.
+- The other player is drawn about a quarter second behind where they really are, so they walk smoothly over a jittery connection instead of hopping.
+- If the connection drops (Wi-Fi blip, phone waking up, server restart), the game keeps running solo, shows "Reconnecting…", and rejoins by itself, putting you back where you were standing. While you're away the other player sees you vanish, and you reappear when you're back.
 
 ## Time
 
@@ -75,6 +83,6 @@ Seasons, weather, day/night lighting, cooking, animals (chickens, our own pets),
 ## Open questions
 
 - Can one player end the day alone if the other isn't online?
-- Characters: choose from presets, or a simple character creator?
+- Characters: beyond a name and shirt color, presets or a simple character creator? (Depends on the art pack.)
 - Our names and pets, if we want them in the game.
 - What's the game called?
