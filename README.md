@@ -17,7 +17,20 @@ The game then opens full screen like an app, with no browser bars. With Tailscal
 - **iPhone (Safari):** tap **Share** (the square with an arrow; on newer iPhones it's inside the **···** menu), scroll down, tap **Add to Home Screen**, leave **Open as Web App** on if you see it, and tap **Add**.
 - **Android (Chrome):** tap **⋮** (top right), then **Add to Home screen** or **Install app**, and confirm with **Install**.
 
-The first time you open it from the home screen, it asks for your name and shirt again, because the home-screen app keeps its own settings. Tailscale still has to be on whenever you play.
+The first time you open it from the home screen, it asks **Who's playing?**, because the home-screen app keeps its own settings: tap your name to get your own bag back (or **Someone new** the very first time). Tailscale still has to be on whenever you play.
+
+### How to play
+
+| | Phone | Laptop |
+|---|---|---|
+| Walk | Put a thumb down anywhere and drag (a light push just turns you) | W A S D or the arrow keys |
+| Do what the round button says (Dig, Plant, Water, Pick, Sleep, Crate, Seeds) | Tap the big round button; hold it while walking to do a whole row | Space or Enter (hold to repeat), or click a tile next to you |
+| Pick what's in your hand | Tap a slot along the bottom | 1–8, Q / E, or the mouse wheel |
+| Open your bag | The bag button | B or Tab |
+| Wave / heart | The two small buttons | Z / X |
+| Close a card, get out of bed | The × or Get up | Esc |
+
+Dig in the farm field, plant seeds, water them, and go to bed in the tent by the farm gate: watered crops grow overnight. Pick what's ripe, put it in the shipping crate on the dock, and it sells overnight for coins you share. Buy more seeds at the stand by the beach path.
 
 ## Develop
 

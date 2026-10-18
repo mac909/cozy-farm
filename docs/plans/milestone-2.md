@@ -1,6 +1,10 @@
 # Milestone 2 plan: Farming
 
-A proposal from 2026-10-18. Nothing here is built. The mockups are in
+**Status:** steps 1–9 are built (2026-10-18), using the suggested answer to every open question; DESIGN.md has
+the decisions and `docs/reports/overnight-2026-10-18.md` what to try. Step 10 (the real farm, the backup task) is
+the developer's. The rest of this file is the plan as written.
+
+A proposal from 2026-10-18. The mockups are in
 [milestone-2-mockups.html](milestone-2-mockups.html): open it in a browser straight from the repo (it loads the real
 sprites from `client/public/assets/`). The browser pane only shows local files as a snapshot without images, so
 there, run `npm run dev` and open `http://localhost:5173/@fs/<path to the repo>/docs/plans/milestone-2-mockups.html`.

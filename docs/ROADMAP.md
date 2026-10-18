@@ -30,7 +30,8 @@ Every milestone ends with something playable. Tick items off as they land.
 - [x] Crops grow day by day; harvest
 - [x] World saved to SQLite (versioned) and restored after restarts
 - [x] Separate dev save, so testing never touches the real farm
-- [ ] Nightly backup of the save to OneDrive (the script is ready: `npm run farm:backup`; the scheduled task comes once saving is wired in)
+- [x] Feel pass: hold to repeat, turning on the spot, sounds, bobbing ripe crops, first-day tips
+- [ ] Nightly backup of the save to OneDrive (the script is ready: `npm run farm:backup`; saving is wired in, so the developer creates the scheduled task from `scripts/backup-farm.ps1`)
 
 ## Milestone 3: Shop
 

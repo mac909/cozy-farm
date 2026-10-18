@@ -35,7 +35,7 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Game server on :2567 and Vite on :5173. Open http://localhost:5173. It saves to `data-dev/` (never the real farm). In the browser console, `dev.nextDay()`, `dev.setTime("23:50")` and `dev.addCoins(100)` skip ahead for testing. |
+| `npm run dev` | Game server on :2567 and Vite on :5173. Open http://localhost:5173. It saves to `data-dev/` (never the real farm). In the browser console, `dev.nextDay()` (a whole night, with the fade and the morning card), `dev.setTime("23:50")` and `dev.addCoins(100)` skip ahead for testing. |
 | `npm run dev:fresh` | Deletes the dev save (`data-dev/`) and starts `npm run dev` with a brand-new world |
 | `npm test` | Unit tests |
 | `npm run typecheck` | TypeScript check across client, server, and shared |
@@ -45,6 +45,13 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 | `npm run farm:logs` / `npm run farm:down` | Follow its logs / stop it |
 | `npm run farm:backup` | Copies the real farm's save into `%OneDrive%\CozyFarm\backups`, keeping the newest 14. `scripts/backup-farm.ps1` has the nightly scheduled-task command. |
 | `npm run farm:restore` | Asks which backup to restore (or `-- <path>`), checks that it loads, then swaps it in and restarts the farm. The replaced save stays in the volume as `saves.before-restore-<date>_<time>.sqlite`; `scripts/restore-farm.ps1` says how to undo. |
+
+## Where things live
+
+- **Server messages:** one file per feature in `server/src/rooms/` (`farming.ts`, `bag.ts`, `crate.ts`, `shop.ts`, `night.ts` for the tent and the night, `dev.ts`), each registered with one line in `FarmRoom.ts`. Handlers check types and bounds, then call the pure rules in `shared/` (`farming/actions.ts`, `economy/trade.ts`, `world/night.ts`, `world/bedtime.ts`) and apply the result with `room.change(world)`. Trades at a place go through `rooms/trade.ts` (are you next to it, awake?). Message types are in `shared/messages.ts`, one section per feature.
+- **Network state:** `shared/schema.ts`, copied from the plain `World` by `shared/stateSync.ts`. The save (`server/src/persistence/worldSave.ts`) is written from the `World`, never from the schema.
+- **Cards over the game** (morning, bed banner, bag, crate, seed stand, tips) are HTML, built on `client/src/ui/panel.ts` and `panel.css`, each with its own CSS file. `WorldScene.openPanel()` opens one at a time and lets go of held keys when they open and close (a card keeps key releases away from the game).
+- **Places** (tent, crate, seed stand) are rectangles in the map's `Objects` layer; `shared/world/places.ts` says who's near which, and `Farming.ts` gives each one its Action button job.
 
 ## Editing the map
 
