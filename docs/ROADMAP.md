@@ -23,7 +23,7 @@ Every milestone ends with something playable. Tick items off as they land.
 
 ## Milestone 2: Farming (the first version to show her)
 
-- [ ] Hoe, seeds, watering can; touch-friendly hotbar and inventory
+- [x] Hoe, seeds, watering can; touch-friendly hotbar and inventory (the bag screen)
 - [x] Day clock (only while playing); sleeping in the shared tent ends the day, with a morning card
 - [x] Crops grow day by day; harvest
 - [x] World saved to SQLite (versioned) and restored after restarts

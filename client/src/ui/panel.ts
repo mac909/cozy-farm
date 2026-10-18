@@ -37,7 +37,8 @@ export function openPanel(options: PanelOptions = {}): Panel {
   let open = true;
   const onKey = (event: KeyboardEvent) => {
     const typing = event.target instanceof HTMLInputElement;
-    if (!typing) event.stopPropagation();
+    // Immediate, so the game's own listener on window never hears it, wherever the key was sent.
+    if (!typing) event.stopImmediatePropagation();
     if (event.type !== "keydown" || event.repeat) return;
     if (event.key === "Escape" || (!typing && options.closeKeys?.some((key) => key.toLowerCase() === event.key.toLowerCase()))) {
       event.preventDefault();

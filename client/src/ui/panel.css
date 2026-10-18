@@ -213,9 +213,9 @@
   border-color: #74a334;
 }
 
+/* 16-pixel items at 2×, so the pixels stay square; smaller only on very narrow phones. */
 .panel-cell img {
-  width: 75%;
-  max-width: 32px;
+  width: min(32px, 100%);
   image-rendering: pixelated;
   pointer-events: none;
 }

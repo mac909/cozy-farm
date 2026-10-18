@@ -115,3 +115,18 @@ export interface WakeUpMessage {
   x: number;
   y: number;
 }
+
+// ---------- The bag ----------
+
+/** Client → server ("moveItem"): move the stack in bag slot `from` onto slot `to` (swapping, or joining the same item). */
+export interface MoveItemMessage {
+  from: number;
+  to: number;
+}
+
+/** Client → server ("splitStack"): split `count` off the stack in slot `from`, into the empty slot `to` or the first empty one. */
+export interface SplitStackMessage {
+  from: number;
+  count: number;
+  to?: number;
+}

@@ -22,6 +22,7 @@ import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { addFarmer, farmerOf, isFarmerId, listFarmers, setFarmerLook, type FarmerId, type World } from "../../../shared/world/world";
 import { liveWorld } from "../world/liveWorld";
+import { registerBag } from "./bag";
 import { registerDevCommands } from "./dev";
 import { registerFarming } from "./farming";
 import { Bedtime } from "./night";
@@ -54,6 +55,7 @@ export class FarmRoom extends Room<FarmState> {
     this.onMessage("emote", (client, message: EmoteMessage) => this.emote(client, message));
     // Each feature's messages live in their own file in this folder.
     registerFarming(this);
+    registerBag(this);
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);

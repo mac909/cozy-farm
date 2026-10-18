@@ -12,7 +12,9 @@ import type {
   JoinOptions,
   LookMessage,
   MorningMessage,
+  MoveItemMessage,
   MoveMessage,
+  SplitStackMessage,
   WakeUpMessage,
   YouMessage,
 } from "../../../shared/messages";
@@ -36,7 +38,7 @@ import {
   VILLAGE_KEY,
   walkFrames,
 } from "../art/assets";
-import { iconUrl } from "../art/itemIcons";
+import { iconUrl, itemIcon } from "../art/itemIcons";
 import { startMusic } from "../audio/music";
 import { installDevCommands } from "../net/devCommands";
 import { FarmConnection } from "../net/connection";
@@ -45,12 +47,18 @@ import { pickFarmer, showOtherDevice } from "../ui/FarmerPicker";
 import { loadFarmerId, saveFarmerId } from "../ui/farmerStorage";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
-import type { Panel } from "../ui/panel";
+import { BagPanel } from "../ui/BagPanel";
 import { Bedtime } from "../world/Bedtime";
 import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
 import { Outline } from "../world/Outline";
 import type { UIScene } from "./UIScene";
+
+/** A card over the game (bag, crate, seed stand). */
+interface OpenPanel {
+  readonly isOpen: boolean;
+  close(): void;
+}
 
 /** The camera picks the whole-number zoom that shows about this many tiles across the screen's shorter side. */
 const TARGET_VISIBLE_TILES = 12;
@@ -133,8 +141,7 @@ export class WorldScene extends Phaser.Scene {
     this.ui = this.scene.get("ui") as UIScene;
     this.ui.events.on("emote", (emote: EmoteId) => this.emote(emote));
     this.ui.events.on("editLook", () => void this.changeLook());
-    // The bag screen comes in the next step; until then the button says so.
-    this.ui.events.on("bag", () => this.me.showHint("The bag screen is coming soon!"));
+    this.ui.events.on("bag", () => this.toggleBag());
     startMusic(this);
     installDevCommands((message) => this.room?.send("dev", message));
 
@@ -319,10 +326,17 @@ export class WorldScene extends Phaser.Scene {
     const me = this.room ? state.players.get(this.room.sessionId) : undefined;
     const bag = me ? readBag(me.bag) : null;
     const before = this.registry.get("bag") as Inventory | null;
+    let changed = false;
     if (JSON.stringify(bag) !== JSON.stringify(before)) {
       if (before && bag) this.announceNewItems(before, bag);
       this.registry.set("bag", bag);
+      changed = true;
     }
+    if (this.registry.get("coins") !== state.coins) {
+      this.registry.set("coins", state.coins);
+      changed = true;
+    }
+    if (changed) this.refreshPanel();
 
     this.farming.readFarm(state);
   }
@@ -376,12 +390,53 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** The panel that's open (bag, crate, seed stand), if any. Only one at a time. */
-  private panel: Panel | null = null;
+  private panel: OpenPanel | null = null;
 
   /** Closes the open panel, if any. */
   private closePanel() {
-    this.panel?.close();
+    const panel = this.panel;
     this.panel = null;
+    panel?.close();
+  }
+
+  /**
+   * Opens a panel over the game, closing any other. Keys held when it opens (or let go while
+   * it's open, which the panel keeps from the game) are forgotten, so nobody walks off by themselves.
+   */
+  private openPanel<T extends OpenPanel>(open: (onClose: () => void) => T): T | null {
+    if (this.bedtime.asleep) return null;
+    this.closePanel();
+    this.input.keyboard?.resetKeys();
+    const panel = open(() => {
+      this.input.keyboard?.resetKeys();
+      if (this.panel === panel) this.panel = null;
+    });
+    this.panel = panel;
+    return panel;
+  }
+
+  /** The bag button, B or Tab: opens the bag, or closes it. */
+  private toggleBag() {
+    if (this.panel instanceof BagPanel) {
+      this.closePanel();
+      return;
+    }
+    const bag = this.openPanel(
+      (onClose) =>
+        new BagPanel({
+          icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+          coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
+          move: (from, to) => this.room?.send("moveItem", { from, to } satisfies MoveItemMessage),
+          split: (from, count) => this.room?.send("splitStack", { from, count } satisfies SplitStackMessage),
+          onClose,
+        }),
+    );
+    bag?.update(this.registry.get("bag"), this.registry.get("coins"));
+  }
+
+  /** Keeps an open panel up to date with the bag and coins. */
+  private refreshPanel() {
+    if (this.panel instanceof BagPanel) this.panel.update(this.registry.get("bag"), this.registry.get("coins"));
   }
 
   private emote(emote: EmoteId) {
