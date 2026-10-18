@@ -59,3 +59,22 @@
 .bed .panel-button {
   margin-top: 10px;
 }
+
+/* What washed up on the beach, as little pictures. */
+.morning-beach .panel-text {
+  margin-bottom: 4px;
+}
+
+.morning-finds {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.morning-find {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}

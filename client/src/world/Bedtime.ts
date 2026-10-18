@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { Room } from "colyseus.js";
+import type { ItemId } from "../../../shared/content/items";
 import type { MorningMessage, SleepMessage, WakeMessage, WakeUpMessage } from "../../../shared/messages";
 import type { Vec } from "../../../shared/movement";
 import type { FarmState } from "../../../shared/schema";
@@ -34,6 +35,8 @@ export interface BedtimeOptions {
   show(view: { inBed: boolean; sleepers: string | null }): void;
   /** The coin picture, as an image URL for the morning card. */
   coinIcon(): string;
+  /** An item's picture, as an image URL (what washed up on the beach). */
+  itemIcon(itemId: ItemId): string;
   /** The morning card just opened (for its sound). */
   morningShown?(report: MorningReport): void;
   /** The morning card was closed (keys let go while it was open are forgotten). */
@@ -171,7 +174,7 @@ export class Bedtime {
     saveMorningShown(report.day);
     this.morningOpen = true;
     this.options.morningShown?.(report);
-    void showMorningCard(report, this.options.coinIcon()).then(() => {
+    void showMorningCard(report, this.options.coinIcon(), this.options.itemIcon).then(() => {
       this.morningOpen = false;
       this.options.cardClosed?.();
     });

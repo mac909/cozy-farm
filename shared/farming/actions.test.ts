@@ -62,6 +62,30 @@ describe("chooseAction", () => {
     expect(chooseAction(UNTILLED, true, HOE, null, "farm")).toEqual({ kind: "till" });
   });
 
+  it("picks up a beach find and catches a bug with anything in hand", () => {
+    const find = { findId: "starfish" as const, col: 20, row: 23 };
+    const bug = { id: "3.1.0", bugId: "brimstone" as const };
+    for (const held of [HOE, "fishing_rod", "fence", null] as (ItemId | null)[]) {
+      expect(chooseAction(UNTILLED, false, held, null, "farm", { find })).toEqual({ kind: "pickUp", ...find });
+      expect(chooseAction(UNTILLED, false, held, null, "farm", { bug })).toEqual({ kind: "catch", ...bug });
+    }
+    // A find in front comes before a bug flying past.
+    expect(chooseAction(UNTILLED, false, null, null, null, { find, bug }).kind).toBe("pickUp");
+    // Places still win.
+    expect(chooseAction(UNTILLED, false, null, { kind: "place", place: "crate" }, null, { find, bug })).toEqual({ kind: "crate" });
+    expect(actionWord({ kind: "pickUp", ...find })).toBe("Pick up");
+    expect(actionWord({ kind: "catch", ...bug })).toBe("Catch");
+  });
+
+  it("fishes with the rod, facing water", () => {
+    const fishing = { spot: "dock" as const, col: 26, row: 29 };
+    expect(chooseAction(UNTILLED, false, "fishing_rod", null, "farm", { fishing })).toEqual({ kind: "fish", ...fishing });
+    expect(actionWord({ kind: "fish", ...fishing })).toBe("Fish");
+    // Without the rod, or without water, nothing.
+    expect(chooseAction(UNTILLED, false, HOE, null, "farm", { fishing })).toEqual({ kind: "none" });
+    expect(chooseAction(UNTILLED, false, "fishing_rod", null, "farm", {})).toEqual({ kind: "none" });
+  });
+
   it("picks a ripe crop with anything in hand", () => {
     for (const held of [HOE, WATERING_CAN, RADISH_SEEDS, "radish", null] as (ItemId | null)[]) {
       expect(chooseAction(RIPE_RADISH, true, held, null)).toEqual({ kind: "harvest", cropId: "radish" });
@@ -133,6 +157,10 @@ describe("hintFor", () => {
     expect(hintFor(DRY, true, RADISH_SEEDS)).toBeNull();
     expect(hintFor(DRY, true, WATERING_CAN)).toBeNull();
     expect(hintFor(RIPE_RADISH, true, null)).toBeNull();
+  });
+
+  it("says where to fish", () => {
+    expect(text(UNTILLED, false, "fishing_rod")).toBe("Face the water from the dock or the beach to fish.");
   });
 
   it("says where furniture goes", () => {

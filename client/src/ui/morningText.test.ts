@@ -36,6 +36,11 @@ describe("the morning card's words", () => {
 
   it("keeps a quiet night short", () => {
     const words = morningWords({ day: 2, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: [] });
-    expect(words).toEqual({ title: "Good morning! Day 2", growth: null, sales: [], earned: null });
+    expect(words).toEqual({ title: "Good morning! Day 2", growth: null, beach: null, sales: [], earned: null });
+  });
+
+  it("says when something washed up on the beach", () => {
+    const words = morningWords({ day: 3, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: ["starfish", "sea_glass"] });
+    expect(words.beach).toBe("Something washed up on the beach!");
   });
 });

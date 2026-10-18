@@ -1,6 +1,9 @@
+import type { BeachFindId } from "../content/beachFinds";
+import type { BugId } from "../content/bugs";
 import { CROPS, isCropId, type CropId } from "../content/crops";
+import type { FishingSpot } from "../content/fish";
 import { goesIn, type FurnitureId, type PlaceKind } from "../content/furniture";
-import { ITEMS, cropItemId, furnitureOf, isItemId, type ItemId } from "../content/items";
+import { FISHING_ROD, ITEMS, cropItemId, furnitureOf, isItemId, type ItemId } from "../content/items";
 import { addItems, countOf, isSlotIndex, removeFromSlot, roomFor, type ItemStack } from "../inventory/inventory";
 import type { PlaceId } from "../world/places";
 import { farmTileAt, farmerOf, setFarmTile, setFarmerBag, type FarmerId, type World } from "../world/world";
@@ -25,6 +28,16 @@ export type Spot =
   | { kind: "exit"; houseId: string }
   | { kind: "bed" };
 
+/**
+ * Things to collect near you, found by the caller: the beach find on the tile in front (or under
+ * your feet), a bug fluttering close by, and where a line would go in if you're facing water.
+ */
+export interface Nearby {
+  find?: { findId: BeachFindId; col: number; row: number } | null;
+  bug?: { id: string; bugId: BugId } | null;
+  fishing?: { spot: FishingSpot; col: number; row: number } | null;
+}
+
 /** What the Action button does. */
 export type Action =
   | { kind: "sleep" }
@@ -34,6 +47,9 @@ export type Action =
   | { kind: "enter"; houseId: string; how: DoorKind }
   | { kind: "leave"; houseId: string }
   | { kind: "place"; itemId: FurnitureId }
+  | { kind: "pickUp"; findId: BeachFindId; col: number; row: number }
+  | { kind: "catch"; bugId: BugId; id: string }
+  | { kind: "fish"; spot: FishingSpot; col: number; row: number }
   | { kind: "harvest"; cropId: CropId }
   | { kind: "till" }
   | { kind: "plant"; cropId: CropId }
@@ -65,7 +81,10 @@ export function seedCrop(itemId: ItemId | null): CropId | null {
 /**
  * What the Action button does, checked in this order:
  * next to a place (tent, crate, seed stand, store), a door, the way out or a bed → that;
+ * a beach find in front (or underfoot) → pick it up, whatever you're holding;
+ * a bug fluttering close by → catch it, whatever you're holding;
  * holding furniture where it can go (`placing`: your own house, or the farm) → put it down;
+ * the fishing rod, facing water you can fish → cast;
  * a ripe crop in front → pick it, whatever you're holding;
  * the hoe on farmland grass → dig;
  * seeds on bare dug soil → plant;
@@ -82,10 +101,14 @@ export function chooseAction(
   held: ItemId | null,
   spot: Spot | null,
   placing: PlaceKind | null = null,
+  nearby: Nearby = {},
 ): Action {
   if (spot) return spotAction(spot);
+  if (nearby.find) return { kind: "pickUp", ...nearby.find };
+  if (nearby.bug) return { kind: "catch", ...nearby.bug };
   const furniture = furnitureOf(held);
   if (furniture && placing && goesIn(furniture, placing)) return { kind: "place", itemId: furniture };
+  if (held === FISHING_ROD && nearby.fishing) return { kind: "fish", ...nearby.fishing };
   if (tile.kind === "planted" && isRipe(tile)) return { kind: "harvest", cropId: tile.cropId };
   if (held === HOE && tile.kind === "untilled" && isFarmland) return { kind: "till" };
   const seed = seedCrop(held);
@@ -117,6 +140,9 @@ const ACTION_WORD: Record<Exclude<Action["kind"], "enter">, string | null> = {
   shop: "Shop",
   leave: "Leave",
   place: "Place",
+  pickUp: "Pick up",
+  catch: "Catch",
+  fish: "Fish",
   harvest: "Pick",
   till: "Dig",
   plant: "Plant",
@@ -164,7 +190,9 @@ export type HintReason =
   | "farm-only"
   | "cant-go-here"
   | "someone-there"
-  | "coming-soon";
+  | "coming-soon"
+  | "no-water"
+  | "nothing-biting";
 
 /** A hint, with the details some of them need. */
 export interface Hint {
@@ -209,6 +237,8 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "cant-go-here": "It won't fit there.",
   "someone-there": "Someone's standing there.",
   "coming-soon": "Coming soon!",
+  "no-water": "Face the water from the dock or the beach to fish.",
+  "nothing-biting": "Nothing's biting here just now.",
 };
 
 /** True for a hint the client can show; use it on hints that arrive from the server. */
@@ -239,6 +269,7 @@ export function daysLeft(tile: PlantedTile): number {
  */
 export function hintFor(tile: FarmTile, isFarmland: boolean, held: ItemId | null, placing: PlaceKind | null = null): Hint | null {
   if (chooseAction(tile, isFarmland, held, null, placing).kind !== "none") return null;
+  if (held === FISHING_ROD && tile.kind !== "planted") return { reason: "no-water" };
   const furniture = furnitureOf(held);
   if (furniture && !(tile.kind === "planted")) {
     if (!placing) return { reason: "not-your-house" };

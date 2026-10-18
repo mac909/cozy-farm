@@ -6,6 +6,8 @@ export interface MorningWords {
   title: string;
   /** What grew and what's ripe, or null after a quiet night. */
   growth: string | null;
+  /** "Something washed up on the beach!", or null if nothing did. */
+  beach: string | null;
   /** One line per thing the crate sold: "Radish 4 × 35" and its total. */
   sales: { text: string; total: string }[];
   /** "+260 coins" and the wallet after it, or null if the crate was empty. */
@@ -31,6 +33,7 @@ export function morningWords(report: MorningReport): MorningWords {
   return {
     title: `Good morning! Day ${report.day}`,
     growth: growthLine(report.grew, report.ready),
+    beach: (report.washedUp?.length ?? 0) > 0 ? "Something washed up on the beach!" : null,
     sales,
     earned: sales.length > 0 ? { text: `+${report.sale.total} coins`, coins: String(report.coins) } : null,
   };

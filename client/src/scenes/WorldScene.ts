@@ -26,7 +26,7 @@ import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
 import { countOf, type Inventory } from "../../../shared/inventory/inventory";
 import type { Crate } from "../../../shared/economy/shop";
-import { readBag, readClock, readCrate } from "../../../shared/stateSync";
+import { readBag, readBeach, readClock, readCrate } from "../../../shared/stateSync";
 import type { GameClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { COLLISION_LAYER, FARMLAND_LAYER, isAboveCharacters, OBJECTS_LAYER } from "../../../shared/world/tiledMap";
@@ -66,6 +66,7 @@ import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
 import { Homes, type Resident } from "../world/Homes";
 import { Arrange } from "../world/Arrange";
+import { BeachView } from "../world/Beach";
 import { homeOf } from "../../../shared/decor/decorate";
 import { targetTile, feetTile } from "../../../shared/world/places";
 import { areaOf, VILLAGE } from "../../../shared/world/houses";
@@ -127,6 +128,8 @@ export class WorldScene extends Phaser.Scene {
   /** The shipping crate on the dock, and what's in it as the server last said. */
   private crateSprite!: Phaser.GameObjects.Image;
   private crate: Crate = [];
+  /** What's lying on the beach. */
+  private beach!: BeachView;
 
   constructor() {
     super("world");
@@ -173,7 +176,13 @@ export class WorldScene extends Phaser.Scene {
     this.ui.events.on("editLook", () => void this.changeLook());
     this.ui.events.on("bag", () => this.toggleBag());
     startMusic(this);
-    installDevCommands((message) => this.room?.send("dev", message));
+    installDevCommands(
+      (message) => this.room?.send("dev", message),
+      (col, row, facing) => {
+        const at = tileCenter(col, row);
+        this.teleport(at.x, at.y, facing);
+      },
+    );
 
     this.homes = new Homes(this, {
       me: this.me,
@@ -186,6 +195,7 @@ export class WorldScene extends Phaser.Scene {
     });
     this.homes.setZoom(this.zoom);
     this.physics.add.collider(this.player, this.homes.colliders);
+    this.beach = new BeachView(this);
 
     this.bedtime = new Bedtime(this, {
       room: () => this.room,
@@ -202,6 +212,7 @@ export class WorldScene extends Phaser.Scene {
         if (this.registry.get("sleepers") !== sleepers) this.registry.set("sleepers", sleepers);
       },
       coinIcon: () => iconUrl(this.textures, { key: COIN_KEY }),
+      itemIcon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
       morningShown: (report) => playSound(this, report.sale.total > 0 ? "coin" : "morning"),
       cardClosed: () => this.releaseKeys(),
     });
@@ -218,7 +229,11 @@ export class WorldScene extends Phaser.Scene {
       busy: () => this.bedtime.asleep || this.panel?.isOpen === true || this.arrange.isActive,
       spot: (position) => this.homes.spot(position),
       placing: () => this.homes.placing(),
+      findAt: (col, row) => this.beach.findAt(col, row),
+      bugNear: () => null,
       on: {
+        catchBug: () => {},
+        fish: () => this.farming.hint({ reason: "coming-soon" }),
         sleep: () => this.bedtime.sleep(),
         crate: () => this.openCrate(),
         seeds: () => this.openShop(seedStandCatalog(), "seedStand"),
@@ -232,6 +247,7 @@ export class WorldScene extends Phaser.Scene {
         if (kind === "till") this.tips.event("dug");
         if (kind === "water") this.tips.event("watered");
         if (kind === "harvest") this.tips.event("picked");
+        if (kind === "pickUp") this.tips.event("pickedUp");
       },
     });
     this.arrange = new Arrange(this, {
@@ -447,6 +463,8 @@ export class WorldScene extends Phaser.Scene {
     });
     // The connection handles being replaced (by its close code); this just keeps Colyseus from warning.
     room.onMessage("replaced", () => {});
+    // Celebrated by the collection book (coming with it); until then, heard and let go.
+    room.onMessage("bookEvent", () => {});
     room.onMessage("emote", (event: EmoteEvent) => {
       if (isEmote(event?.emote)) this.remotes.get(event.sessionId)?.character.showEmote(event.emote);
     });
@@ -487,6 +505,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.farming.readFarm(state);
     this.homes.readState(state);
+    this.beach.update(readBeach(state.beach));
     // Not moved in anywhere yet, with a cottage free: say where they are.
     if (this.farmerId && VILLAGE_MAP.houses.length > 0 && !homeOf(this.homes.houseViews, this.farmerId)) {
       const free = VILLAGE_MAP.houses.some((plan) => !this.homes.houseViews[plan.id]);

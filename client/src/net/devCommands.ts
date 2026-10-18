@@ -8,7 +8,23 @@ export interface DevCommands {
   setTime(time: string | number): void;
   /** Add coins to the shared wallet. */
   addCoins(amount: number): void;
+  /**
+   * Walk there in a blink (your own character only): dev.goTo("dock"), "dockEnd", "beach", "meadow",
+   * "tent", or dev.goTo(28, 30) for a tile.
+   */
+  goTo(place: DevPlace | number, row?: number): void;
 }
+
+/** Handy spots for dev.goTo, as tiles: where you stand, and which way you face. */
+export const DEV_PLACES = {
+  dock: { col: 27, row: 29, facing: "left" },
+  dockEnd: { col: 28, row: 33, facing: "down" },
+  beach: { col: 10, row: 25, facing: "down" },
+  meadow: { col: 32, row: 10, facing: "down" },
+  tent: { col: 7, row: 15, facing: "down" },
+} as const;
+
+export type DevPlace = keyof typeof DEV_PLACES;
 
 declare global {
   interface Window {
@@ -30,10 +46,20 @@ export function parseTime(time: string | number): number {
   return hour * 60 + minute;
 }
 
-/** Puts the dev commands on window.dev. `send` passes them to the server, if connected. */
-export function installDevCommands(send: (message: DevMessage) => void): void {
+/** Puts the dev commands on window.dev. `send` passes them to the server, if connected; `goTo` moves you to a tile. */
+export function installDevCommands(
+  send: (message: DevMessage) => void,
+  goTo: (col: number, row: number, facing: "up" | "down" | "left" | "right") => void,
+): void {
   if (!import.meta.env.DEV) return;
   window.dev = {
+    goTo: (place, row) => {
+      if (typeof place === "number" && typeof row === "number") goTo(place, row, "down");
+      else if (typeof place === "string" && Object.hasOwn(DEV_PLACES, place)) {
+        const spot = DEV_PLACES[place];
+        goTo(spot.col, spot.row, spot.facing);
+      } else console.warn(`dev.goTo: try ${Object.keys(DEV_PLACES).join(", ")}, or a column and a row.`);
+    },
     nextDay: () => send({ command: "nextDay" }),
     setTime: (time) => {
       const value = parseTime(time);
