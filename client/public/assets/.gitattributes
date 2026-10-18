@@ -1,0 +1,6 @@
+# Keep art, audio and fonts out of line-ending conversion.
+*.png binary
+*.gif binary
+*.ogg binary
+*.wav binary
+*.ttf binary
