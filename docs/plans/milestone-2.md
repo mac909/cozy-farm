@@ -14,11 +14,14 @@ strawberry seeds with it.
 
 - Merged rules, not wired up yet: `shared/farming/`, `shared/time/clock.ts`, `shared/content/crops.ts` and
   `items.ts`, `shared/inventory/`, `shared/economy/`, and the save layer in `server/src/persistence/`.
-- The art session running now (its plan is in `~/.claude/plans/distributed-whistling-cascade.md`). It brings the
-  Ninja Adventure art, the map in Tiled at `shared/world/village.json` with hidden `Collision` and `Farmland`
-  layers and an `Objects` layer (`spawn`, `shippingCrate`), `parseTiledMap()` returning `farmland[][]`, 12 pack
-  characters (`Look = { name, character }`), and a music button next to the look button. This plan uses those
-  names. Check them again once that work is on `main`.
+- The art work, merged on `main` as 7ee19e5: the Ninja Adventure art, 12 pack characters
+  (`Look = { name, character }`), a music button next to the look button, and the village in Tiled at
+  `shared/world/village.json` (48 × 36 tiles). `parseTiledMap()` in `shared/world/tiledMap.ts` reads its hidden
+  `Collision` and `Farmland` layers and its `Objects` layer into a `WorldMap` (`shared/world/map.ts`):
+  `farmland[][]`, the `spawn` tile, and the `shippingCrate` rectangle. The farm field is cols 4–19, rows 4–10
+  (112 farmland tiles) inside a rail fence with a gate at cols 11–12; `spawn` is tile (12, 13), on the sandy path
+  just below the gate; the crate is at tile (29, 26), where the dock starts. CLAUDE.md's "Editing the map" has the
+  layer rules.
 
 **Contents:** [1. How farming feels](#1-how-farming-feels) ·
 [2. The rest of the game](#2-the-rest-of-the-player-experience) · [3. Server design](#3-server-design) ·
@@ -258,7 +261,7 @@ The older one shows "You're playing on another device" with a **Play here** butt
 
 ### Sleeping before houses exist: a tent
 
-A tent on the farm, next to where you start (the pack's `tileset_camp.png` has one, 48 × 48 px). It belongs to both
+A tent just outside the farm gate, next to where you start (the pack's `tileset_camp.png` has one, 48 × 48 px). It belongs to both
 of you until the houses come in Milestone 4. Then it can stay as a decoration or go.
 
 - Walk up to the door: Action says **Sleep**. Tap it, and your character goes into the tent: they disappear and
@@ -434,8 +437,9 @@ refuse anything that doesn't make sense.
   seed by accident.
 - **Within reach** means the tile is at most 2 tiles from the tile under your feet, using your last reported
   position. On screen you can only reach the 8 tiles around you; the extra tile covers lag.
-- **Near** a place (tent, crate, stand) means within 2.5 tiles of its point in the map's `Objects` layer. The
-  client switches the Action button at 1.5 tiles.
+- **Near** a place (tent, crate, stand) means within 2.5 tiles of its rectangle in the map's `Objects` layer
+  (`shippingCrate` is already a rectangle; `tent` and `seedStand` are drawn the same way). The client switches
+  the Action button at 1.5 tiles.
 - Nothing is rate-limited. Two trusted players.
 
 Server → client:
@@ -477,9 +481,11 @@ Server → client:
   joins the farming and bag rules (plant takes the seed, picking needs room in the bag).
 - `world/night.ts`: `endNight(world)` returns the next morning's world and a `MorningReport { day, grew, ready,
   sale }`: advance every tile, settle the crate, next day.
-- `world/places.ts`: `nearPlace(position, place, distance)` for the tent, crate and stand points from the map.
-- The map (art work's `parseTiledMap`) gains two more `Objects` points, `tent` and `seedStand`. Its test that walks
-  from `spawn` to the crate should reach them too.
+- `world/places.ts`: `nearPlace(position, rect, distance)` for the tent, crate and stand rectangles from the map,
+  and `wakeSpots(tent)`: the two tiles in front of the tent's door, where everyone wakes up.
+- The map gains two more `Objects` rectangles, `tent` and `seedStand`: found by name with the `one()` helper in
+  `parseTiledMap` (it ignores unknown objects today), added to `WorldMap` in `shared/world/map.ts`, and reached by
+  the "lets you walk up to the shipping crate" flood-fill test in `shared/world/map.test.ts`.
 
 ### The clock in the room
 
@@ -597,19 +603,19 @@ While Milestone 2 is being built, dev saves from an older shape fail that check.
 
 ## 5. Build order
 
-Each step ends with something to try in the browser, except step 1, which is rules and tests only. Steps 1 and 2
-can start now, while the art work is still going; the rest start from `main` after the art work has merged.
+Each step ends with something to try in the browser, except step 1, which is rules and tests only. The art work is
+on `main`, so every step starts from there.
 
 | Step | What players get | Main files | Can run alongside |
 |---|---|---|---|
-| 1 | (nothing visible: the rules that join everything up) | new files in `shared/farming/`, `shared/world/` | the art work; step 2 |
-| 2 | The day clock, saved and restored | `shared/schema.ts`, `server/src/index.ts`, `FarmRoom.ts`, `worldSave.ts`; `UIScene.ts` after the art merge | the art work (server half); step 1 |
+| 1 | (nothing visible: the rules that join everything up) | new files in `shared/farming/`, `shared/world/` | step 2 |
+| 2 | The day clock, saved and restored | `shared/schema.ts`, `server/src/index.ts`, `FarmRoom.ts`, `worldSave.ts`, `UIScene.ts` | step 1 |
 | 3 | Who's playing, your own bag, the hotbar | `connection.ts`, new `FarmerPicker.ts`, `UIScene.ts`, `FarmRoom.ts`, `index.ts`, `vite.config.ts` | nothing (it touches everything) |
 | 4 | Dig, plant, water, pick | `WorldScene.ts`, `UIScene.ts`, new `client/src/world/Farm.ts`, `server/src/rooms/farming.ts` | step 6 |
-| 5 | The tent, sleeping, the night, the morning card | `village.json`, `UIScene.ts`, `WorldScene.ts`, new `MorningCard.ts`, `server/src/rooms/night.ts` | step 6 |
+| 5 | The tent, sleeping, the night, the morning card | `village.json`, `tiledMap.ts`, `map.ts`, `UIScene.ts`, `WorldScene.ts`, new `MorningCard.ts`, `server/src/rooms/night.ts` | step 6 |
 | 6 | The bag screen | new `client/src/ui/BagPanel.ts` + `bag.css`, `server/src/rooms/bag.ts` | steps 4 and 5 |
 | 7 | The shipping crate and coins | new `CratePanel.ts`, `server/src/rooms/crate.ts`, `MorningCard.ts` | step 8 |
-| 8 | The seed stand | `village.json`, new `ShopPanel.ts`, `server/src/rooms/shop.ts` | step 7 |
+| 8 | The seed stand | `village.json`, `tiledMap.ts`, `map.ts`, new `ShopPanel.ts`, `server/src/rooms/shop.ts` | step 7 |
 | 9 | The feel pass | `WorldScene.ts`, `UIScene.ts`, sounds | nothing |
 | 10 | It's on the real farm | docs, a fixture test, `farm:up`, the backup task | nothing |
 
@@ -640,8 +646,7 @@ check that whatever the step added comes back. The dev commands are also reachab
 - Reshape `WorldSave` version 1, with its `validate` and tests. Load at startup; the world module; save 2 seconds
   after changes, at shutdown and when the last player leaves. The clock ticks only while someone's connected and
   syncs in 10-minute steps. Dev commands. `npm run dev:fresh`.
-- HUD: the clock card in the top left, with the connection status folded in. (If the art work hasn't merged yet,
-  build the server half and check it from the console and server logs, then add the card after the merge.)
+- HUD: the clock card in the top left, with the connection status folded in.
 - Checks in the browser: the card says "Day 1 · 6:00 am" and moves every ~8 seconds in both tabs. Close both tabs
   for a minute and reopen: the clock hasn't moved. Restart the dev server: it picks up where it was.
   `data-dev/saves.sqlite` exists. A deliberately broken save makes the server stop with a clear message. The real
@@ -673,8 +678,9 @@ check that whatever the step added comes back. The dev commands are also reachab
 
 ### Step 5: The tent, sleeping, the night, the morning
 
-- The developer places the tent in Tiled (tiles in `Decor`, its blocked tiles in `Collision`, a `tent` point in
-  `Objects`). `sleep` and `wake`; hiding the sleeper and the Zzz bubble; the dimmed screen with Get up; the
+- The developer places the tent in Tiled: its 48 × 48 sprite in `Decor`, `Collision` painted under its bottom row
+  (otherwise you get invisible walls or walk through it), and a `tent` rectangle in `Objects`. `parseTiledMap`
+  and `WorldMap` learn `tent`. `sleep` and `wake`; hiding the sleeper and the Zzz bubble; the dimmed screen with Get up; the
   "Pip is asleep" chip; the night as in section 3; the 30-second wait; midnight; the evening tint, the moon and
   the late-night warnings; the morning card with the growth line; `lastMorning` for whoever missed it.
 - Checks: one tab alone, Sleep starts the night at once. Two tabs: tab 1 sleeps, tab 2 sees the chip and the clock
@@ -693,14 +699,15 @@ check that whatever the step added comes back. The dev commands are also reachab
 
 ### Step 7: The shipping crate and coins
 
-- Coins on the clock card. The crate card (the crate's point already comes from the art work's map); `ship` and
+- Coins on the clock card. The crate card (the map already has the `shippingCrate` rectangle); `ship` and
   `unship`; `settleCrate` in the night; the sale lines on the morning card.
 - Checks: tab 1 puts radishes in; tab 2 sees them in the crate and "Sells tonight for…"; take some back; the hoe
   can't go in. After the night, both tabs show the same coins and the same sale lines.
 
 ### Step 8: The seed stand
 
-- The developer places the stand in Tiled (a `seedStand` point). The seeds card with − / +, 5 and 10; `buy`.
+- The developer places the stand in Tiled (its sprite, `Collision` under it, a `seedStand` rectangle), and
+  `parseTiledMap` learns it. The seeds card with − / +, 5 and 10; `buy`.
 - Checks: buy some seeds and see the coins drop in both tabs; try to buy more than the coins allow; fill the bag
   and see "Your bag is full".
 - Steps 7 and 8 only meet in `shared/messages.ts` and `FarmRoom.ts` one-liners, so they can run side by side.
@@ -755,8 +762,10 @@ Each has a suggested answer. Say the word and it goes into DESIGN.md.
 9. **A few one-time tips on her first day?** For example: "Pick the hoe and tap the big button on the grass",
    "Water your seeds every day", "The tent ends the day". *Suggested: yes, three or four, each shown once.*
 
-10. **Where do the tent and seed stand go?** You place them in Tiled. *Suggested: the tent beside the farm, next
-    to where you start; the seed stand at the top of the beach path, so seeds are on the way back from the crate.*
+10. **Where do the tent and seed stand go?** You place them in Tiled. *Suggested: the tent on the open grass
+    just left of where you start (about cols 7–9, rows 12–14, door facing down, a few steps from the field gate);
+    the seed stand beside the path where it reaches the beach, so seeds are on the way back from the crate at the
+    dock.*
 
 11. **Digging up a crop you don't want: still not decided.** Crops never die, so a wrong one just ripens.
     *Suggested: leave it out of Milestone 2 and add it if she asks for it.*
