@@ -13,6 +13,9 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | `crops.ts` | Growth stages, harvested item and seed packet for each starter crop |
 | `soil.ts` | Tilled soil, dry and watered, as a 16-tile autotile set |
 | `beach.ts` | Shells, sea glass, starfish |
+| `fish.ts` | Twelve fish icons, one per fish in `shared/content/fish.ts` |
+| `bugs.ts` | The meadow's bugs: the pack's butterflies, three recolours, and a firefly |
+| `fishing.ts` | The pack's fishing rod on a 16×16 frame, and the bobber |
 | `crate.ts` | The shipping crate, closed and open |
 | `seedStand.ts` | The seed stand: a market stall with seed sacks |
 | `sand.ts` | Beach sand: recolours of the pack's floor and water autotiles |
@@ -45,6 +48,9 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
 - `soil.png`: row 0 dry, row 1 watered. Frame = mask (+16 when watered), where the mask adds 1, 2, 4, 8 for a
   tilled neighbour to the north, east, south, west.
 - `beach-items.png`: one row, frame order in `manifest.json`.
+- `fish.png`: one row of 16×16 icons in `FISH` order (`shared/content/fish.ts`), facing right.
+- `bugs.png`: one row per bug in `BUGS` order (`shared/content/bugs.ts`): four frames of fluttering, then the icon.
+- `fishing.png`: one row: the rod, the bobber, the bobber dipped under.
 - `shipping-crate.png`: 32×32 frames, closed then open.
 - `seed-stand.png`: one 32×32 frame, the counter on the bottom of the frame.
 - `sand-grass.png`, `sand-water.png`: same layout as the source blocks in the pack's `TilesetFloor.png` (from y 112)

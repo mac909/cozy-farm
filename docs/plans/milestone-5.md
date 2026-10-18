@@ -1,6 +1,6 @@
 # Milestone 5 plan: fishing, beachcombing, butterflies and the collection book
 
-**Status:** in progress (2026-10-18).
+**Status:** built (2026-10-18); every step below landed, and `docs/reports/overnight-2026-10-18.md` has what to try.
 
 Written 2026-10-18 by Claude, building autonomously ("I trust you with decisions"). Every decision is also in
 DESIGN.md; this file is the short build plan.

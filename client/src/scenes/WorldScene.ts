@@ -323,6 +323,8 @@ export class WorldScene extends Phaser.Scene {
     this.otherLines = new OtherLines(this);
     this.ui.events.on("selectSlot", (_slot: number, item: { itemId?: string } | null) => {
       if (item?.itemId === FISHING_ROD) this.tips.event("rod");
+      // Putting the rod away reels in.
+      else if (this.fishing.isActive) this.fishing.stop();
     });
     this.ui.events.on("action", () => {
       if (this.fishing.isActive) this.fishing.press();

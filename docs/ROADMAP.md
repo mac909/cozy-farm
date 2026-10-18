@@ -45,10 +45,10 @@ Every milestone ends with something playable. Tick items off as they land.
 
 ## Milestone 5: Collecting
 
-- [ ] Fishing from the dock
-- [ ] Beachcombing for shells and sea glass
-- [ ] Bugs and butterflies
-- [ ] Collection book
+- [x] Fishing from the dock, the shore and the end of the dock (a relaxed one-button minigame; a rod for everyone)
+- [x] Beachcombing for shells and sea glass (a few wash up each morning)
+- [x] Bugs and butterflies (by time of day; fireflies after dark)
+- [x] Collection book (shared, with first-discovery celebrations on both screens), and a fish tank at the store
 
 ## Later
 

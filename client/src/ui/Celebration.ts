@@ -41,6 +41,8 @@ export class Celebrations {
     const celebration = this.queue.shift();
     if (!celebration) return;
     const panel = openPanel({ cardClass: `celebrate${celebration.big ? "" : " small"}`, passThrough: true, position: "top" });
+    // Over any card that opens after it (the book, the bag), not dimmed behind it.
+    panel.card.parentElement?.classList.add("over");
     if (celebration.itemId) panel.card.append(picture(this.options.icon(celebration.itemId), "celebrate-icon"));
     const words = el("div");
     words.append(el("div", "celebrate-title", celebration.title), el("div", "celebrate-line", celebration.line));

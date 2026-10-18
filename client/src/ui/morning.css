@@ -63,6 +63,8 @@
 /* What washed up on the beach, as little pictures. */
 .morning-beach .panel-text {
   margin-bottom: 4px;
+  color: #4a3b2a;
+  font-weight: 700;
 }
 
 .morning-finds {

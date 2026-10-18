@@ -146,7 +146,11 @@
   text-align: center;
 }
 
-/* The celebration card for something new in the book, near the top of the screen. */
+/* The celebration card for something new in the book, near the top of the screen, over other cards. */
+.panel.over {
+  z-index: 11;
+}
+
 .celebrate {
   display: flex;
   align-items: center;

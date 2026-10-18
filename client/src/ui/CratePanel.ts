@@ -52,7 +52,7 @@ export class CratePanel {
       this.grid.top,
       el("div", "crate-gap"),
       this.grid.rest,
-      el("p", "panel-tip", "It all sells overnight, and the morning card says what sold. The hoe and can can't be sold."),
+      el("p", "panel-tip", "It all sells overnight, and the morning card says what sold. Tools (the hoe, the can and the rod) can't be sold."),
     );
   }
 

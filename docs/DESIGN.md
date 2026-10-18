@@ -45,13 +45,22 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Rooms | One room each, 9 × 6 tiles of floor inside the pack's interior walls, drawn in the same Tiled map, out of sight below the sea: going through a door moves you there, and the camera shows just the room with the pack's dark background round it. You only see people in the same place as you. One map keeps everything the server already checks (positions, reach, places) working unchanged. Decided by Claude (Milestone 4). | 2026-10-18 |
 | Beds | Any bed in any house works like the tent (Action says **Sleep** next to it), and the tent stays. In a house you wake up where you slept; outdoors, in front of the tent. Decided by Claude (Milestone 4). | 2026-10-18 |
 | General store | A little green-roofed shop (the pack's) just above the sandy path, two steps left of the seed stand, so the two make a small market. It sells furniture and farm decorations; the seed stand keeps the seeds. Same card as the seed stand, in two shelves ("For your house", "For the farm"), starting at 1 with quick buttons 1 and 10. Decided by Claude (Milestone 3). | 2026-10-18 |
+| Where to fish | Facing the water with the rod: off the sides of the **dock**, from the **shore** (any sand or grass at the sea's edge), and the **deep water** off the dock's end (a `deepWater` rectangle in Tiled). Water, sand and grass are read from the map's Ground terrain, so new beach painted in Tiled just works. All 12 fish in the merged list can be caught. Decided by Claude (Milestone 5). | 2026-10-18 |
+| The fishing rod | Every new farmer starts with one. The save upgrade (version 3) put one in each existing farmer's first empty bag slot; a farmer whose bag was full gets it the next time they join with a free slot. It isn't sold anywhere. Decided by Claude (Milestone 5). | 2026-10-18 |
+| Who plays the fishing minigame | The server picks the fish when you cast (from the spot, the time of day and its own random seed) and your device plays out the bite and the reel with the merged rules, then says it's landed; the server checks there was a cast, enough time passed and the size fits, then the fish goes in your bag and the book. Holding through tugs needs instant feedback, and a round trip over Tailscale's relay would feel sticky. Two trusted players. Decided by Claude (Milestone 5). | 2026-10-18 |
+| Fishing controls | One button: tap when the bobber dips, hold to reel, let go while it pulls. The Action button, Space, or a touch **anywhere** on the screen all count (the joystick is off while fishing). A strip at the top of the screen says what to do and shows the reel; **Stop** (in the bag's place), Esc or walking off with the keys reels in. Decided by Claude (Milestone 5). | 2026-10-18 |
+| Bugs | Six kinds by time of day: four butterflies in the daytime (two from the pack, two recoloured) and, after dark, fireflies and a luna moth. 3–6 flutter over the meadow's open grass at once; a new lot every two game hours. Next to one, Action says **Catch**, whatever you're holding: no net. They aren't saved (they come and go like weather). Decided by Claude (Milestone 5). | 2026-10-18 |
+| Beachcombing | The merged rules: 2–5 finds each morning on beach sand (plain sand within 5 tiles of the sea, so not the path up to the farm), at most 10 at once, never on a decoration or round the crate. The first tide also came when the server first started after the update. Facing one (or standing on it) Action says **Pick up**, whatever you're holding; holding the button picks up a row. Decided by Claude (Milestone 5). | 2026-10-18 |
+| Collection book | One shared book: Fish, Beach and Bugs pages. Found things in colour with how many, who found the first and (fish) the biggest; the rest are silhouettes with a hint of where to look. "9 of 23 found" at the top. Opens from a book button at the top right (key C) and a Book button in the bag. Decided by Claude (Milestone 5). | 2026-10-18 |
+| Celebrations | A first discovery puts a card at the top of both screens ("New in the collection book! Sea Bream, caught by Pip") with the pack's success jingle, confetti and a heart over the finder. A bigger fish than ever gets a smaller card; a full page and a full book get their own. Tapping a card opens the book. Decided by Claude (Milestone 5). | 2026-10-18 |
+| Fish pictures | Our own 12 fish icons, drawn in `tools/sprites/fish.ts`: the pack has only three small fish, all one shape, and the book needs each fish to look like itself. Decided by Claude (Milestone 5). | 2026-10-18 |
 
 ## Controls
 
 One way of playing on every device: an Action button for the tile in front of you (like Animal Crossing or Stardew on a controller).
 
 - **Hotbar:** the first 8 slots of your bag along the bottom. Tap a slot (or 1–8, Q/E, the mouse wheel) to hold what's in it; its name shows for a moment. The choice is remembered on the device, and a slot stays picked when it empties.
-- **Action button** (bottom right, the biggest thing on screen; Space or Enter): it says what it will do for the tile in front of your feet, which gets a pulsing outline: **Dig** (hoe on farm-field grass), **Plant** (seeds on bare dug soil), **Water** (can on dry soil), **Pick** (a ripe crop, whatever you're holding). Next to a place it takes over: **Sleep** at the tent or a bed, **Crate** at the shipping crate, **Seeds** at the seed stand, **Shop** at the general store, **Home**, **Visit** or **Move in** at a cottage's door, **Leave** on a room's mat. Holding furniture where it can go, it says **Place** (see Arrange mode). When nothing would happen it fades, and tapping it gives a hint over your head instead ("Dig it with the hoe first."). These hints are the tutorial.
+- **Action button** (bottom right, the biggest thing on screen; Space or Enter): it says what it will do for the tile in front of your feet, which gets a pulsing outline: **Dig** (hoe on farm-field grass), **Plant** (seeds on bare dug soil), **Water** (can on dry soil), **Pick** (a ripe crop, whatever you're holding). Next to a place it takes over: **Sleep** at the tent or a bed, **Crate** at the shipping crate, **Seeds** at the seed stand, **Shop** at the general store, **Home**, **Visit** or **Move in** at a cottage's door, **Leave** on a room's mat. Facing a beach find (or standing on it) it says **Pick up**, and next to a bug **Catch**, whatever you're holding. With the fishing rod, facing water, it says **Fish**. Holding furniture where it can go, it says **Place** (see Arrange mode). When nothing would happen it fades, and tapping it gives a hint over your head instead ("Dig it with the hoe first."). These hints are the tutorial.
 - **Hold to repeat:** keep Action (or Space) held after a press and walk: each new tile you face gets dug, planted, watered or picked, so a row is one stroke. On a phone, steer with one thumb and hold Action with the other.
 - **Turn on the spot:** a light push on the joystick turns you without walking, so lining up on one tile is easy; push further to walk.
 - On a laptop, clicking one of the 8 tiles around you acts there. Tapping a tile on a phone doesn't: a touch steers the joystick, and telling a tap from the start of a walk would make the stick flicker. Revisit if it's missed on a real phone.
@@ -59,7 +68,9 @@ One way of playing on every device: an Action button for the tile in front of yo
 - Ripe crops bob a pixel, so you can spot them across the field.
 - **Bag** (the bag button, B or Tab): a card with all 24 slots, 8 × 3, the top row being the hotbar. Tap a stack to pick it up (a strip says what it is and what it sells for), then tap another slot to move it there: it moves, joins a stack of the same thing, or swaps. **Split** halves a stack into the first empty slot. With a mouse, drag and drop works too. Close with ×, Esc, B or Tab. Tap, then tap, is the main way on a phone: a drag starting on a small slot is easy to fumble, and tapping can't drop anything by mistake.
 - **Emotes:** wave and heart next to Action (Z and X).
-- **First-day tips:** four small cards near the top of the screen, each shown once per device, that don't stop play (OK, or they go by themselves after 10 seconds): how to dig (on first joining), plant and water (after your first dig), the tent ends the day (after your first watering, or at 6 pm), and the crate (after your first pick). The words are in `client/src/ui/tipRules.ts`.
+- **Fishing:** see Collecting. While fishing, the button says **Wait…**, **Now!**, **Reel** and **Let go**; a touch anywhere on the screen works as the button; **Stop** (Esc) reels in.
+- **The collection book:** the book button at the top right, left of the music (key C), or **Book** in the bag.
+- **First-day tips:** small cards near the top of the screen, each shown once per device, that don't stop play (OK, or they go by themselves after 10 seconds): how to dig (on first joining), plant and water (after your first dig), the tent ends the day (after your first watering, or at 6 pm), and the crate (after your first pick). Later ones: the cottages, arranging, and for collecting: how to fish (the first time you pick the rod), where the fish are (after your first catch), the beach (after your first pick-up), bugs (after your first catch), and the book (after the first discovery). No tips while fishing. The words are in `client/src/ui/tipRules.ts`.
 - **Esc** closes whatever card is open, and gets you out of bed.
 - Time never stops while a card is open: it's shared time.
 - The watering can never runs dry and there's no energy bar ("no stress").
@@ -92,7 +103,7 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ### The morning card
 
-- After the fade: "Good morning! Day 4", how many crops grew and how many are ready to pick, what the crate sold (line by line) and the coins it made, and **Let's go**. A quiet night just says "Good morning! Day 4".
+- After the fade: "Good morning! Day 4", how many crops grew and how many are ready to pick, "Something washed up on the beach!" with a little picture of each find, what the crate sold (line by line) and the coins it made, and **Let's go**. A quiet night just says "Good morning! Day 4".
 - The server keeps the last morning's report, so whoever was offline sees it when they next open the game. Each device remembers the last day it showed, so it shows once per device.
 
 ## Farming
@@ -113,7 +124,9 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 - A shipping crate on the dock, shared by both of you: whatever's in it sells overnight, at that night's prices, and the morning card says what sold. It has no size limit, and you can take things back out before night. Walk up to it and Action says **Crate**: the card shows what's in it (from both of you) and what it sells for tonight, with your bag underneath. Tap a stack in your bag to put the whole stack in (split it in the bag first to keep some); tap a line in the crate to take it back. Tools can't be sold, so they're faded. The crate's lid stands open while something's waiting to sell.
 - A seed stand at the top of the sandy path down to the beach, on the way back from the crate. Walk up and Action says **Seeds**: its card lists the six seeds with how long each takes to ripen, whether it regrows, what the crop sells for, and the packet's price. Tap one to open it, pick how many with − and + (or 5 and 10; it starts at 5, or as many as the coins cover), and **Buy 5 for 100**. The button says why when you can't: "Need 20 more coins", "Your bag is full". Seeds only: tools never get lost, and furniture has nowhere to go until the houses.
 - The **general store**, a small green-roofed shop just above the sandy path, left of the seed stand. Walk up to its door and Action says **Shop**: the same kind of card as the seed stand, with two shelves, **For your house** (beds, a sofa, chairs, tables, shelves, lamps, plants, rugs) and **For the farm** (fences, stepping stones, flowers, flower tubs, barrels, a scarecrow, a washing line, a fishing net, banners). Each line says where it goes, how many tiles it takes and anything special ("sleep in it", "walk over it", "turns"). It starts at 1, with quick buttons for 1 and 10. Seeds stay at the seed stand. The list is `shared/content/generalStore.ts`; the pieces and prices are `shared/content/furniture.ts`.
-- Seeds and furniture sell back in the crate for half price, so a mistake isn't a total loss. Tools can't be sold.
+- Seeds and furniture sell back in the crate for half price, so a mistake isn't a total loss. Tools (the hoe, the can, the rod) can't be sold.
+- Fish, beach finds and bugs sell in the crate at their own prices (`shared/content/fish.ts`, `items.ts` for the finds, `bugs.ts`): a sardine 20, a moonfish 260, a scallop 15, a starfish 60, a cabbage white 25, a luna moth 140.
+- The general store also sells a **fish tank** for your house (our own sprite).
 - All prices and amounts live in `shared/content/items.ts` and `shared/content/crops.ts`. They're first guesses, to be tuned by playing.
 
 ## Decorating
@@ -145,15 +158,34 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ## Collecting
 
-- **Fishing** from the dock and the beach: a relaxed minigame, with different fish by time of day.
-- **Beachcombing:** shells and sea glass wash up on the sand each morning.
-- **Bugs and butterflies** in the meadow.
-- A shared collection book; later, a little aquarium or museum to fill.
+### Fishing
+
+- Everyone has a **fishing rod** (a tool: it never wears out). Hold it in the hotbar, face the water from the dock, the beach, or the end of the dock, and the Action button says **Fish**.
+- Tap it: you cast, and the bobber lands a tile or two out. **Wait for a bite** (the bobber bobs, and now and then nibbles, which isn't a bite yet). When it **dips and a "!" pops up**, tap (the strip at the top says "Tap now!", and phones buzz where they can). Then **hold** to reel it in, and **let go while it pulls** (the bar turns red). Holding through a pull only loses a little. Landed: the fish leaps into your hands, "A Sea Bream! 34 cm", and it's in your bag and the book.
+- A miss is never a loss: "Too soon!", "It got away. Cast again!", "It slipped off the hook!", and you cast again. No bait, no breaking line, no energy.
+- What bites depends on **where** (dock, shore, the deep water off the dock's end) and **when** (12 fish, some all day, some only mornings, afternoons, evenings or late at night; rarer ones less often and livelier on the line). The list and numbers are `shared/content/fish.ts`; the minigame's timings are `FISHING` and `REEL_FEEL` in `shared/fishing/fishing.ts`. All first guesses.
+- You see each other fish: the other player's rod, line and bobber show while they're at it.
+
+### Beachcombing
+
+- Each morning 2–5 things wash up on the beach's sand (scallop and cowrie shells, sea glass, a conch, now and then a starfish), at most 10 lying about at once. What and where follow from the world's own seed and the day, so a restart never re-rolls them. They glint now and then so you can spot them.
+- Face one (or stand on it): **Pick up**. Hold the button to sweep a row. Whatever nobody picks up stays.
+
+### Bugs
+
+- A few bugs flutter over the meadow's open grass (not the farm field), a new lot every two game hours, by time of day: cabbage whites and brimstones in the morning, red admirals and common blues through the day, fireflies after 6 pm and the rare luna moth after 8 pm. Each one loops slowly round its spot.
+- Walk up close and Action says **Catch**. Bugs aren't saved: after a restart the same lot is back.
+
+### The collection book
+
+- One book for both of you, three pages: **Fish** (12), **Beach** (5) and **Bugs** (6), 23 in all. Found things in colour, with how many, who found the first and on which day, and for fish the biggest and who caught it; what's still out there is a silhouette with a hint ("Try the end of the dock.", "Out in the meadow after dark."). Tap one to read about it.
+- A first discovery is cheered on both screens: a card at the top, the jingle, confetti and a heart over whoever found it. Bigger-than-ever fish get a smaller card, and a finished page or the whole book get their own.
+- Later: a museum or aquarium that shows what you've found. For now there's a decorative fish tank at the store.
 
 ## Art and sound
 
 - Ninja Adventure (pixel-boy, CC0) for tiles, characters, critters, items, UI and music. One artist, so styles don't clash.
-- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, the seed stand, a wave emote, the arrange/turn/done icons, and four seaside pieces for the store (a ship in a bottle, a life ring on a post, an anchor, a beach umbrella). The tent is the pack's own camp tent; the store and the cottages are the pack's houses; the rooms are its interior walls and floors; furniture is its beds, furniture and house props.
+- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, the seed stand, a wave emote, the arrange/turn/done/book/stop icons, five seaside pieces for the store (a ship in a bottle, a life ring on a post, an anchor, a beach umbrella, a fish tank), twelve fish, a red and white bobber, and a firefly. Three butterflies are recolours of the pack's (a cabbage white, a brimstone, a luna moth); the red admiral and the common blue are the pack's own, and the rod is the pack's on a 16×16 frame. The tent is the pack's own camp tent; the store and the cottages are the pack's houses; the rooms are its interior walls and floors; furniture is its beds, furniture and house props.
 - Characters walk in four directions; you can walk behind tree tops.
 - Music: "Calm Village" on a soft loop. The pack's "Peaceful", "Sunny" and "Aquatic" are imported too, for later (other times of day or places).
 - Sound effects from the pack (see Controls). The waves sound is imported for later, for the beach.
