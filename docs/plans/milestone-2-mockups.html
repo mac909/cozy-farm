@@ -1,0 +1,1305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Milestone 2 Mockups</title>
+    <!--
+      Mockups for docs/plans/milestone-2.md. Open this file straight from the repo: it draws the
+      world with the real sprites from client/public/assets/ (relative paths), and the HUD in HTML
+      at the sizes the plan gives. Nothing here is game code.
+    -->
+    <style>
+      :root {
+        --page: #f3eee3;
+        --ink: #3a3024;
+        --muted: #7b6d59;
+        --rule: #ded2b8;
+        --accent: #e8765f;
+        --hud: rgba(29, 47, 59, 0.62);
+        --hud-line: rgba(255, 255, 255, 0.6);
+        --card: #fff8e7;
+        --card-line: #e2cfa6;
+        --card-ink: #4a3b2a;
+        --card-soft: #efe2c4;
+        --go: #ef7d6d;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --page: #1f1c18;
+          --ink: #efe6d6;
+          --muted: #b3a58e;
+          --rule: #3d362c;
+        }
+      }
+      :root[data-theme="dark"] {
+        --page: #1f1c18;
+        --ink: #efe6d6;
+        --muted: #b3a58e;
+        --rule: #3d362c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 1260px;
+        margin: 0 auto;
+        padding: 32px 16px 80px;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 0 0 6px;
+      }
+      h2 {
+        font-size: 22px;
+        margin: 52px 0 4px;
+        padding-top: 20px;
+        border-top: 1px solid var(--rule);
+      }
+      .lede,
+      .sub {
+        color: var(--muted);
+        max-width: 75ch;
+        margin: 0;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px 32px;
+        align-items: flex-start;
+        margin-top: 20px;
+      }
+      figure {
+        margin: 0;
+        width: min-content;
+      }
+      figcaption {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 10px;
+        min-width: 220px;
+      }
+      figcaption b {
+        color: var(--ink);
+      }
+      .notes {
+        flex: 1 1 300px;
+        max-width: 480px;
+        font-size: 15px;
+      }
+      .notes ol {
+        padding-left: 0;
+        list-style: none;
+        margin: 0;
+      }
+      .notes li {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        margin-bottom: 10px;
+      }
+      .num {
+        display: inline-grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      /* A device shown smaller than life; click to see it at full size. */
+      .scale {
+        zoom: var(--z, 0.5);
+        cursor: zoom-in;
+      }
+      .scale.big {
+        zoom: 1;
+        cursor: zoom-out;
+      }
+      .device {
+        position: relative;
+        background: #121214;
+        border-radius: 56px;
+        padding: 12px;
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+        width: max-content;
+      }
+      .device.laptop {
+        border-radius: 16px;
+        padding: 18px 18px 30px;
+        background: #2b2b30;
+      }
+      .screen {
+        position: relative;
+        overflow: hidden;
+        border-radius: 44px;
+        background: #9bbf4a;
+      }
+      .laptop .screen {
+        border-radius: 4px;
+      }
+      .screen canvas {
+        position: absolute;
+        inset: 0;
+        image-rendering: pixelated;
+      }
+      .island {
+        position: absolute;
+        background: #000;
+        border-radius: 20px;
+        z-index: 5;
+      }
+      .homebar {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 3px;
+        z-index: 5;
+      }
+
+      /* HUD, drawn in CSS px at the sizes in the plan */
+      .hud {
+        position: absolute;
+        inset: 0;
+        color: #fff;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .hud > * {
+        position: absolute;
+      }
+      .spr {
+        display: inline-block;
+        background-repeat: no-repeat;
+        image-rendering: pixelated;
+        vertical-align: middle;
+      }
+      img.px {
+        image-rendering: pixelated;
+        vertical-align: middle;
+      }
+      .clock {
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        border-radius: 14px;
+        padding: 5px 12px 6px;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.3;
+        white-space: nowrap;
+      }
+      .clock.late {
+        background: rgba(150, 92, 22, 0.82);
+      }
+      .clock .coins {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+      }
+      .clock .chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+        padding: 2px 8px 2px 4px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.18);
+        font-size: 13px;
+      }
+      .status {
+        font-size: 13px;
+        font-weight: 600;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 2px 8px;
+        border-radius: 6px;
+      }
+      .round {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+      }
+      .face {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+        image-rendering: pixelated;
+      }
+      .action {
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        background: rgba(29, 47, 59, 0.72);
+        border: 3px solid rgba(255, 255, 255, 0.85);
+        display: grid;
+        place-items: center;
+      }
+      .action.faded {
+        opacity: 0.45;
+      }
+      .action.big {
+        width: 92px;
+        height: 92px;
+      }
+      .tag {
+        position: absolute;
+        left: 50%;
+        bottom: -9px;
+        transform: translateX(-50%);
+        background: var(--card);
+        color: var(--card-ink);
+        border: 2px solid #1d2f3b;
+        border-radius: 8px;
+        padding: 0 8px;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 17px;
+        white-space: nowrap;
+      }
+      .key {
+        position: absolute;
+        right: -4px;
+        top: -4px;
+        background: #1d2f3b;
+        color: #fff;
+        border-radius: 5px;
+        padding: 0 5px;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 16px;
+      }
+      .bagbtn {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        display: grid;
+        place-items: center;
+      }
+      .hotbar {
+        display: flex;
+      }
+      .slot {
+        position: relative;
+        display: grid;
+        place-items: center;
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        border-radius: 8px;
+      }
+      .slot.sel {
+        transform: translateY(-4px);
+        border-color: #ffd36b;
+        background: rgba(29, 47, 59, 0.82);
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+      }
+      .slot .n {
+        position: absolute;
+        right: 3px;
+        bottom: 0;
+        font-size: 11px;
+        font-weight: 800;
+        text-shadow:
+          1px 1px 0 #000,
+          -1px 1px 0 #000,
+          1px -1px 0 #000,
+          -1px -1px 0 #000;
+      }
+      .slot .k {
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        font-size: 10px;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .toast {
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.55);
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .finger {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255, 220, 190, 0.55);
+        border: 2px solid rgba(255, 255, 255, 0.9);
+        transform: translate(-50%, -50%);
+      }
+      .finger::after {
+        content: "44 px fingertip";
+        position: absolute;
+        left: 50%;
+        top: 46px;
+        transform: translateX(-50%);
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-shadow: 0 1px 2px #000;
+      }
+      .pouch {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        border-radius: 12px;
+        padding: 2px 8px 2px 4px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .cursor {
+        width: 30px;
+        height: 45px;
+      }
+
+      /* Panels: cream cards like today's look picker */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(20, 36, 48, 0.55);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 60px 16px 50px;
+      }
+      .overlay.bottom {
+        justify-content: flex-end;
+        background: rgba(10, 16, 40, 0.25);
+        padding-bottom: 60px;
+      }
+      .card {
+        background: var(--card);
+        color: var(--card-ink);
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        padding: 16px;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 21px;
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .card-head .grow {
+        flex: 1;
+      }
+      .card .coins {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 800;
+        background: var(--card-soft);
+        border-radius: 10px;
+        padding: 2px 8px;
+      }
+      .xbtn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--card-soft);
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .label {
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #9b8664;
+        margin: 8px 0 4px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 3px;
+      }
+      .cell {
+        position: relative;
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        background: var(--card-soft);
+        border: 2px solid #dcc79c;
+        border-radius: 7px;
+      }
+      .cell.hot {
+        background: #e8d6ad;
+      }
+      .cell.sel {
+        border-color: var(--go);
+        box-shadow: 0 0 0 2px var(--go);
+      }
+      .cell.off {
+        opacity: 0.35;
+      }
+      .cell .n {
+        position: absolute;
+        right: 2px;
+        bottom: -1px;
+        font-size: 10px;
+        font-weight: 800;
+        color: #fff;
+        text-shadow:
+          1px 1px 0 #4a3b2a,
+          -1px 1px 0 #4a3b2a,
+          1px -1px 0 #4a3b2a,
+          -1px -1px 0 #4a3b2a;
+      }
+      .info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 12px;
+        background: var(--card-soft);
+      }
+      .info .grow {
+        flex: 1;
+      }
+      .info small {
+        display: block;
+        color: #8a7556;
+        font-size: 13px;
+      }
+      .btn {
+        display: inline-grid;
+        place-items: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 12px;
+        background: var(--go);
+        color: #fff;
+        font-weight: 800;
+        font-size: 16px;
+        white-space: nowrap;
+      }
+      .btn.soft {
+        background: #e4d3ad;
+        color: var(--card-ink);
+      }
+      .btn.wide {
+        display: grid;
+        width: 100%;
+        margin-top: 12px;
+      }
+      .tip {
+        margin: 8px 0 0;
+        font-size: 13px;
+        color: #8a7556;
+        text-align: center;
+      }
+      .line {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: 10px;
+      }
+      .line + .line {
+        margin-top: 2px;
+      }
+      .line .grow {
+        flex: 1;
+      }
+      .line small {
+        display: block;
+        color: #8a7556;
+        font-size: 12px;
+      }
+      .line.open {
+        background: var(--card-soft);
+        flex-wrap: wrap;
+      }
+      .price {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 800;
+      }
+      .stepper {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        margin-top: 6px;
+      }
+      .stepper .pm {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #e4d3ad;
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+        font-weight: 800;
+      }
+      .stepper .count {
+        width: 36px;
+        text-align: center;
+        font-size: 20px;
+        font-weight: 800;
+      }
+      .stepper .quick {
+        padding: 0 10px;
+        height: 32px;
+        border-radius: 8px;
+        background: #e4d3ad;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: 14px;
+      }
+      .who {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: var(--card-soft);
+        font-size: 20px;
+        font-weight: 800;
+        margin-top: 10px;
+      }
+      .who img {
+        width: 56px;
+        height: 56px;
+        image-rendering: pixelated;
+        border-radius: 10px;
+        background: #f8efd8;
+      }
+      .center {
+        text-align: center;
+      }
+      .sale {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 6px 0 4px;
+        font-size: 15px;
+      }
+      .sale td {
+        padding: 3px 0;
+      }
+      .sale td:last-child {
+        text-align: right;
+        font-weight: 800;
+      }
+      .total {
+        display: flex;
+        justify-content: space-between;
+        border-top: 2px dashed #dcc79c;
+        padding-top: 6px;
+        font-weight: 800;
+        font-size: 17px;
+      }
+      .muted {
+        color: #8a7556;
+      }
+
+      /* Action button states */
+      .states {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 22px 18px;
+        margin-top: 20px;
+      }
+      .state {
+        width: 120px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .state .action {
+        position: relative;
+        margin: 0 auto 18px;
+      }
+      .bubble {
+        display: inline-block;
+        margin-top: 6px;
+        background: #fff;
+        color: #3a3024;
+        border: 2px solid #3a3024;
+        border-radius: 10px;
+        padding: 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .pill {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 800;
+        border-radius: 10px;
+        padding: 1px 9px;
+        background: var(--accent);
+        color: #fff;
+        vertical-align: 2px;
+        margin-left: 6px;
+      }
+      code {
+        font-size: 0.92em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Milestone 2 mockups</h1>
+      <p class="lede">
+        How farming could look and feel, for <code>docs/plans/milestone-2.md</code>. The world is drawn with the
+        real sprites at the game's zoom (a tile is 32 px on a phone, 64 px on a laptop); the buttons are drawn at
+        the sizes the plan gives. <b>Click any device to see it at full size.</b> Pip and Juno are stand-in names.
+      </p>
+
+      <h2>Recommended: an Action button for the tile in front of you <span class="pill">scheme A</span></h2>
+      <p class="sub">
+        Pick a tool in the hotbar, walk up, check the outline, tap Action. The button says what it will do.
+      </p>
+      <div class="row">
+        <figure id="hero"></figure>
+        <div class="notes">
+          <ol>
+            <li><span class="num">1</span><span><b>Clock card.</b> Day, time in 10-minute steps, coins. The connection status only shows here when it's reconnecting.</span></li>
+            <li><span class="num">2</span><span><b>Music and look</b> stay top right, as the art work leaves them.</span></li>
+            <li><span class="num">3</span><span><b>The outline</b> is on the tile in front of Pip's feet: dry radish seeds.</span></li>
+            <li><span class="num">4</span><span><b>Action</b> (76 px, the biggest thing on screen) says <i>Water</i>, because the watering can is selected and that soil is dry. Faded when nothing would happen.</span></li>
+            <li><span class="num">5</span><span><b>Wave and heart</b>, still one tap each, 46 px.</span></li>
+            <li><span class="num">6</span><span><b>Bag</b> opens all 24 slots.</span></li>
+            <li><span class="num">7</span><span><b>Hotbar:</b> the first 8 bag slots, 42 px. The selected one is lifted, and its name shows for a moment above.</span></li>
+            <li><span class="num">8</span><span><b>The joystick</b> still starts wherever the thumb lands in the open middle of the screen.</span></li>
+            <li><span class="num">9</span><span><b>Juno</b> is about to pick the ripe radishes. Ripe crops get picked with anything in hand.</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="row">
+        <figure id="landscape"></figure>
+        <figure id="laptop"></figure>
+      </div>
+
+      <h2>What the Action button says</h2>
+      <p class="sub">
+        Checked in this order, by one shared function, so the button, the hints and the tests agree. Next to the
+        tent, crate or seed stand, the place wins.
+      </p>
+      <div class="states" id="states"></div>
+
+      <h2>The other screens</h2>
+      <p class="sub">Cards over the game, in HTML like today's name picker. Time keeps going while they're open.</p>
+      <div class="row" id="screens"></div>
+
+      <h2>Bedtime with two players</h2>
+      <p class="sub">The night starts when everyone online is in bed (or at midnight).</p>
+      <div class="row" id="bedtime"></div>
+
+      <h2>The schemes compared</h2>
+      <p class="sub">The plan explains each one; this is how they'd look on an upright phone.</p>
+      <div class="row" id="schemes"></div>
+    </main>
+
+    <script>
+      (async function () {
+        const NA = "../../client/public/assets/ninja-adventure/";
+        const CU = "../../client/public/assets/custom/";
+        const T = 16;
+
+        // ---------- images for the canvas world ----------
+        const SRC = {
+          floor: NA + "Backgrounds/Tilesets/TilesetFloor.png",
+          water: NA + "Backgrounds/Tilesets/TilesetWater.png",
+          camp: NA + "Backgrounds/Tilesets/tileset_camp.png",
+          pip: NA + "Actor/Character/Woman/SpriteSheet.png",
+          juno: NA + "Actor/Character/Villager4/SpriteSheet.png",
+          sandGrass: CU + "sand-grass.png",
+          sandWater: CU + "sand-water.png",
+          soil: CU + "soil.png",
+          crops: CU + "crops.png",
+          crate: CU + "shipping-crate.png",
+          zzz: NA + "Ui/Emote/emote28.png",
+          heart: NA + "Ui/Emote/emote27.png",
+        };
+        const images = {};
+        await Promise.all(
+          Object.entries(SRC).map(
+            ([name, src]) =>
+              new Promise((resolve) => {
+                const image = new Image();
+                image.onload = () => {
+                  images[name] = image;
+                  resolve();
+                };
+                image.onerror = () => {
+                  console.warn("Couldn't load", src);
+                  resolve();
+                };
+                image.src = src;
+              }),
+          ),
+        );
+
+        // ---------- the little world (tiles) ----------
+        const MAP_W = 40;
+        const MAP_H = 44;
+        const CROP_ROW = { radish: 0, carrot: 1, samphire: 2, potato: 3, strawberry: 4, pumpkin: 5 };
+
+        function ground(c, r) {
+          if (r >= 26) return c >= 22 && c <= 23 && r <= 31 ? "dock" : "water";
+          if (r >= 23) return "sand";
+          if (c >= 22 && c <= 23 && r >= 13) return "sand";
+          return "grass";
+        }
+        const soil = new Map();
+        const dig = (c, r, o = {}) => soil.set(`${c},${r}`, { watered: !!o.w, crop: o.crop ?? null, stage: o.stage ?? 0 });
+        for (let c = 4; c <= 11; c++) {
+          dig(c, 11, c <= 6 ? { crop: "carrot", stage: 2, w: 1 } : c <= 9 ? { crop: "radish", stage: 3 } : { crop: "strawberry", stage: 2, w: 1 });
+          dig(c, 12, c <= 7 ? { crop: "potato", stage: 1 } : { crop: "radish", stage: 0, w: c <= 9 });
+        }
+        for (let c = 4; c <= 9; c++) dig(c, 13);
+        const OBJECTS = [
+          { img: "camp", sx: 64, sy: 0, w: 48, h: 48, x: 18 * T, y: 9 * T }, // tent
+          { img: "camp", sx: 64, sy: 96, w: 32, h: 32, x: 25 * T, y: 15 * T }, // seed stand: a crate…
+          { img: "camp", sx: 112, sy: 80, w: 16, h: 32, x: 27 * T, y: 14 * T }, // …and its banner
+          { img: "crops", sx: 6 * T, sy: 0, w: 16, h: 16, x: 25 * T, y: 14 * T + 6 }, // seed packets on top
+          { img: "crops", sx: 6 * T, sy: 4 * T, w: 16, h: 16, x: 26 * T, y: 14 * T + 6 },
+          { img: "crate", sx: 0, sy: 0, w: 32, h: 32, x: 22 * T, y: 30 * T }, // shipping crate on the dock
+        ];
+        const FACING_COL = { down: 0, up: 1, left: 2, right: 3 };
+        const hash = (c, r) => ((c * 73856093) ^ (r * 19349663)) >>> 0;
+        const center = (c, r) => ({ x: (c + 0.5) * T, y: (r + 0.5) * T });
+
+        /**
+         * Draws the world into a canvas of W×H CSS px at a whole-number zoom, camera on `look`.
+         * Returns where a tile lands on screen, for placing HUD bits over it.
+         */
+        function drawWorld(canvas, W, H, zoom, opts) {
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = Math.round(W * dpr);
+          canvas.height = Math.round(H * dpr);
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          const ctx = canvas.getContext("2d");
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.imageSmoothingEnabled = false;
+          const viewW = W / zoom;
+          const viewH = H / zoom;
+          // No clamp at the top and left: the mockup map is small, so grass carries on past its edge.
+          const left = Math.round(Math.min(opts.look.x - viewW / 2, MAP_W * T - viewW));
+          const top = Math.round(Math.min(opts.look.y - viewH / 2, MAP_H * T - viewH));
+          const sx = (wx) => (wx - left) * zoom;
+          const sy = (wy) => (wy - top) * zoom;
+          const blit = (img, x, y, w, h, wx, wy) => {
+            if (images[img]) ctx.drawImage(images[img], x, y, w, h, sx(wx), sy(wy), w * zoom, h * zoom);
+          };
+
+          const c0 = Math.floor(left / T);
+          const r0 = Math.floor(top / T);
+          const c1 = Math.ceil((left + viewW) / T);
+          const r1 = Math.ceil((top + viewH) / T);
+          const FALLBACK = { grass: "#9bbf4a", sand: "#f1d29a", water: "#62c7e0", dock: "#f4a65f" };
+          for (let r = r0; r < r1; r++) {
+            for (let c = c0; c < c1; c++) {
+              const g = ground(c, r);
+              ctx.fillStyle = FALLBACK[g];
+              ctx.fillRect(sx(c * T), sy(r * T), T * zoom, T * zoom);
+              if (g === "grass") {
+                const h = hash(c, r) % 11;
+                blit("floor", h === 0 ? 16 : h === 1 ? 32 : 0, 192, T, T, c * T, r * T);
+              } else if (g === "sand") blit("sandGrass", 16, 16, T, T, c * T, r * T);
+              else if (g === "water") blit("sandWater", 16, 16, T, T, c * T, r * T);
+              else blit("water", 16, 208, T, T, c * T, r * T);
+            }
+          }
+
+          // Dug soil: frame = neighbour mask (N1 E2 S4 W8), +16 when watered. Then the crop on top.
+          const dug = (c, r) => soil.has(`${c},${r}`);
+          for (const [key, tile] of soil) {
+            const [c, r] = key.split(",").map(Number);
+            const mask = (dug(c, r - 1) ? 1 : 0) | (dug(c + 1, r) ? 2 : 0) | (dug(c, r + 1) ? 4 : 0) | (dug(c - 1, r) ? 8 : 0);
+            const frame = mask + (tile.watered ? 16 : 0);
+            blit("soil", (frame % 16) * T, Math.floor(frame / 16) * T, T, T, c * T, r * T);
+            if (tile.crop) blit("crops", tile.stage * T, CROP_ROW[tile.crop] * T, T, T, c * T, r * T - 2);
+          }
+
+          if (opts.reach) {
+            ctx.fillStyle = "rgba(255,255,255,0.22)";
+            for (let dr = -1; dr <= 1; dr++)
+              for (let dc = -1; dc <= 1; dc++) {
+                if (!dc && !dr) continue;
+                ctx.fillRect(sx((opts.reach.c + dc) * T) + 1, sy((opts.reach.r + dr) * T) + 1, T * zoom - 2, T * zoom - 2);
+              }
+          }
+
+          for (const o of OBJECTS) blit(o.img, o.sx, o.sy, o.w, o.h, o.x, o.y);
+
+          const people = (opts.people ?? []).filter((p) => !p.hidden).sort((a, b) => a.r - b.r);
+          for (const p of people) {
+            const at = center(p.c + (p.dx ?? 0), p.r);
+            blit(p.who, FACING_COL[p.facing] * T, 0, T, T, at.x - 8, at.y - 12);
+          }
+
+          if (opts.target) outline(ctx, sx(opts.target.c * T), sy(opts.target.r * T), T * zoom, zoom, opts.target.faint);
+
+          if (opts.tint) {
+            ctx.fillStyle = opts.tint;
+            ctx.fillRect(0, 0, W, H);
+          }
+
+          // Name tags and bubbles sit above the tint, as they do in the game.
+          for (const p of people) {
+            const at = center(p.c + (p.dx ?? 0), p.r);
+            const x = sx(at.x);
+            const y = sy(at.y - 13);
+            if (p.name) nameTag(ctx, x, y, p.name);
+            if (p.hint) speech(ctx, x, y - 22, p.hint);
+            if (p.bubble && images[p.bubble]) ctx.drawImage(images[p.bubble], x - 7 * zoom, y - 16 - 13 * zoom, 14 * zoom, 13 * zoom);
+          }
+          if (opts.tentZzz && images.zzz) ctx.drawImage(images.zzz, sx(20.4 * T), sy(8.2 * T), 14 * zoom, 13 * zoom);
+
+          return (c, r) => ({ x: sx(c * T), y: sy(r * T), size: T * zoom });
+        }
+
+        function outline(ctx, x, y, s, z, faint) {
+          const L = 5 * z;
+          const t = z;
+          const corners = [
+            [x, y, 1, 1],
+            [x + s, y, -1, 1],
+            [x, y + s, 1, -1],
+            [x + s, y + s, -1, -1],
+          ];
+          for (const [color, grow] of [["rgba(0,0,0,0.55)", z], [faint ? "rgba(255,255,255,0.45)" : "#ffffff", 0]]) {
+            ctx.fillStyle = color;
+            for (const [cx, cy, dx, dy] of corners) {
+              const ox = dx > 0 ? cx - grow / 2 : cx - t - grow / 2;
+              const oy = dy > 0 ? cy - grow / 2 : cy - t - grow / 2;
+              ctx.fillRect(dx > 0 ? ox : ox - L + t, oy, L + grow, t + grow);
+              ctx.fillRect(ox, dy > 0 ? oy : oy - L + t, t + grow, L + grow);
+            }
+          }
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, r);
+        }
+
+        function nameTag(ctx, x, y, text) {
+          ctx.font = "bold 12px system-ui, sans-serif";
+          const w = ctx.measureText(text).width + 12;
+          ctx.fillStyle = "rgba(0,0,0,0.5)";
+          roundRect(ctx, x - w / 2, y - 16, w, 17, 6);
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, x, y - 7.5);
+        }
+
+        function speech(ctx, x, y, text) {
+          ctx.font = "bold 13px system-ui, sans-serif";
+          const w = ctx.measureText(text).width + 18;
+          ctx.fillStyle = "#fff";
+          ctx.strokeStyle = "#3a3024";
+          ctx.lineWidth = 2;
+          roundRect(ctx, x - w / 2, y - 26, w, 24, 9);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x - 6, y - 3);
+          ctx.lineTo(x, y + 5);
+          ctx.lineTo(x + 6, y - 3);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillRect(x - 5, y - 5, 10, 3);
+          ctx.fillStyle = "#3a3024";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, x, y - 14);
+        }
+
+        // ---------- HUD pieces (HTML) ----------
+        const IMG = {
+          hoe: NA + "Items/Tool/Hoe.png",
+          can: NA + "Items/Tool/WateringCan.png",
+          bag: NA + "Items/Object/Bag.png",
+          coin: NA + "Items/Treasure/GoldCoin.png",
+          heart: NA + "Ui/Emote/emote27.png",
+          wave: NA + "Ui/Emote/emote11.png",
+          zzz: NA + "Ui/Emote/emote28.png",
+          pipFace: NA + "Actor/Character/Woman/Faceset.png",
+          junoFace: NA + "Actor/Character/Villager4/Faceset.png",
+        };
+        const img = (src, w, h = w) => `<img class="px" src="${src}" width="${w}" height="${h}" alt="">`;
+        const spr = (src, sheetW, sheetH, x, y, w, h, k) =>
+          `<i class="spr" style="width:${w * k}px;height:${h * k}px;background-image:url('${src}');background-size:${sheetW * k}px ${sheetH * k}px;background-position:-${x * k}px -${y * k}px"></i>`;
+        const coin = (k = 2) => img(IMG.coin, 7 * k);
+
+        /** The sprite for an item, `k` times its 16 px size. */
+        function icon(item, k) {
+          if (!item) return "";
+          if (item.tool) return img(IMG[item.tool], 16 * k);
+          if (item.seed) return spr(CU + "crops.png", 112, 96, 6 * T, CROP_ROW[item.seed] * T, T, T, k);
+          if (item.crop) return spr(CU + "crops.png", 112, 96, 5 * T, CROP_ROW[item.crop] * T, T, T, k);
+          if (item.tent) return spr(NA + "Backgrounds/Tilesets/tileset_camp.png", 368, 144, 64, 0, 48, 48, k);
+          if (item.crate) return spr(CU + "shipping-crate.png", 64, 32, 0, 0, 32, 32, k);
+          return "";
+        }
+
+        const HOE = { tool: "hoe", name: "Hoe" };
+        const CAN = { tool: "can", name: "Watering Can" };
+        const seeds = (crop, n) => ({ seed: crop, n });
+        const crop = (c, n) => ({ crop: c, n });
+        const HOTBAR = [HOE, CAN, seeds("radish", 7), seeds("carrot", 5), seeds("strawberry", 3), crop("radish", 4), null, null];
+
+        const LAYOUTS = {
+          portrait: { W: 390, H: 844, zoom: 2, safe: { t: 47, r: 0, b: 34, l: 0 }, slot: 42, gap: 3 },
+          landscape: { W: 844, H: 390, zoom: 2, safe: { t: 0, r: 47, b: 21, l: 47 }, slot: 44, gap: 4 },
+          laptop: { W: 1280, H: 800, zoom: 4, safe: { t: 0, r: 0, b: 0, l: 0 }, slot: 48, gap: 4, keys: true },
+        };
+
+        function positions(kind) {
+          const L = LAYOUTS[kind];
+          const M = 14;
+          const hotW = 8 * L.slot + 7 * L.gap;
+          const hot = { x: Math.round((L.W - hotW) / 2), y: L.H - L.safe.b - 8 - L.slot };
+          const right = L.W - L.safe.r - M;
+          const left = L.safe.l + M;
+          const top = L.safe.t + (kind === "portrait" ? 8 : M);
+          const upright = kind === "portrait";
+          const act = upright ? { x: right - 76, y: hot.y - 12 - 76 } : { x: right - 76, y: hot.y + L.slot - 76 };
+          const emotes = upright
+            ? [
+                { x: act.x - 12 - 46 - 8 - 46, y: act.y + 30 },
+                { x: act.x - 12 - 46, y: act.y + 30 },
+              ]
+            : [
+                { x: act.x + 15, y: act.y - 12 - 46 - 8 - 46 },
+                { x: act.x + 15, y: act.y - 12 - 46 },
+              ];
+          return {
+            hot,
+            act,
+            emotes,
+            bag: upright ? { x: hot.x, y: act.y + 24 } : { x: left, y: hot.y + L.slot - 52 },
+            clock: { x: left, y: top },
+            look: { x: right - 46, y: top },
+            music: { x: right - 46 - 10 - 46, y: top },
+            toast: upright ? { x: L.W / 2, y: act.y - 30 } : { x: L.W / 2, y: hot.y - 30 },
+          };
+        }
+
+        const at = (p, extra = "") => `style="left:${p.x}px;top:${p.y}px;${extra}"`;
+
+        function hudHtml(kind, h) {
+          const L = LAYOUTS[kind];
+          const P = positions(kind);
+          const keys = L.keys;
+          let out = "";
+          if (h.clock !== false) {
+            const c = { day: 3, time: "9:40 am", coins: 640, ...(h.clock || {}) };
+            out += `<div class="clock${c.late ? " late" : ""}" ${at(P.clock)}>${c.moon ? "☾" : "☀"} Day ${c.day} · ${c.time}
+              <div class="coins">${coin()} ${c.coins}</div>
+              ${c.chip ? `<div class="chip">${img(IMG.zzz, 21, 19)} ${c.chip}</div>` : ""}</div>`;
+          }
+          if (h.status) out += `<div class="status" ${at({ x: P.clock.x, y: P.clock.y + 64 })}>○ Reconnecting…</div>`;
+          out += `<div class="round" ${at(P.music)}>♪</div>`;
+          out += `<div class="round" ${at(P.look)}><img class="face" src="${IMG[h.face || "pipFace"]}" alt=""></div>`;
+          if (h.emotes !== false) {
+            ["wave", "heart"].forEach((e, i) => {
+              out += `<div class="round" ${at(P.emotes[i])}>${img(IMG[e], 28, 26)}${keys ? `<span class="key">${i ? "X" : "Z"}</span>` : ""}</div>`;
+            });
+          }
+          if (h.bag !== false) out += `<div class="bagbtn" ${at(P.bag)}>${img(IMG.bag, 32)}${keys ? '<span class="key">B</span>' : ""}</div>`;
+          if (h.action) {
+            const a = h.action;
+            const p = a.big ? { x: P.act.x - 16, y: P.act.y - 16 } : P.act;
+            out += `<div class="action${a.faded ? " faded" : ""}${a.big ? " big" : ""}" ${at(p)}>${icon(a.icon, a.k ?? 3)}${a.word ? `<span class="tag">${a.word}</span>` : ""}${keys ? '<span class="key">Space</span>' : ""}</div>`;
+          }
+          if (h.pouch) out += `<div class="pouch" ${at({ x: P.act.x - 30, y: P.act.y - 62 })}>${icon(seeds("radish"), 2)} Radish ×7 ▾</div>`;
+          if (h.hotbar !== false) {
+            const items = h.hotbar || HOTBAR;
+            const sel = h.sel ?? 1;
+            out += `<div class="hotbar" ${at(P.hot, `gap:${L.gap}px`)}>`;
+            items.forEach((item, i) => {
+              out += `<div class="slot${i === sel ? " sel" : ""}" style="width:${L.slot}px;height:${L.slot}px">${keys ? `<span class="k">${i + 1}</span>` : ""}${icon(item, 2)}${item?.n ? `<span class="n">${item.n}</span>` : ""}</div>`;
+            });
+            out += `</div>`;
+          }
+          if (h.toast) out += `<div class="toast" ${at(P.toast)}>${h.toast}</div>`;
+          return out;
+        }
+
+        // ---------- devices ----------
+        const callouts = (list, tileAt) =>
+          list
+            .map(({ n, x, y, tile }) => {
+              const p = tile ? tileAt(tile.c, tile.r) : { x, y };
+              const left = tile ? p.x + p.size + 2 : x;
+              const top = tile ? p.y - 6 : y;
+              return `<span class="num" style="position:absolute;left:${left}px;top:${top}px;z-index:4">${n}</span>`;
+            })
+            .join("");
+
+        function device(target, kind, cfg) {
+          const L = LAYOUTS[kind];
+          const fig = typeof target === "string" ? document.getElementById(target) : target;
+          const frameClass = kind === "laptop" ? "device laptop" : "device";
+          fig.innerHTML = `<div class="scale" style="--z:${cfg.z ?? 0.5}">
+              <div class="${frameClass}"><div class="screen" style="width:${L.W}px;height:${L.H}px">
+                <canvas></canvas><div class="hud"></div></div></div></div>
+            ${cfg.caption ? `<figcaption>${cfg.caption}</figcaption>` : ""}`;
+          const screen = fig.querySelector(".screen");
+          const tileAt = drawWorld(fig.querySelector("canvas"), L.W, L.H, L.zoom, cfg.world);
+          const hud = fig.querySelector(".hud");
+          hud.innerHTML = (cfg.hud ? hudHtml(kind, cfg.hud) : "") + (cfg.extra ? cfg.extra(tileAt, positions(kind)) : "") + (cfg.panel ?? "") + callouts(cfg.callouts ?? [], tileAt);
+          if (kind === "portrait") {
+            screen.insertAdjacentHTML("beforeend", `<div class="island" style="left:${L.W / 2 - 62}px;top:11px;width:124px;height:36px"></div><div class="homebar" style="left:${L.W / 2 - 67}px;bottom:8px;width:134px;height:5px"></div>`);
+          } else if (kind === "landscape") {
+            screen.insertAdjacentHTML("beforeend", `<div class="island" style="left:11px;top:${L.H / 2 - 62}px;width:36px;height:124px"></div><div class="homebar" style="left:${L.W / 2 - 67}px;bottom:6px;width:134px;height:5px"></div>`);
+          }
+          fig.querySelector(".scale").addEventListener("click", (e) => e.currentTarget.classList.toggle("big"));
+        }
+
+        const PIP_FARMING = { who: "pip", c: 12, r: 12, facing: "left", name: "Pip" };
+        const JUNO_PICKING = { who: "juno", c: 8, r: 10, facing: "down", name: "Juno" };
+        const FARM = { look: center(10, 12), people: [PIP_FARMING, JUNO_PICKING], target: { c: 11, r: 12 } };
+        const FARM_HUD = { action: { icon: CAN, word: "Water" }, toast: "Watering Can" };
+
+        // Hero: upright phone
+        device("hero", "portrait", {
+          z: 0.85,
+          world: FARM,
+          hud: FARM_HUD,
+          callouts: [
+            { n: 1, x: 162, y: 60 },
+            { n: 2, x: 248, y: 66 },
+            { n: 3, tile: { c: 10, r: 13 } },
+            { n: 4, x: 280, y: 656 },
+            { n: 5, x: 164, y: 714 },
+            { n: 6, x: 74, y: 700 },
+            { n: 7, x: 184, y: 806 },
+            { n: 9, tile: { c: 8, r: 9 } },
+          ],
+          extra: () => `<div style="position:absolute;left:155px;top:520px;width:110px;height:110px;border:2px dashed rgba(255,255,255,.7);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;text-align:center;text-shadow:0 1px 2px #000">joystick<br>anywhere here</div><span class="num" style="position:absolute;left:268px;top:520px">8</span>`,
+          caption: "<b>Upright phone</b>, 390 × 844 (iPhone 13–16). One thumb: steer, lift, tap Action.",
+        });
+
+        device("landscape", "landscape", {
+          z: 0.62,
+          world: FARM,
+          hud: FARM_HUD,
+          caption: "<b>Sideways phone</b>, 844 × 390. Hotbar centred, wave and heart stack above Action. Left thumb steers, right thumb acts, so holding Action while walking waters a row.",
+        });
+
+        device("laptop", "laptop", {
+          z: 0.42,
+          world: FARM,
+          hud: FARM_HUD,
+          extra: (tileAt) => {
+            const p = tileAt(11, 12);
+            return `<svg class="cursor" style="position:absolute;left:${p.x + p.size * 0.55}px;top:${p.y + p.size * 0.45}px" viewBox="0 0 12 18" width="22" height="33"><path d="M1 1 L1 15 L4.5 11.5 L7 17 L9 16 L6.6 10.6 L11 10.6 Z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+          },
+          caption: "<b>Laptop</b>, 1280 × 800, zoom 4. Same layout with key hints: WASD, Space, 1–8, B, Z/X. The mouse over a tile next to you moves the outline there, and a click acts on it.",
+        });
+
+        // ---------- Action button states ----------
+        const STATES = [
+          { icon: HOE, word: "Dig", note: "Hoe on farmland grass" },
+          { icon: seeds("radish"), word: "Plant", note: "Seeds on bare dug soil" },
+          { icon: CAN, word: "Water", note: "Can on soil that's dry" },
+          { icon: crop("radish"), word: "Pick", note: "A ripe crop, whatever you hold" },
+          { icon: { tent: 1 }, k: 1, word: "Sleep", note: "Next to the tent" },
+          { icon: { crate: 1 }, k: 1.5, word: "Crate", note: "Next to the shipping crate" },
+          { icon: seeds("carrot"), word: "Seeds", note: "Next to the seed stand" },
+          { icon: CAN, faded: true, note: 'Nothing to do. Tap it: <span class="bubble">Already watered today.</span>' },
+        ];
+        document.getElementById("states").innerHTML = STATES.map(
+          (s) => `<div class="state"><div class="action${s.faded ? " faded" : ""}">${icon(s.icon, s.k ?? 3)}${s.word ? `<span class="tag">${s.word}</span>` : ""}</div>${s.note}</div>`,
+        ).join("");
+
+        // ---------- panels ----------
+        const cell = (item, cls = "") => `<div class="cell ${cls}">${icon(item, 2)}${item?.n ? `<span class="n">${item.n}</span>` : ""}</div>`;
+        const BAG_REST = [crop("carrot", 6), crop("strawberry", 2), seeds("potato", 4), null, null, null, null, null, null, null, null, null, null, null, null, null];
+
+        const whoPanel = `<div class="overlay"><div class="card">
+            <h3 class="center">Who's playing?</h3>
+            <div class="who"><img src="${IMG.pipFace}" alt="">Pip</div>
+            <div class="who"><img src="${IMG.junoFace}" alt="">Juno</div>
+            <div class="btn soft wide">+ Someone new</div>
+            <p class="tip">Shown once on a new phone, laptop or home-screen app.</p>
+          </div></div>`;
+
+        const bagPanel = `<div class="overlay"><div class="card">
+            <div class="card-head"><h3 class="grow">Bag</h3><span class="coins">${coin()} 640</span><span class="xbtn">×</span></div>
+            <div class="label">Hotbar</div>
+            <div class="grid">${HOTBAR.map((it, i) => cell(it, "hot" + (i === 5 ? " sel" : ""))).join("")}</div>
+            <div class="label">Bag</div>
+            <div class="grid">${BAG_REST.map((it) => cell(it)).join("")}</div>
+            <div class="info">${icon(crop("radish"), 2)}<div class="grow"><b>Radish ×4</b><small>Sells for 35 each in the crate</small></div><span class="btn soft">Split</span></div>
+            <p class="tip">Tap another slot to move it there.</p>
+          </div></div>`;
+
+        const cratePanel = `<div class="overlay"><div class="card">
+            <div class="card-head"><h3 class="grow">Shipping crate</h3><span class="xbtn">×</span></div>
+            <div class="label">In the crate · sells tonight</div>
+            <div class="line open">${icon(crop("radish"), 2)}<div class="grow"><b>Radish ×4</b><small>Pip · tap to take back</small></div><span class="price">${coin()} 140</span></div>
+            <div class="line open">${icon(crop("carrot"), 2)}<div class="grow"><b>Carrot ×2</b><small>Juno · tap to take back</small></div><span class="price">${coin()} 120</span></div>
+            <div class="total" style="margin-top:8px"><span>Tonight</span><span>${coin()} 260</span></div>
+            <div class="label">Your bag · tap a stack to put it in</div>
+            <div class="grid">${[HOE, CAN, seeds("radish", 7), seeds("carrot", 5), seeds("strawberry", 3), null, null, null].map((it) => cell(it, "hot" + (it?.tool ? " off" : ""))).join("")}</div>
+            <div class="grid" style="margin-top:3px">${[crop("carrot", 4), crop("strawberry", 2), seeds("potato", 4), null, null, null, null, null].map((it) => cell(it)).join("")}</div>
+            <p class="tip">The hoe and can can't be sold, so they're faded.</p>
+          </div></div>`;
+
+        const SHOP = [
+          ["radish", "Radish", 3, 35, 20],
+          ["carrot", "Carrot", 4, 60, 30],
+          ["samphire", "Sea Samphire", 4, 25, 50, "regrows"],
+          ["potato", "Potato", 6, 120, 50],
+          ["strawberry", "Strawberry", 6, 45, 80, "regrows"],
+          ["pumpkin", "Pumpkin", 8, 260, 120],
+        ];
+        const shopPanel = `<div class="overlay"><div class="card">
+            <div class="card-head"><h3 class="grow">Seed stand</h3><span class="coins">${coin()} 640</span><span class="xbtn">×</span></div>
+            ${SHOP.map(([id, name, days, sell, price, regrows]) => {
+              const open = id === "strawberry";
+              return `<div class="line${open ? " open" : ""}">${icon(seeds(id), 2)}<div class="grow"><b>${name}</b><small>Ripe in ${days} days${regrows ? ", then regrows" : ""} · sells for ${sell}</small></div><span class="price">${coin()} ${price}</span>
+                ${open ? `<div class="stepper"><span class="pm">−</span><span class="count">5</span><span class="pm">+</span><span class="quick">5</span><span class="quick">10</span></div><div class="btn wide" style="margin-top:8px">Buy 5 for 400</div>` : ""}</div>`;
+            }).join("")}
+          </div></div>`;
+
+        const morningPanel = `<div class="overlay"><div class="card">
+            <h3 class="center">Good morning! Day 4</h3>
+            <p class="center muted" style="margin:6px 0 10px">6 crops grew overnight. 3 are ready to pick.</p>
+            <div class="label">The crate sold</div>
+            <table class="sale"><tr><td>Radish 4 × 35</td><td>140</td></tr><tr><td>Carrot 2 × 60</td><td>120</td></tr></table>
+            <div class="total"><span>+260 coins</span><span>${coin()} 900</span></div>
+            <div class="btn wide">Let's go</div>
+          </div></div>`;
+
+        const bedBanner = `<div class="overlay bottom"><div class="card center">
+            <div style="font-size:18px;font-weight:800">Sleeping…</div>
+            <div class="muted">Waiting for Juno to go to bed</div>
+            <div class="btn soft wide">Get up</div>
+          </div></div>`;
+
+        const TENT_LOOK = center(19.5, 13);
+        const screens = document.getElementById("screens");
+        const add = (parent) => parent.appendChild(document.createElement("figure"));
+        device(add(screens), "portrait", {
+          world: { look: center(12, 12), people: [] },
+          hud: { clock: false, hotbar: false, emotes: false, bag: false },
+          panel: whoPanel,
+          caption: "<b>Who's playing?</b> Bags belong to farmers, so a new device asks once. Someone new goes to today's name and character picker.",
+        });
+        device(add(screens), "portrait", {
+          world: FARM,
+          hud: {},
+          panel: bagPanel,
+          caption: "<b>Bag</b>: 8 × 3, top row is the hotbar. Tap an item, then tap where it goes. Split halves a stack.",
+        });
+        device(add(screens), "portrait", {
+          world: { look: center(23, 28), people: [{ who: "pip", c: 23, r: 29, facing: "up", name: "Pip" }] },
+          hud: {},
+          panel: cratePanel,
+          caption: "<b>Crate</b> on the dock: shared, so you see what Juno put in. Tap a stack to put it in; tap a line to take it back.",
+        });
+        device(add(screens), "portrait", {
+          world: { look: center(25, 17), people: [{ who: "pip", c: 25, r: 17, facing: "up", name: "Pip" }] },
+          hud: {},
+          panel: shopPanel,
+          caption: "<b>Seed stand</b>: seeds only. Tap one to open it, pick how many, buy. The button says why if you can't.",
+        });
+        device(add(screens), "portrait", {
+          world: {
+            look: TENT_LOOK,
+            people: [
+              { who: "pip", c: 19, r: 12, facing: "down", name: "Pip", dx: -0.4 },
+              { who: "juno", c: 20, r: 12, facing: "down", name: "Juno", dx: 0.2 },
+            ],
+          },
+          hud: { clock: { day: 4, time: "6:00 am", coins: 900 } },
+          panel: morningPanel,
+          caption: "<b>Morning</b>: both wake in front of the tent. What grew, what sold. Whoever was offline sees it next time.",
+        });
+
+        const bedtime = document.getElementById("bedtime");
+        device(add(bedtime), "portrait", {
+          z: 0.6,
+          world: { look: TENT_LOOK, people: [{ who: "juno", c: 25, r: 17, facing: "up", name: "Juno" }], tint: "rgba(30, 36, 92, 0.42)", tentZzz: true },
+          hud: { clock: { time: "10:40 pm", moon: true, late: true }, hotbar: false, bag: false },
+          panel: bedBanner,
+          caption: "<b>Pip's phone, in bed.</b> Pip is inside the tent (Zzz). The screen dims, and Get up (or the joystick, or Esc) gets out.",
+        });
+        device(add(bedtime), "portrait", {
+          z: 0.6,
+          world: {
+            look: center(19, 13),
+            people: [{ who: "juno", c: 17, r: 12, facing: "right", name: "Juno" }],
+            tint: "rgba(30, 36, 92, 0.32)",
+            tentZzz: true,
+          },
+          hud: { clock: { time: "10:40 pm", moon: true, late: true, chip: "Pip is asleep" }, face: "junoFace", action: { icon: { tent: 1 }, k: 1, word: "Sleep" } },
+          caption: "<b>Juno's phone, still up.</b> The chip says Pip's asleep, and time keeps going. Next to the tent, Action says Sleep: tap it and the night starts for both.",
+        });
+        const steps = document.createElement("div");
+        steps.className = "notes";
+        steps.innerHTML = `<ol>
+            <li><span class="num">1</span><span>Pip taps Sleep at the tent. Juno sees the chip.</span></li>
+            <li><span class="num">2</span><span>Juno farms on, then taps Sleep too.</span></li>
+            <li><span class="num">3</span><span>Everyone online is in bed: both screens fade for a second. Crops grow, the soil dries, the crate sells, the world is saved.</span></li>
+            <li><span class="num">4</span><span>Both wake in front of the tent with the morning card.</span></li>
+            <li><span class="num">5</span><span>If Juno's phone locks while Pip is in bed, the night waits 30 seconds, then starts.</span></li>
+            <li><span class="num">6</span><span>At midnight the night starts whoever's still up. At 10 pm the clock turns amber; at 11:30 pm a hint says it's nearly midnight.</span></li>
+          </ol>`;
+        bedtime.appendChild(steps);
+
+        // ---------- schemes ----------
+        const schemes = document.getElementById("schemes");
+        device(add(schemes), "portrait", {
+          world: FARM,
+          hud: FARM_HUD,
+          caption: "<b>A. Action button (recommended).</b> The outline shows the tile first, the button says what happens. Same scheme on a laptop.",
+        });
+        device(add(schemes), "portrait", {
+          world: { look: center(12, 12), people: [{ ...PIP_FARMING }, JUNO_PICKING], reach: { c: 12, r: 12 } },
+          hud: { action: null },
+          extra: (tileAt) => {
+            const p = tileAt(11, 11);
+            return `<div class="finger" style="position:absolute;left:${p.x + p.size / 2}px;top:${p.y + p.size / 2}px"></div>`;
+          },
+          caption: "<b>B. Tap the tile.</b> Direct, but the fingertip covers the 32 px tile and the character, a tap has to be told apart from starting the joystick, and laptops still need A.",
+        });
+        device(add(schemes), "portrait", {
+          world: { ...FARM },
+          hud: { hotbar: false, action: { icon: CAN, word: "Water", big: true }, pouch: true },
+          caption: "<b>C. One smart button.</b> No tool picking: it guesses from the tile, with a seed pouch for which seed. Least to learn, but on bare dry soil it has to guess between planting and watering.",
+        });
+      })();
+    </script>
+  </body>
+</html>
