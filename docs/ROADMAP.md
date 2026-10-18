@@ -41,7 +41,7 @@ Every milestone ends with something playable. Tick items off as they land.
 
 - [x] A house interior for each player; visiting each other (and a bed in each that works like the tent)
 - [x] Place, rotate, and pick up furniture (arrange mode: one thumb or keys)
-- [ ] Outdoor decorations on the farm
+- [x] Outdoor decorations on the farm (fences, stepping stones, flowers, tubs, barrels, a scarecrow, a washing line, banners...)
 
 ## Milestone 5: Collecting
 

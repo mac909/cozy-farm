@@ -33,7 +33,8 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Map | Painted in Tiled (`shared/world/village.json`). Hidden layers mark where nobody can walk and where farming is allowed; objects mark the spawn point and the spots for the shipping crate, tent and seed stand. The server reads the same file. | 2026-10-18 |
 | Places | The tent stands on the grass just left of the farm field's gate, and you appear (and wake up) at its door. The seed stand is beside the top of the sandy path down to the beach. The shipping crate is on the dock. The general store is just left of the seed stand, and the two cottages are in the meadow above it. Decided by Claude while the developer was away; easy to move in Tiled. | 2026-10-18 |
 | Music | "Calm Village" from the pack loops softly, starting at the first tap or key press. A music button next to the look button mutes it, remembered on that device. | 2026-10-18 |
-| Controls | An Action button for the tile in front of you (the plan's scheme A), saying what it will do; ripe crops get picked whatever you're holding; places (tent, crate, seed stand) take over the button; hold to repeat; a light joystick push turns on the spot. The game never switches tools for you, for now: watch how she plays. Details under Controls. | 2026-10-18 |
+| Controls | An Action button for the tile in front of you (the plan's scheme A), saying what it will do; ripe crops get picked whatever you're holding; places (tent, crate, seed stand, store, doors, beds) take over the button; hold to repeat; a light joystick push turns on the spot. The game never switches tools for you, for now: watch how she plays. Details under Controls. | 2026-10-18 |
+| Arranging | An arrange mode with a cursor (the plan's "move/rotate/place/cancel"): the stick, keys, a tap or the mouse move it; Place, Turn, Put away, Done. Placing keeps carrying the rest of a stack. Decided by Claude (Milestone 4). | 2026-10-18 |
 | Phone held | Both upright and sideways work; the layout starts from upright with one thumb. Still to find out: how she holds it on the first evening. | 2026-10-18 |
 | No stress, made concrete | The watering can never runs dry, there's no energy bar, crops never die, and midnight just sends everyone to bed. | 2026-10-18 |
 | Bedtime | A shared tent by the farm gate until the houses (Milestone 4). The night starts when everyone online is in bed; if someone's phone drops while they're still up, it waits 30 seconds for them, then starts. A morning card says what grew and what sold. Details under Time. | 2026-10-18 |
@@ -50,7 +51,7 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 One way of playing on every device: an Action button for the tile in front of you (like Animal Crossing or Stardew on a controller).
 
 - **Hotbar:** the first 8 slots of your bag along the bottom. Tap a slot (or 1–8, Q/E, the mouse wheel) to hold what's in it; its name shows for a moment. The choice is remembered on the device, and a slot stays picked when it empties.
-- **Action button** (bottom right, the biggest thing on screen; Space or Enter): it says what it will do for the tile in front of your feet, which gets a pulsing outline: **Dig** (hoe on farm-field grass), **Plant** (seeds on bare dug soil), **Water** (can on dry soil), **Pick** (a ripe crop, whatever you're holding). Next to a place it takes over: **Sleep** at the tent, **Crate** at the shipping crate, **Seeds** at the seed stand. When nothing would happen it fades, and tapping it gives a hint over your head instead ("Dig it with the hoe first."). These hints are the tutorial.
+- **Action button** (bottom right, the biggest thing on screen; Space or Enter): it says what it will do for the tile in front of your feet, which gets a pulsing outline: **Dig** (hoe on farm-field grass), **Plant** (seeds on bare dug soil), **Water** (can on dry soil), **Pick** (a ripe crop, whatever you're holding). Next to a place it takes over: **Sleep** at the tent or a bed, **Crate** at the shipping crate, **Seeds** at the seed stand, **Shop** at the general store, **Home**, **Visit** or **Move in** at a cottage's door, **Leave** on a room's mat. Holding furniture where it can go, it says **Place** (see Arrange mode). When nothing would happen it fades, and tapping it gives a hint over your head instead ("Dig it with the hoe first."). These hints are the tutorial.
 - **Hold to repeat:** keep Action (or Space) held after a press and walk: each new tile you face gets dug, planted, watered or picked, so a row is one stroke. On a phone, steer with one thumb and hold Action with the other.
 - **Turn on the spot:** a light push on the joystick turns you without walking, so lining up on one tile is easy; push further to walk.
 - On a laptop, clicking one of the 8 tiles around you acts there. Tapping a tile on a phone doesn't: a touch steers the joystick, and telling a tap from the start of a walk would make the stick flicker. Revisit if it's missed on a real phone.
@@ -128,8 +129,19 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ### Furniture and decorations
 
-- Furniture sits on a grid and can be placed, rotated, and picked up freely.
-- Outdoor decorations (fences, paths, lamps, flower beds) go on the shared farm.
+- Bought at the general store, carried in the bag like anything else (they stack), and sold back in the crate for half.
+- **Furniture** goes in your own house; **decorations** go on the farm, outside the field. A few go either place (a potted fern, a lamp, a chair, flower tubs, barrels). Either of you can put decorations down or pick them up.
+- Everything sits on the tile grid and blocks walking where it stands, except **flat** pieces (rugs, mats, stepping stones, the fishing net), which you walk over and which other pieces can stand on, and **flowers**, which you walk through. Tall things (lamps, bookshelves, banners) rise above their tiles, and you can walk behind their tops.
+- **Turning:** each piece has the ways round its art has: a bed upright or on its side either way, a chair facing either way, a rug long or tall, and the fence straight across, straight up, or any of its four corners, so a fence can go all the way round. Pieces the pack only draws one way don't turn.
+- Decorations stay off the farm field and its soil, off the paths up to doors, stands, the store and the tent, all round the shipping crate, and off where everyone wakes up, so nothing can ever be blocked off. In a room, the floor tile just inside the door stays clear. Nothing that blocks walking goes where someone's standing.
+
+### Arrange mode
+
+- **Getting in:** hold a piece in the hotbar and tap Action (it says **Place** where the piece can go); or tap **Place** on it in the bag; or the **Arrange** button (a hammer, key F) above the bag button, shown in your own house and outdoors.
+- Your character stands still and the joystick (or WASD, the arrows) moves a cursor a tile at a time, repeating while held. On a phone a quick tap on a tile jumps the cursor there; on a laptop the cursor follows the mouse and a click acts. Outdoors the camera follows the cursor, so you can decorate anywhere.
+- **Carrying a piece** it shows at the cursor, with a green frame where it fits and a red one where it doesn't: **Place** (Action, Space, a click) puts it down and keeps carrying the rest of the stack, so a fence goes down post after post; **Turn** (R) turns it; **Put away** (Del) stops carrying it, or puts a lifted piece back in the bag; **Done** (Esc) stops, and a lifted piece stays where it was.
+- **Not carrying**, the cursor frames whatever's under it: **Lift** (Action) picks it up to carry, **Turn** turns it on the spot, **Put away** puts it straight in your bag. Tapping a furniture slot on the hotbar carries that instead.
+- Turn, Put away and Done take the emotes' and the bag's places on screen while arranging; they fade when there's nothing to turn or put away. Nothing changes for the other player until Place, Turn or Put away, each one message to the server.
 
 ## Collecting
 
