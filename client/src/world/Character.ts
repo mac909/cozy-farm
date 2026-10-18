@@ -92,6 +92,19 @@ export class Character {
     });
   }
 
+  /** Hides the character and everything over its head (asleep in the tent), or shows them again. */
+  setHidden(hidden: boolean) {
+    if (this.sprite.visible === !hidden) return;
+    this.sprite.setVisible(!hidden);
+    this.nameTag.setVisible(!hidden);
+    this.bubble?.setVisible(!hidden);
+    this.hint?.setVisible(!hidden);
+  }
+
+  get hidden(): boolean {
+    return !this.sprite.visible;
+  }
+
   /** The world is zoomed in, so shrink the name tag by the same amount to keep it a steady, crisp size on screen. */
   setZoom(zoom: number) {
     this.zoom = zoom;
@@ -104,6 +117,7 @@ export class Character {
    * hints that teach the game. A new hint replaces the old one.
    */
   showHint(text: string) {
+    if (this.hidden) return;
     this.hintTween?.stop();
     this.hint?.destroy();
     const label = this.scene.add
@@ -167,6 +181,7 @@ export class Character {
 
   /** Pops up a bubble over the character's head for a couple of seconds. A new emote replaces the old one. */
   showEmote(emote: EmoteId) {
+    if (this.hidden) return;
     this.bubbleTween?.stop();
     this.bubble?.destroy();
     const bubble = this.scene.add.image(0, 0, EMOTES_KEY, emoteFrame(emote)).setOrigin(0.5, 1).setDepth(OVERHEAD_DEPTH + 1);

@@ -11,7 +11,11 @@ import { ClockCard } from "../ui/ClockCard";
 import { Hotbar, slotName } from "../ui/Hotbar";
 import { Joystick } from "../ui/Joystick";
 import { RoundButton } from "../ui/RoundButton";
+import { EVENING_COLOR, eveningTint, IN_BED_TINT } from "../ui/evening";
 import { safeArea } from "../ui/safeArea";
+
+/** The colour the screen fades to when the night comes. */
+const NIGHT_COLOR = 0x0b1026;
 
 /** Keyboard shortcuts for emotes: the Phaser key name, and the label shown on the button. */
 const EMOTE_KEYS: Record<EmoteId, { key: string; label: string }> = {
@@ -63,6 +67,12 @@ export class UIScene extends Phaser.Scene {
   private actionButton!: ActionButton;
   private toast!: Phaser.GameObjects.Text;
   private toastTimer?: Phaser.Time.TimerEvent;
+  /** The evening tint over the world (deeper while you're in bed), under the HUD. */
+  private tint!: Phaser.GameObjects.Rectangle;
+  private tintTarget = 0;
+  /** Over everything, for the fade into the night and out into the morning. */
+  private fader!: Phaser.GameObjects.Rectangle;
+  private fadeChain?: Phaser.Tweens.TweenChain;
   private keyHints = false;
   /** Kept here because Phaser applies sound.mute a moment later, so reading it straight back can be stale. */
   private muted = loadMuted();
@@ -72,6 +82,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
+    // First, so it's under everything else in the HUD.
+    this.tint = this.add.rectangle(0, 0, 1, 1, EVENING_COLOR, 1).setOrigin(0, 0).setAlpha(0);
     this.joystick = new Joystick(this);
     // Key hints only make sense where there's a keyboard.
     this.keyHints = !this.sys.game.device.input.touch;
@@ -80,6 +92,8 @@ export class UIScene extends Phaser.Scene {
     this.showClock();
     this.onRegistry("netStatus", () => this.showClock());
     this.onRegistry("clock", () => this.showClock());
+    this.onRegistry("sleepers", () => this.showClock());
+    this.onRegistry("inBed", () => this.showBedMode());
 
     this.hotbar = new Hotbar(this, (slot, item) => this.onSelectSlot(slot, item));
     this.hotbar.setBag(this.registry.get("bag") ?? null);
@@ -141,8 +155,12 @@ export class UIScene extends Phaser.Scene {
       onPress: () => this.toggleMusic(),
     });
 
+    // Last, so it covers everything.
+    this.fader = this.add.rectangle(0, 0, 1, 1, NIGHT_COLOR, 1).setOrigin(0, 0).setAlpha(0);
+
     this.bindKeys();
     this.layout();
+    this.showBedMode();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
   }
@@ -181,6 +199,8 @@ export class UIScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_WHEEL, (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       if (dy !== 0) this.hotbar.select(this.hotbar.selected + Math.sign(dy));
     });
+    // Panels catch Esc themselves while they're open; this is for getting out of bed.
+    onKey("ESC", () => this.events.emit("escape"));
   }
 
   /** Where everything goes, from the screen size and safe area (the notch and home bar). */
@@ -226,9 +246,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private layout() {
-    const { width } = this.scale;
+    const { width, height } = this.scale;
     const safe = safeArea();
     const L = this.computeLayout();
+    this.tint.setSize(width, height);
+    this.fader.setSize(width, height);
     const right = width - safe.right - MARGIN;
     const top = safe.top + (L.upright ? 8 : MARGIN);
 
@@ -264,10 +286,50 @@ export class UIScene extends Phaser.Scene {
   }
 
   private showClock() {
+    const clock = (this.registry.get("clock") as GameClock | undefined) ?? null;
     this.clockCard.show({
-      clock: (this.registry.get("clock") as GameClock | undefined) ?? null,
+      clock,
       status: this.registry.get("netStatus") as NetStatus,
-      sleepers: null,
+      sleepers: (this.registry.get("sleepers") as string | null | undefined) ?? null,
+    });
+    this.showTint();
+  }
+
+  /** The evening tint for the time of day, or the dim of being in bed. */
+  private showTint() {
+    const clock = this.registry.get("clock") as GameClock | null;
+    const inBed = this.registry.get("inBed") === true;
+    const alpha = Math.max(clock ? eveningTint(clock.minute) : 0, inBed ? IN_BED_TINT : 0);
+    if (this.tintTarget === alpha) return;
+    this.tintTarget = alpha;
+    this.tweens.killTweensOf(this.tint);
+    this.tweens.add({ targets: this.tint, alpha, duration: inBed ? 500 : 1500 });
+  }
+
+  /** In bed: the screen dims and the controls go, leaving the clock, music and look. */
+  private showBedMode() {
+    const inBed = this.registry.get("inBed") === true;
+    this.hotbar.setVisible(!inBed);
+    this.actionButton.setVisible(!inBed);
+    this.bagButton.setVisible(!inBed);
+    for (const button of this.emoteButtons) button.setVisible(!inBed);
+    if (inBed) this.toast.setVisible(false);
+    this.showTint();
+  }
+
+  /**
+   * The night: the whole screen fades to dark, `atDark` runs (you wake up by the tent), and it
+   * fades back to the morning; then `done`.
+   */
+  nightFade(atDark: () => void, done: () => void) {
+    this.fadeChain?.stop();
+    this.fadeChain = this.tweens.chain({
+      targets: this.fader,
+      tweens: [
+        { alpha: 1, duration: 450, ease: "Sine.easeIn", onComplete: atDark },
+        { alpha: 0, delay: 500, duration: 800, ease: "Sine.easeOut" },
+      ],
+      onComplete: done,
     });
   }
 

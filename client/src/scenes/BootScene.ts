@@ -18,6 +18,9 @@ export class BootScene extends Phaser.Scene {
     this.registry.set("clock", null);
     this.registry.set("bag", null);
     this.registry.set("selectedSlot", 0);
+    this.registry.set("inBed", false);
+    this.registry.set("sleepers", null);
+    this.registry.set("coins", null);
     this.scene.start("world");
   }
 }

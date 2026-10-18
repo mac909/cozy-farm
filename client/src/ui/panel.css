@@ -1,0 +1,243 @@
+/*
+ * Cream cards over the game (client/src/ui/panel.ts), in the look of the name picker and the
+ * mockups: the morning card, the bed banner, the bag, the crate and the seed stand. Each panel's
+ * own bits are in its own CSS file next to it.
+ */
+
+.panel {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px))
+    calc(16px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
+  background: rgba(20, 36, 48, 0.55);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #4a3b2a;
+  z-index: 10;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.panel.bottom {
+  justify-content: flex-end;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Touches around the card go through to the game (the bed banner: the joystick gets you up). */
+.panel.through {
+  background: none;
+  pointer-events: none;
+}
+
+.panel.through .panel-card {
+  pointer-events: auto;
+}
+
+.panel-card {
+  width: min(100%, 380px);
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff8e7;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  font-size: 15px;
+  line-height: 1.35;
+  animation: panel-in 140ms ease-out;
+}
+
+/* Movement only, no fading in: a card opened while the page is hidden still shows when it comes back. */
+@keyframes panel-in {
+  from {
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.panel-title {
+  flex: 1;
+  margin: 0;
+  font-size: 21px;
+}
+
+.panel-title.center {
+  text-align: center;
+}
+
+.panel-coins {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #efe2c4;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.panel-coins img,
+.panel-coin {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+}
+
+.panel-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #efe2c4;
+  color: inherit;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.panel-label {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9b8664;
+}
+
+.panel-text {
+  margin: 6px 0 10px;
+  color: #8a7556;
+}
+
+.panel-text.center {
+  text-align: center;
+}
+
+.panel-tip {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #8a7556;
+  text-align: center;
+}
+
+.panel-button {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: #ef7d6d;
+  color: #ffffff;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.panel-button.soft {
+  background: #e4d3ad;
+  color: inherit;
+}
+
+.panel-button:disabled {
+  background: #e4d3ad;
+  color: #9b8664;
+  cursor: default;
+}
+
+.panel-button:not(:disabled):active,
+.panel-x:active {
+  transform: scale(0.97);
+}
+
+/* An 8-wide grid of bag slots (the bag and the crate). */
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+}
+
+.panel-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 2px solid #dcc79c;
+  border-radius: 7px;
+  background: #efe2c4;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.panel-cell.hot {
+  background: #e8d6ad;
+}
+
+.panel-cell.selected {
+  border-color: #ef7d6d;
+  box-shadow: 0 0 0 2px #ef7d6d;
+}
+
+.panel-cell.off {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.panel-cell.drop {
+  border-color: #74a334;
+}
+
+.panel-cell img {
+  width: 75%;
+  max-width: 32px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.panel-cell .count {
+  position: absolute;
+  right: 2px;
+  bottom: -1px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow:
+    1px 1px 0 #4a3b2a,
+    -1px 1px 0 #4a3b2a,
+    1px -1px 0 #4a3b2a,
+    -1px -1px 0 #4a3b2a;
+  pointer-events: none;
+}
+
+.panel-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  image-rendering: pixelated;
+}

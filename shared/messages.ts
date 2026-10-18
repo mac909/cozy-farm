@@ -5,6 +5,7 @@ import type { EmoteId } from "./content/emotes";
 import type { Hint } from "./farming/actions";
 import type { Facing } from "./movement";
 import type { Look } from "./player";
+import type { MorningReport } from "./world/world";
 
 /**
  * Client → server, when joining: who I am, and where I am if I'm rejoining
@@ -94,3 +95,23 @@ export interface FarmActionMessage {
 
 /** Server → client ("hint"): an action failed for a reason the client couldn't see coming. */
 export type HintMessage = Hint;
+
+// ---------- Bedtime ----------
+
+/** Client → server ("sleep"): go to bed in the tent (only next to its door). */
+export type SleepMessage = Record<string, never>;
+
+/** Client → server ("wake"): get up again before the night starts. */
+export type WakeMessage = Record<string, never>;
+
+/**
+ * Server → client ("morning"): what the night did. Sent to everyone when it ends, and to each
+ * player as they join, so whoever missed it can catch up (the device remembers the last day it showed).
+ */
+export type MorningMessage = MorningReport;
+
+/** Server → client ("wakeUp"), when the night ends: where to wake up, in world pixels. Clients move their own character. */
+export interface WakeUpMessage {
+  x: number;
+  y: number;
+}

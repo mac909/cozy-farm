@@ -24,10 +24,10 @@ Every milestone ends with something playable. Tick items off as they land.
 ## Milestone 2: Farming (the first version to show her)
 
 - [ ] Hoe, seeds, watering can; touch-friendly hotbar and inventory
-- [ ] Day clock (only while playing); sleeping ends the day
-- [ ] Crops grow day by day; harvest
-- [ ] World saved to SQLite (versioned) and restored after restarts
-- [ ] Separate dev save, so testing never touches the real farm
+- [x] Day clock (only while playing); sleeping in the shared tent ends the day, with a morning card
+- [x] Crops grow day by day; harvest
+- [x] World saved to SQLite (versioned) and restored after restarts
+- [x] Separate dev save, so testing never touches the real farm
 - [ ] Nightly backup of the save to OneDrive (the script is ready: `npm run farm:backup`; the scheduled task comes once saving is wired in)
 
 ## Milestone 3: Shop and coins

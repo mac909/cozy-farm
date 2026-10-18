@@ -1,0 +1,61 @@
+/* The morning card (client/src/ui/MorningCard.ts). */
+
+.morning {
+  width: min(100%, 340px);
+}
+
+.morning .panel-title {
+  margin-top: 4px;
+}
+
+.morning-sale {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2px 0 6px;
+  font-size: 15px;
+}
+
+.morning-sale td {
+  padding: 3px 0;
+}
+
+.morning-sale td:last-child {
+  text-align: right;
+  font-weight: 800;
+}
+
+.morning-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 2px dashed #dcc79c;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.morning-coins {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The bed banner (client/src/world/Bedtime.ts). */
+
+.bed {
+  width: min(100%, 320px);
+  text-align: center;
+}
+
+.bed-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.bed-text {
+  color: #8a7556;
+}
+
+.bed .panel-button {
+  margin-top: 10px;
+}

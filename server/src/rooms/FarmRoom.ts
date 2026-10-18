@@ -8,6 +8,7 @@ import type {
   HintMessage,
   JoinOptions,
   LookMessage,
+  MorningMessage,
   MoveMessage,
   ReplacedMessage,
   YouMessage,
@@ -23,6 +24,7 @@ import { addFarmer, farmerOf, isFarmerId, listFarmers, setFarmerLook, type Farme
 import { liveWorld } from "../world/liveWorld";
 import { registerDevCommands } from "./dev";
 import { registerFarming } from "./farming";
+import { Bedtime } from "./night";
 
 const WORLD_WIDTH = VILLAGE_MAP.width * TILE_SIZE;
 const WORLD_HEIGHT = VILLAGE_MAP.height * TILE_SIZE;
@@ -42,6 +44,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 export class FarmRoom extends Room<FarmState> {
   maxClients = 8;
   autoDispose = false;
+  private bedtime!: Bedtime;
 
   onCreate() {
     this.setState(new FarmState());
@@ -51,7 +54,8 @@ export class FarmRoom extends Room<FarmState> {
     this.onMessage("emote", (client, message: EmoteMessage) => this.emote(client, message));
     // Each feature's messages live in their own file in this folder.
     registerFarming(this);
-    registerDevCommands(this);
+    this.bedtime = new Bedtime(this);
+    registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
   }
 
@@ -75,7 +79,11 @@ export class FarmRoom extends Room<FarmState> {
     console.log(`${player.name} (${client.sessionId}) joined${known ? "" : " as someone new"} (${this.state.players.size} online)`);
 
     if (tellDevice) client.send("you", { farmerId } satisfies YouMessage);
+    this.bedtime.joined(farmerId);
     this.replaceOlderDevices(client, farmerId);
+    // Whoever missed the last morning catches up; the device knows if it already showed it.
+    const morning = this.world.lastMorning;
+    if (morning) client.send("morning", morning satisfies MorningMessage);
   }
 
   /**
@@ -108,9 +116,9 @@ export class FarmRoom extends Room<FarmState> {
     client.send("hint", hint satisfies HintMessage);
   }
 
-  /** Whether a player can't act right now. */
-  isBusy(_client: Client): boolean {
-    return false;
+  /** Whether a player can't act right now: they're in bed. */
+  isBusy(client: Client): boolean {
+    return this.bedtime.inBed(client);
   }
 
   /** The farmer a connected player is, if they're still here. */
@@ -119,9 +127,10 @@ export class FarmRoom extends Room<FarmState> {
   }
 
   onLeave(client: Client) {
-    const name = this.state.players.get(client.sessionId)?.name;
+    const player = this.state.players.get(client.sessionId);
     this.state.players.delete(client.sessionId);
-    console.log(`${name} (${client.sessionId}) left (${this.state.players.size} online)`);
+    console.log(`${player?.name} (${client.sessionId}) left (${this.state.players.size} online)`);
+    if (player) this.bedtime.left(player);
     // Nobody's left to change anything, so save now rather than in a moment.
     if (this.state.players.size === 0) liveWorld().saveNow();
   }
@@ -149,14 +158,19 @@ export class FarmRoom extends Room<FarmState> {
     });
   }
 
-  /** Time passes only while someone's here. The network clock (and the save) only change every 10 game minutes. */
+  /**
+   * Time passes only while someone's here. The network clock (and the save) only change every 10
+   * game minutes. Then: is it time for the night (midnight, or the wait for a dropped player is over)?
+   */
   private tick(deltaMs: number) {
     if (this.state.players.size === 0) return;
     const before = this.world.clock;
     const clock = tickClock(before, deltaMs);
-    if (clock === before) return;
-    const stepped = clock.day !== before.day || steppedMinute(clock.minute) !== steppedMinute(before.minute);
-    this.change({ ...this.world, clock }, { save: stepped });
+    if (clock !== before) {
+      const stepped = clock.day !== before.day || steppedMinute(clock.minute) !== steppedMinute(before.minute);
+      this.change({ ...this.world, clock }, { save: stepped });
+    }
+    this.bedtime.check();
   }
 
   private movePlayer(client: Client, message: MoveMessage) {

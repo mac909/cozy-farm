@@ -163,7 +163,9 @@ describe("the village map", () => {
       for (let row = first.row; row <= last.row; row++)
         for (let col = first.col; col <= last.col; col++) {
           expect(map.farmland[row][col]).toBe(false);
-          expect(map.blocked[row][col]).toBe(false);
+          // The tent is drawn, so its bottom row (where its feet would be) is blocked; you can walk behind its top.
+          const isTentBottom = spot === map.tent && row === last.row;
+          expect(map.blocked[row][col], `${col},${row}`).toBe(isTentBottom);
         }
       const overlapsCrate =
         spot.x < crate.x + crate.width && crate.x < spot.x + spot.width && spot.y < crate.y + crate.height && crate.y < spot.y + spot.height;

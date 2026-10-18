@@ -1,3 +1,4 @@
+import type Phaser from "phaser";
 import { ITEMS, type ItemId } from "../../../shared/content/items";
 import { BAG_KEY, BEACH_ITEMS_KEY, CROPS_KEY, FISH_KEY, HOE_KEY, WATERING_CAN_KEY } from "./assets";
 import { cropItemFrame, seedPacketFrame } from "./cropFrames";
@@ -16,6 +17,22 @@ const BEACH_FRAMES: Partial<Record<ItemId, number>> = {
   starfish: 4,
   sea_glass: 5,
 };
+
+const urls = new Map<string, string>();
+
+/**
+ * An image URL of a texture frame, for the HTML panels (bag, crate, seed stand). Made once per
+ * frame and kept. Phaser's getBase64 needs the art loaded, so call it from a running scene.
+ */
+export function iconUrl(textures: Phaser.Textures.TextureManager, icon: Icon): string {
+  const id = `${icon.key}#${icon.frame ?? ""}`;
+  let url = urls.get(id);
+  if (url === undefined) {
+    url = textures.getBase64(icon.key, icon.frame);
+    urls.set(id, url);
+  }
+  return url;
+}
 
 /** The picture for an item in the hotbar, the bag and the Action button. */
 export function itemIcon(itemId: ItemId): Icon {

@@ -47,9 +47,23 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 ## Time
 
 - The clock runs only while someone is connected.
-- A day runs 6am to midnight and lasts about 15 real minutes.
+- A day runs 6am to midnight and lasts about 15 real minutes. The clock card in the top left shows it in 10-minute steps; from 6 pm the sun becomes a moon, from 10 pm the card turns amber ("It's getting late"), and at 11:30 pm a bubble says "Nearly midnight. Time for bed!". From 5:30 pm a soft blue tint deepens over the world until midnight.
 - The day ends when everyone online has gone to bed, so one player playing alone can end it. If nobody is online, the day never ends on its own.
-- Still up at midnight? You're sent home, with no penalty.
+- Still up at midnight? Everyone falls asleep where they stand and wakes up by the tent, with no penalty.
+
+### Bedtime: the tent
+
+- Until the houses arrive (Milestone 4), you both sleep in a shared tent on the grass just left of the farm gate. Walk up to its door and the Action button says **Sleep**.
+- In bed your character disappears into the tent and a "Zzz" floats over it for everyone. Your screen dims, the controls go, and a banner says "Sleeping… waiting for Juno to go to bed" with **Get up**. Moving (joystick or keys) or Esc gets you up too.
+- The other player's clock card shows a chip, "Pip is asleep", and time keeps going for them.
+- When everyone online is in bed, the night starts: both screens fade to dark for a second. Overnight, watered crops grow, the soil dries, the shipping crate sells, the day moves on and the world is saved. Everyone wakes up side by side in front of the tent.
+- If someone's phone locks or drops while they're still up, the night waits 30 seconds in case they come back, then starts. Someone whose phone locks while they're in bed just isn't online any more.
+- After a server restart everyone's awake again and taps Sleep again.
+
+### The morning card
+
+- After the fade: "Good morning! Day 4", how many crops grew and how many are ready to pick, what the crate sold (line by line) and the coins it made, and **Let's go**. A quiet night just says "Good morning! Day 4".
+- The server keeps the last morning's report, so whoever was offline sees it when they next open the game. Each device remembers the last day it showed, so it shows once per device.
 
 ## Farming
 

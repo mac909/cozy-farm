@@ -39,6 +39,8 @@ export const HOE_KEY = "item-hoe";
 export const WATERING_CAN_KEY = "item-watering-can";
 export const BAG_KEY = "item-bag";
 export const FISH_KEY = "item-fish";
+/** A 7×7 gold coin, for the wallet. */
+export const COIN_KEY = "coin";
 export const BEACH_ITEMS_KEY = "beach-items";
 /** A small white dot for dirt puffs and splashes, drawn in code at boot. */
 export const PARTICLE_KEY = "particle";
@@ -93,6 +95,7 @@ export function loadArt(scene: Phaser.Scene): void {
   load.image(WATERING_CAN_KEY, `${PACK}Items/Tool/WateringCan.png`);
   load.image(BAG_KEY, `${PACK}Items/Object/Bag.png`);
   load.image(FISH_KEY, `${PACK}Items/Food/Fish.png`);
+  load.image(COIN_KEY, `${PACK}Items/Treasure/GoldCoin.png`);
 }
 
 /** Where the tent is on the pack's camp sheet: the plain one, 3 × 3 tiles. */

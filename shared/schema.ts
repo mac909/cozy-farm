@@ -44,6 +44,8 @@ export class Player extends Schema {
   @type("string") character = "";
   /** Which farmer this is: whose bag they carry. */
   @type("string") farmerId = "";
+  /** In the tent, asleep: hidden from view until they get up or the morning comes. Never saved. */
+  @type("boolean") inBed = false;
   /** The farmer's bag: INVENTORY_SLOTS slots, the first HOTBAR_SLOTS of them the hotbar. */
   @type([BagSlot]) bag = new ArraySchema<BagSlot>();
 }

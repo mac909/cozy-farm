@@ -6,7 +6,16 @@ import type { EmoteId } from "../../../shared/content/emotes";
 import { ITEMS, type ItemId } from "../../../shared/content/items";
 import { isHint } from "../../../shared/farming/actions";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
-import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage, YouMessage } from "../../../shared/messages";
+import type {
+  EmoteEvent,
+  EmoteMessage,
+  JoinOptions,
+  LookMessage,
+  MorningMessage,
+  MoveMessage,
+  WakeUpMessage,
+  YouMessage,
+} from "../../../shared/messages";
 import { clampMove, type Facing, facingFor, isFacing, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
@@ -19,6 +28,7 @@ import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { isFarmerId, type FarmerId } from "../../../shared/world/world";
 import {
   characterKey,
+  COIN_KEY,
   RIPPLE_ANIM,
   RIPPLES_KEY,
   SHIPPING_CRATE_KEY,
@@ -26,6 +36,7 @@ import {
   VILLAGE_KEY,
   walkFrames,
 } from "../art/assets";
+import { iconUrl } from "../art/itemIcons";
 import { startMusic } from "../audio/music";
 import { installDevCommands } from "../net/devCommands";
 import { FarmConnection } from "../net/connection";
@@ -34,6 +45,8 @@ import { pickFarmer, showOtherDevice } from "../ui/FarmerPicker";
 import { loadFarmerId, saveFarmerId } from "../ui/farmerStorage";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
+import type { Panel } from "../ui/panel";
+import { Bedtime } from "../world/Bedtime";
 import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
 import { Outline } from "../world/Outline";
@@ -75,6 +88,7 @@ export class WorldScene extends Phaser.Scene {
   private facing: Facing = "down";
   private lastSent = { x: NaN, y: NaN, facing: "down" as Facing, at: 0 };
   private farming!: Farming;
+  private bedtime!: Bedtime;
 
   constructor() {
     super("world");
@@ -124,6 +138,20 @@ export class WorldScene extends Phaser.Scene {
     startMusic(this);
     installDevCommands((message) => this.room?.send("dev", message));
 
+    this.bedtime = new Bedtime(this, {
+      room: () => this.room,
+      me: this.me,
+      wakeAt: (x, y) => this.teleport(x, y, "down"),
+      fade: (atDark, done) => this.ui.nightFade(atDark, done),
+      closePanels: () => this.closePanel(),
+      show: ({ inBed, sleepers }) => {
+        if (this.registry.get("inBed") !== inBed) this.registry.set("inBed", inBed);
+        if (this.registry.get("sleepers") !== sleepers) this.registry.set("sleepers", sleepers);
+      },
+      coinIcon: () => iconUrl(this.textures, { key: COIN_KEY }),
+    });
+    this.ui.events.on("escape", () => this.bedtime.wake());
+
     this.farming = new Farming(this, new Outline(this), {
       me: this.me,
       facing: () => this.facing,
@@ -132,8 +160,8 @@ export class WorldScene extends Phaser.Scene {
       bag: () => this.registry.get("bag") as Inventory | null,
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
-      busy: () => false,
-      places: {},
+      busy: () => this.bedtime.asleep || this.panel?.isOpen === true,
+      places: { tent: () => this.bedtime.sleep() },
     });
     this.ui.events.on("action", () => this.farming.act());
 
@@ -156,7 +184,8 @@ export class WorldScene extends Phaser.Scene {
 
   update(time: number) {
     const input = this.readInput();
-    const move = clampMove(input.x, input.y);
+    // In bed you stay put; moving gets you up instead.
+    const move = this.bedtime.holdStill(input) ? { x: 0, y: 0 } : clampMove(input.x, input.y);
     this.player.setVelocity(move.x * WALK_SPEED, move.y * WALK_SPEED);
     this.facing = facingFor(move.x, move.y, this.facing);
     this.me.setMotion(this.facing, move.x !== 0 || move.y !== 0);
@@ -253,8 +282,12 @@ export class WorldScene extends Phaser.Scene {
       $(player).onChange(() => {
         this.recordPosition(remote, player);
         remote.character.setLook(lookFrom(player));
+        // Asleep in the tent.
+        remote.character.setHidden(player.inBed);
       });
     });
+    room.onMessage("wakeUp", (message: WakeUpMessage) => this.bedtime.wakeUp(message));
+    room.onMessage("morning", (report: MorningMessage) => this.bedtime.morning(report));
     $(room.state).players.onRemove((_player, sessionId) => this.removeRemote(sessionId));
     this.farming.joined();
     room.onStateChange((state) => this.readState(state));
@@ -277,7 +310,11 @@ export class WorldScene extends Phaser.Scene {
   private readState(state: FarmState) {
     const clock = readClock(state.clock);
     const shown = this.registry.get("clock") as GameClock | null;
-    if (!shown || shown.day !== clock.day || shown.minute !== clock.minute) this.registry.set("clock", clock);
+    if (!shown || shown.day !== clock.day || shown.minute !== clock.minute) {
+      this.registry.set("clock", clock);
+      this.bedtime.clock(clock);
+    }
+    if (this.room) this.bedtime.readState(state, this.room.sessionId);
 
     const me = this.room ? state.players.get(this.room.sessionId) : undefined;
     const bag = me ? readBag(me.bag) : null;
@@ -315,6 +352,7 @@ export class WorldScene extends Phaser.Scene {
       lastMovedAt: 0,
     };
     this.recordPosition(remote, player);
+    remote.character.setHidden(player.inBed);
     this.remotes.set(sessionId, remote);
     return remote;
   }
@@ -329,7 +367,25 @@ export class WorldScene extends Phaser.Scene {
     this.remotes.delete(sessionId);
   }
 
+  /** Puts your own character somewhere at once (waking up), and tells the server straight away. */
+  private teleport(x: number, y: number, facing: Facing) {
+    this.player.body.reset(x, y);
+    this.facing = facing;
+    this.me.setMotion(facing, false);
+    this.lastSent = { x: NaN, y: NaN, facing, at: 0 };
+  }
+
+  /** The panel that's open (bag, crate, seed stand), if any. Only one at a time. */
+  private panel: Panel | null = null;
+
+  /** Closes the open panel, if any. */
+  private closePanel() {
+    this.panel?.close();
+    this.panel = null;
+  }
+
   private emote(emote: EmoteId) {
+    if (this.bedtime.asleep) return;
     // Shown right away for us; the server passes it on to everyone else.
     this.me.showEmote(emote);
     const message: EmoteMessage = { emote };
