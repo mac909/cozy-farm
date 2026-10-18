@@ -8,6 +8,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BEACH_ITEMS, BEACH_LEGEND } from "./beach";
+import { BUG_IDS } from "../../shared/content/bugs";
+import { FISH_IDS } from "../../shared/content/fish";
+import { BUG_SHEET, bugFrames } from "./bugs";
+import { FISH_ART } from "./fish";
+import { FISHING_FRAMES, fishingFrames } from "./fishing";
 import { crateClosed, crateOpen } from "./crate";
 import { CROP_ART, CROP_LEGEND, PACKET, PACKET_PICTURE, SEEDS } from "./crops";
 import { PACK_EMOTES, emoteFrames } from "./emotes";
@@ -165,6 +170,35 @@ function renderSeaside(): void {
   });
 }
 
+function renderFish(): void {
+  const frames = FISH_IDS.map((id) => outline(fromGrid(FISH_ART[id].grid, FISH_ART[id].legend)));
+  save("fish", packRows([frames], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    frames: Object.fromEntries(FISH_IDS.map((id, i) => [id, i])),
+    note: "One icon per fish, in FISH order (shared/content/fish.ts), facing right.",
+  });
+}
+
+function renderBugs(): void {
+  const read = (file: string) => Img.read(path.join(PACK, file));
+  save("bugs", packRows(BUG_IDS.map((id) => bugFrames(id, read)), T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    rows: Object.fromEntries(BUG_IDS.map((id, i) => [id, i])),
+    layout: `One row per bug in BUGS order (shared/content/bugs.ts): ${BUG_SHEET.flutterFrames} frames of fluttering, then its icon (column ${BUG_SHEET.iconColumn}).`,
+  });
+}
+
+function renderFishing(): void {
+  save("fishing", packRows([fishingFrames((file) => Img.read(path.join(PACK, file)))], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    frames: FISHING_FRAMES,
+    note: "The rod is the pack's own, centred on a 16×16 frame.",
+  });
+}
+
 console.log(`Rendering sprites into ${path.relative(ROOT, OUT)}${path.sep}`);
 renderCrops();
 renderSoil();
@@ -176,5 +210,8 @@ renderMarkers();
 renderEmotes();
 renderUiIcons();
 renderSeaside();
+renderFish();
+renderBugs();
+renderFishing();
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log("  manifest.json");

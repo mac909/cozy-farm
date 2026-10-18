@@ -1,6 +1,20 @@
 import type Phaser from "phaser";
+import { BUG_IDS } from "../../../shared/content/bugs";
+import { FISH_IDS } from "../../../shared/content/fish";
 import { ITEMS, type ItemId } from "../../../shared/content/items";
-import { BEACH_ITEMS_KEY, CROPS_KEY, FISH_KEY, furnitureIconKey, HOE_KEY, WATERING_CAN_KEY } from "./assets";
+import {
+  BEACH_ITEMS_KEY,
+  BUG_COLUMNS,
+  BUG_ICON_COLUMN,
+  BUGS_KEY,
+  CROPS_KEY,
+  FISH_ICONS_KEY,
+  FISHING_FRAME,
+  FISHING_KEY,
+  furnitureIconKey,
+  HOE_KEY,
+  WATERING_CAN_KEY,
+} from "./assets";
 import { cropItemFrame, seedPacketFrame } from "./cropFrames";
 
 /** A picture: a texture key, its frame if the texture is a sheet, and its size (16 unless it says). */
@@ -50,11 +64,14 @@ export function itemIcon(itemId: ItemId): Icon {
     case "crop":
       return { key: CROPS_KEY, frame: cropItemFrame(item.cropId) };
     case "tool":
+      if (itemId === "fishing_rod") return { key: FISHING_KEY, frame: FISHING_FRAME.rod };
       return { key: itemId === "watering_can" ? WATERING_CAN_KEY : HOE_KEY };
     case "beach":
       return { key: BEACH_ITEMS_KEY, frame: BEACH_FRAMES[itemId] ?? 0 };
     case "fish":
-      return { key: FISH_KEY };
+      return { key: FISH_ICONS_KEY, frame: FISH_IDS.indexOf(item.fishId) };
+    case "bug":
+      return { key: BUGS_KEY, frame: BUG_IDS.indexOf(item.bugId) * BUG_COLUMNS + BUG_ICON_COLUMN };
     case "furniture":
       return { key: furnitureIconKey(item.furnitureId), size: 32 };
   }

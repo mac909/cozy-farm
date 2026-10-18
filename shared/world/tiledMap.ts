@@ -1,5 +1,5 @@
 import { TILE_SIZE } from "../constants";
-import { type HousePlan, type Rect, tileAt, type WorldMap } from "./map";
+import { type HousePlan, type Rect, type Terrain, tileAt, type WorldMap } from "./map";
 
 /**
  * Reads a map saved by Tiled (JSON format, see "Editing the map" in CLAUDE.md).
@@ -10,6 +10,10 @@ import { type HousePlan, type Rect, tileAt, type WorldMap } from "./map";
 /** Hidden tile layers: any tile painted on them counts, whatever it looks like. */
 export const COLLISION_LAYER = "Collision";
 export const FARMLAND_LAYER = "Farmland";
+/** The ground: its terrain set (grass, sand, sea) says where the beach and the water are. */
+export const GROUND_LAYER = "Ground";
+/** Layers whose tiles count as something standing or lying there (palms, tufts, planks). */
+export const CLUTTER_LAYERS = ["Decor", "Details"];
 /** The object layer with the spawn point and the spots for the shipping crate, tent, seed stand and store. */
 export const OBJECTS_LAYER = "Objects";
 /** Tile layers with this bool property set draw over the characters (tree tops). */
@@ -48,7 +52,20 @@ export interface TiledTileset {
   image?: string;
   /** Present only for external tilesets, which Phaser can't read. */
   source?: string;
+  /** Terrain sets ("Beach": grass, sand, sea), painted with Tiled's terrain brush. */
+  wangsets?: TiledWangSet[];
 }
+
+export interface TiledWangSet {
+  name: string;
+  type: string;
+  colors: { name: string }[];
+  /** Each tile's colours: 8 numbers clockwise from the top edge, corners at the odd places; 0 is none, 1 the first colour. */
+  wangtiles: { tileid: number; wangid: number[] }[];
+}
+
+/** Tiled keeps flips and turns in a tile's top bits. */
+const GID_MASK = 0x1fffffff;
 
 export function parseTiledMap(input: unknown): WorldMap {
   const json = input as TiledMapJson;
@@ -66,7 +83,7 @@ export function parseTiledMap(input: unknown): WorldMap {
     }
   }
 
-  const painted = (name: string): boolean[][] => {
+  const tiles = (name: string): number[] => {
     const layer = json.layers.find((l) => l.name === name);
     if (!layer || layer.type !== "tilelayer") throw new Error(`The map has no "${name}" tile layer`);
     const { data } = layer;
@@ -74,8 +91,13 @@ export function parseTiledMap(input: unknown): WorldMap {
       throw new Error(`Layer "${name}" isn't plain numbers: in Tiled, set Map Properties → Tile Layer Format to CSV`);
     }
     if (data.length !== width * height) throw new Error(`Layer "${name}" has ${data.length} tiles, expected ${width * height}`);
-    return Array.from({ length: height }, (_, row) => data.slice(row * width, (row + 1) * width).map((gid) => gid !== 0));
+    return data as number[];
   };
+  const grid = <T>(data: readonly number[], cell: (gid: number) => T): T[][] =>
+    Array.from({ length: height }, (_, row) => data.slice(row * width, (row + 1) * width).map(cell));
+  const painted = (name: string): boolean[][] => grid(tiles(name), (gid) => gid !== 0);
+  const hasLayer = (name: string) => json.layers.some((l) => l.name === name && l.type === "tilelayer");
+  const empty = new Array<number>(width * height).fill(0);
 
   const objectLayer = json.layers.find((l) => l.name === OBJECTS_LAYER && l.type === "objectgroup");
   if (!objectLayer) throw new Error(`The map has no "${OBJECTS_LAYER}" object layer`);
@@ -108,6 +130,12 @@ export function parseTiledMap(input: unknown): WorldMap {
   }
   houses.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
 
+  const terrainOf = terrainReader(json.tilesets);
+  const clutter = CLUTTER_LAYERS.filter(hasLayer).map(tiles);
+  const deepWater = (objectLayer.objects ?? [])
+    .filter((o) => o.name === "deepWater")
+    .map(({ x, y, width: w = 0, height: h = 0 }): Rect => ({ x, y, width: w, height: h }));
+
   return {
     width,
     height,
@@ -119,7 +147,44 @@ export function parseTiledMap(input: unknown): WorldMap {
     seedStand: area("seedStand"),
     store: area("store"),
     houses,
+    terrain: grid(hasLayer(GROUND_LAYER) ? tiles(GROUND_LAYER) : empty, terrainOf),
+    cluttered: grid(
+      empty.map((_, i) => (clutter.some((layer) => layer[i] !== 0) ? 1 : 0)),
+      (any) => any !== 0,
+    ),
+    deepWater,
   };
+}
+
+/**
+ * Reads the ground's terrain from the tileset painted with the terrain brush: the first terrain
+ * set with colours named Grass, Sand and Sea. Each tile's four corners say what it is.
+ */
+function terrainReader(tilesets: readonly TiledTileset[]): (gid: number) => Terrain {
+  const byTile = new Map<number, Terrain>();
+  for (const tileset of tilesets) {
+    for (const set of tileset.wangsets ?? []) {
+      const names = set.colors.map((c) => c.name.toLowerCase());
+      if (!["grass", "sand", "sea"].every((n) => names.includes(n))) continue;
+      for (const { tileid, wangid } of set.wangtiles) {
+        // Corner sets keep colours at the odd places; a mixed set may use the edges too.
+        const places = set.type === "corner" ? wangid.filter((_, i) => i % 2 === 1) : wangid;
+        const kinds = new Set(places.filter((c) => c > 0).map((c) => names[c - 1]));
+        byTile.set(tileset.firstgid + tileid, terrainFrom(kinds));
+      }
+    }
+  }
+  return (gid) => byTile.get(gid & GID_MASK) ?? "other";
+}
+
+function terrainFrom(kinds: ReadonlySet<string>): Terrain {
+  if (kinds.size === 1) {
+    const [only] = kinds;
+    if (only === "grass" || only === "sand" || only === "sea") return only;
+  }
+  if (kinds.has("sea")) return "shore";
+  if (kinds.has("grass") && kinds.has("sand")) return "edge";
+  return "other";
 }
 
 /**

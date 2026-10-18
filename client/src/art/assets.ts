@@ -17,9 +17,9 @@ export const tilesetKey = (name: string) => `tileset-${name}`;
 export const characterKey = (id: CharacterId) => `character-${id}`;
 /** Speech bubbles, one frame per emote in EMOTES order. */
 export const EMOTES_KEY = "emotes";
-/** HUD icons: music on, music off, arrange, turn, done. */
+/** HUD icons: music on, music off, arrange, turn, done, book, stop. */
 export const UI_ICONS_KEY = "ui-icons";
-export const UI_ICON = { musicOn: 0, musicOff: 1, arrange: 2, turn: 3, done: 4 } as const;
+export const UI_ICON = { musicOn: 0, musicOff: 1, arrange: 2, turn: 3, done: 4, book: 5, stop: 6 } as const;
 export const SHIPPING_CRATE_KEY = "shipping-crate";
 /** Our seed stand, 32×32, drawn at the map's seedStand spot. */
 export const SEED_STAND_KEY = "seed-stand";
@@ -47,6 +47,17 @@ export const FISH_KEY = "item-fish";
 /** A 7×7 gold coin, for the wallet. */
 export const COIN_KEY = "coin";
 export const BEACH_ITEMS_KEY = "beach-items";
+/** Our fish, one 16×16 icon each in FISH order. */
+export const FISH_ICONS_KEY = "fish-icons";
+/** Our bugs: one row per bug in BUGS order, four flutter frames then the icon. */
+export const BUGS_KEY = "bugs";
+export const BUG_COLUMNS = 5;
+export const BUG_ICON_COLUMN = 4;
+/** The fishing rod, the bobber and the bobber dipped under. */
+export const FISHING_KEY = "fishing";
+export const FISHING_FRAME = { rod: 0, bobber: 1, dipped: 2 } as const;
+/** The pack's red "!" bubble, for a bite. */
+export const BITE_KEY = "bite";
 /** A small white dot for dirt puffs and splashes, drawn in code at boot. */
 export const PARTICLE_KEY = "particle";
 /** The general store: the pack's green-roofed shop, a named frame on the house tileset. */
@@ -110,6 +121,10 @@ export function loadArt(scene: Phaser.Scene): void {
   load.spritesheet(CROPS_KEY, `${CUSTOM}crops.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(SOIL_KEY, `${CUSTOM}soil.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(BEACH_ITEMS_KEY, `${CUSTOM}beach-items.png`, { frameWidth: 16, frameHeight: 16 });
+  load.spritesheet(FISH_ICONS_KEY, `${CUSTOM}fish.png`, { frameWidth: 16, frameHeight: 16 });
+  load.spritesheet(BUGS_KEY, `${CUSTOM}bugs.png`, { frameWidth: 16, frameHeight: 16 });
+  load.spritesheet(FISHING_KEY, `${CUSTOM}fishing.png`, { frameWidth: 16, frameHeight: 16 });
+  load.image(BITE_KEY, `${PACK}Ui/Emote/emote21.png`);
   load.image(HOE_KEY, `${PACK}Items/Tool/Hoe.png`);
   load.image(WATERING_CAN_KEY, `${PACK}Items/Tool/WateringCan.png`);
   load.image(BAG_KEY, `${PACK}Items/Object/Bag.png`);

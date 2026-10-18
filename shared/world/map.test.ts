@@ -79,6 +79,43 @@ describe("parseTiledMap", () => {
     expect(() => parseTiledMap(short)).toThrow(/"Farmland" has 2 tiles, expected 6/);
   });
 
+  it("reads the ground's terrain set, what's drawn on top, and the deep water", () => {
+    const map = smallMap();
+    map.tilesets[0].wangsets = [
+      {
+        name: "Beach",
+        type: "corner",
+        colors: [{ name: "Grass" }, { name: "Sand" }, { name: "Sea" }],
+        wangtiles: [
+          { tileid: 0, wangid: [0, 1, 0, 1, 0, 1, 0, 1] },
+          { tileid: 1, wangid: [0, 2, 0, 3, 0, 3, 0, 2] },
+          { tileid: 2, wangid: [0, 3, 0, 3, 0, 3, 0, 3] },
+        ],
+      },
+    ];
+    // Tiled keeps flips in the top bits; they don't change what the ground is.
+    map.layers[0].data = [1, 2, 3, 0x80000000 + 3, 99, 0];
+    map.layers.push({ name: "Details", type: "tilelayer", data: [0, 5, 0, 0, 0, 0] });
+    map.layers[3].objects!.push({ name: "deepWater", x: 32, y: 0, width: 16, height: 32 });
+    const parsed = parseTiledMap(map);
+    expect(parsed.terrain).toEqual([
+      ["grass", "shore", "sea"],
+      ["sea", "other", "other"],
+    ]);
+    expect(parsed.cluttered).toEqual([
+      [false, true, false],
+      [false, false, false],
+    ]);
+    expect(parsed.deepWater).toEqual([{ x: 32, y: 0, width: 16, height: 32 }]);
+  });
+
+  it("copes with a map without terrain, clutter or deep water", () => {
+    const parsed = parseTiledMap(smallMap());
+    expect(parsed.terrain.flat().every((t) => t === "other")).toBe(true);
+    expect(parsed.cluttered.flat().every((c) => !c)).toBe(true);
+    expect(parsed.deepWater).toEqual([]);
+  });
+
   it("explains compressed layers and external tilesets", () => {
     const compressed = smallMap();
     (compressed.layers[1] as { data: unknown }).data = "eJxjYGBgAAAABAAB";

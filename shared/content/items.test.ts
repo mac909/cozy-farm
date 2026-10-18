@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CROPS, type CropId } from "./crops";
-import { ITEMS, STARTER_ITEMS, cropItemId, isItemId, seedItemId, type ItemDef } from "./items";
+import { BUG_IDS, BUGS } from "./bugs";
+import { ITEMS, STARTER_ITEMS, bugItemId, cropItemId, isItemId, seedItemId, type ItemDef } from "./items";
 
 const CROP_IDS = Object.keys(CROPS) as CropId[];
 const items = Object.entries(ITEMS);
@@ -38,6 +39,7 @@ describe("item data", () => {
       inCategory("tool").length +
       inCategory("beach").length +
       inCategory("fish").length +
+      inCategory("bug").length +
       inCategory("furniture").length;
     expect(items.length).toBe(expected);
   });
@@ -68,9 +70,10 @@ describe("seeds and crops", () => {
 });
 
 describe("tools", () => {
-  it("has a hoe and a watering can", () => {
+  it("has a hoe, a watering can and a fishing rod", () => {
     expect(ITEMS.hoe.category).toBe("tool");
     expect(ITEMS.watering_can.category).toBe("tool");
+    expect(ITEMS.fishing_rod.category).toBe("tool");
   });
 
   it("can't be sold and don't stack", () => {
@@ -97,6 +100,19 @@ describe("beach finds", () => {
   });
 });
 
+describe("bugs", () => {
+  it("has an item for every bug, sold at its price and never bought", () => {
+    for (const bugId of BUG_IDS) {
+      const item = ITEMS[bugItemId(bugId)];
+      expect(item.category).toBe("bug");
+      expect(item.category === "bug" && item.bugId).toBe(bugId);
+      expect(item.name).toBe(BUGS[bugId].name);
+      expect(item.sellPrice).toBe(BUGS[bugId].sellPrice);
+      expect(item.buyPrice).toBeUndefined();
+    }
+  });
+});
+
 describe("furniture", () => {
   const furniture = inCategory("furniture");
 
@@ -117,6 +133,10 @@ describe("furniture", () => {
 });
 
 describe("starter items", () => {
+  it("include the hoe, the watering can, radish seeds and the fishing rod", () => {
+    expect(STARTER_ITEMS.map((stack) => stack.itemId)).toEqual(["hoe", "watering_can", "radish_seeds", "fishing_rod"]);
+  });
+
   it("are real items in counts that fit one slot each", () => {
     for (const { itemId, count } of STARTER_ITEMS) {
       expect(isItemId(itemId)).toBe(true);

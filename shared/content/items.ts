@@ -1,3 +1,4 @@
+import { BUGS, BUG_IDS, type BugId } from "./bugs";
 import { CROPS, type CropId } from "./crops";
 import { FISH, FISH_IDS, type FishId } from "./fish";
 import { FURNITURE, FURNITURE_IDS, FURNITURE_SELL_FRACTION, type FurnitureId } from "./furniture";
@@ -5,13 +6,13 @@ import { FURNITURE, FURNITURE_IDS, FURNITURE_SELL_FRACTION, type FurnitureId } f
 /**
  * Everything a player can carry. Every number here is a first guess, meant to be tuned by playing.
  *
- * Seeds and harvested crops are built from CROPS, fish from FISH, and furniture from FURNITURE, so
- * their prices live there.
+ * Seeds and harvested crops are built from CROPS, fish from FISH, bugs from BUGS, and furniture from
+ * FURNITURE, so their prices live there.
  * An item's `buyPrice` is what the general store charges (no `buyPrice`: the
  * store doesn't sell it); its `sellPrice` is what the shipping crate pays
  * (no `sellPrice`: it can't be sold).
  */
-export type ItemCategory = "seed" | "crop" | "tool" | "beach" | "fish" | "furniture";
+export type ItemCategory = "seed" | "crop" | "tool" | "beach" | "fish" | "bug" | "furniture";
 
 interface BaseItemDef {
   /** Same as its key in ITEMS. Saves hold these, so renaming one needs a save migration. */
@@ -52,6 +53,12 @@ export interface FishItemDef extends BaseItemDef {
   fishId: FishId;
 }
 
+export interface BugItemDef extends BaseItemDef {
+  category: "bug";
+  /** The bug this is. */
+  bugId: BugId;
+}
+
 export interface FurnitureItemDef extends BaseItemDef {
   category: "furniture";
   /** The piece this is: where it goes, how it turns, the tiles it covers. */
@@ -64,6 +71,7 @@ export type ItemDef =
   | ToolItemDef
   | BeachItemDef
   | FishItemDef
+  | BugItemDef
   | FurnitureItemDef;
 
 /** How many of a stackable item fit in one inventory slot. */
@@ -94,6 +102,11 @@ export function furnitureOf(itemId: string | null | undefined): FurnitureId | nu
 /** The item a caught `fishId` gives. Fish items share their fish's id. */
 export function fishItemId(fishId: FishId): FishId {
   return fishId;
+}
+
+/** The item a caught `bugId` gives. Bug items share their bug's id. */
+export function bugItemId(bugId: BugId): BugId {
+  return bugId;
 }
 
 const CROP_IDS = Object.keys(CROPS) as CropId[];
@@ -142,6 +155,7 @@ const toolData = {
     maxStack: 1,
     buyPrice: 100,
   },
+  fishing_rod: { id: "fishing_rod", name: "Fishing Rod", category: "tool", maxStack: 1, buyPrice: 100 },
 } satisfies Record<string, ToolItemDef>;
 
 /** Washed up on the sand. Found, never bought. */
@@ -189,6 +203,17 @@ const fishItems = Object.fromEntries(
   }),
 ) as Record<FishId, FishItemDef>;
 
+/** Caught in the meadow, never bought. */
+const bugItems = Object.fromEntries(
+  BUG_IDS.map((bugId): [BugId, BugItemDef] => {
+    const bug = BUGS[bugId];
+    return [
+      bugItemId(bugId),
+      { id: bugItemId(bugId), name: bug.name, category: "bug", bugId, maxStack: STACK, sellPrice: bug.sellPrice },
+    ];
+  }),
+) as Record<BugId, BugItemDef>;
+
 /** Bought at the general store, put down in your house or on the farm. They ship back for about half. */
 const furnitureItems = Object.fromEntries(
   FURNITURE_IDS.map((furnitureId): [FurnitureId, FurnitureItemDef] => {
@@ -214,15 +239,17 @@ export type ItemId =
   | keyof typeof toolData
   | keyof typeof beachData
   | FishId
+  | BugId
   | FurnitureId;
 
-/** Every item, grouped seeds, crops, tools, beach finds, fish, furniture. Shop and bag listings follow this order. */
+/** Every item, grouped seeds, crops, tools, beach finds, fish, bugs, furniture. Shop and bag listings follow this order. */
 export const ITEMS: Readonly<Record<ItemId, ItemDef>> = {
   ...seedItems,
   ...cropItems,
   ...toolData,
   ...beachData,
   ...fishItems,
+  ...bugItems,
   ...furnitureItems,
 };
 
@@ -236,4 +263,8 @@ export const STARTER_ITEMS: readonly { itemId: ItemId; count: number }[] = [
   { itemId: "hoe", count: 1 },
   { itemId: "watering_can", count: 1 },
   { itemId: seedItemId("radish"), count: 10 },
+  { itemId: "fishing_rod", count: 1 },
 ];
+
+/** The fishing rod: hold it facing the water to fish (shared/fishing/spots.ts). */
+export const FISHING_ROD: ItemId = "fishing_rod";

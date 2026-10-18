@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { BEACH_FIND_IDS } from "../content/beachFinds";
+import { BUG_IDS } from "../content/bugs";
 import { FISH_IDS } from "../content/fish";
 import {
   EMPTY_BOOK,
   completion,
   isComplete,
+  recordBug,
   recordCatch,
   recordFind,
   type BookResult,
@@ -72,7 +74,7 @@ describe("recordCatch", () => {
     expect(book.fish).toEqual({
       sardine: { caught: 1, firstDay: 3, firstBy: "Sam", biggestCm: 14, biggestBy: "Sam" },
     });
-    expect(EMPTY_BOOK).toEqual({ fish: {}, finds: {} });
+    expect(EMPTY_BOOK).toEqual({ fish: {}, finds: {}, bugs: {} });
   });
 });
 
@@ -93,12 +95,30 @@ describe("recordFind", () => {
   });
 });
 
+describe("recordBug", () => {
+  it("discovers a bug the first time, then just counts", () => {
+    const first = recordBug(EMPTY_BOOK, "brimstone", SAM);
+    expect(eventsOf(first)).toEqual([{ type: "discovered", section: "bugs", id: "brimstone" }]);
+    expect(bookOf(first).bugs.brimstone).toEqual({ caught: 1, firstDay: 3, firstBy: "Sam" });
+
+    const second = recordBug(bookOf(first), "brimstone", ALEX);
+    expect(eventsOf(second)).toEqual([]);
+    expect(bookOf(second).bugs.brimstone).toEqual({ caught: 2, firstDay: 3, firstBy: "Sam" });
+  });
+
+  it("refuses things that aren't bugs", () => {
+    expect(recordBug(EMPTY_BOOK, "sardine", SAM)).toEqual({ ok: false, reason: "unknown-bug" });
+    expect(recordBug(EMPTY_BOOK, "constructor", SAM)).toEqual({ ok: false, reason: "unknown-bug" });
+  });
+});
+
 describe("completion", () => {
   it("starts at nothing found", () => {
     expect(completion(EMPTY_BOOK)).toEqual({
       fish: { found: 0, total: FISH_IDS.length },
       finds: { found: 0, total: BEACH_FIND_IDS.length },
-      all: { found: 0, total: FISH_IDS.length + BEACH_FIND_IDS.length },
+      bugs: { found: 0, total: BUG_IDS.length },
+      all: { found: 0, total: FISH_IDS.length + BEACH_FIND_IDS.length + BUG_IDS.length },
     });
   });
 
@@ -118,6 +138,7 @@ describe("completion", () => {
     const old = {
       fish: { old_boot: { caught: 1, firstDay: 1, firstBy: "Sam", biggestCm: 30, biggestBy: "Sam" } },
       finds: {},
+      bugs: {},
     };
     expect(completion(old as CollectionBook).fish.found).toBe(0);
   });
@@ -137,9 +158,17 @@ describe("completion", () => {
     expect(eventsOf(lastFind)).toEqual([
       { type: "discovered", section: "finds", id: BEACH_FIND_IDS.at(-1) },
       { type: "section-complete", section: "finds" },
+    ]);
+    book = bookOf(lastFind);
+
+    for (const id of BUG_IDS.slice(0, -1)) book = bookOf(recordBug(book, id, ALEX));
+    const lastBug = recordBug(book, BUG_IDS.at(-1)!, ALEX);
+    expect(eventsOf(lastBug)).toEqual([
+      { type: "discovered", section: "bugs", id: BUG_IDS.at(-1) },
+      { type: "section-complete", section: "bugs" },
       { type: "book-complete" },
     ]);
-    expect(isComplete(completion(bookOf(lastFind)).all)).toBe(true);
+    expect(isComplete(completion(bookOf(lastBug)).all)).toBe(true);
   });
 
   it("doesn't celebrate completion again for repeat catches", () => {

@@ -1,8 +1,9 @@
 import { BEACH_FIND_IDS, isBeachFindId, type BeachFindId } from "../content/beachFinds";
+import { BUG_IDS, isBugId, type BugId } from "../content/bugs";
 import { FISH_IDS, isFishId, type FishId } from "../content/fish";
 
 /**
- * The shared collection book: every fish and beach find the two of you have
+ * The shared collection book: every fish, beach find and bug the two of you have
  * discovered, who found each one first, and the biggest of each fish. One book
  * for both players. Never changed in place; the actions below return a new one.
  */
@@ -30,21 +31,34 @@ export interface FindEntry {
   readonly firstBy: string;
 }
 
+export interface BugEntry {
+  /** How many have been caught, by either player. */
+  readonly caught: number;
+  readonly firstDay: number;
+  readonly firstBy: string;
+}
+
 export interface CollectionBook {
   /** Only fish that have been caught have an entry. */
   readonly fish: Readonly<Partial<Record<FishId, FishEntry>>>;
   /** Only finds that have been picked up have an entry. */
   readonly finds: Readonly<Partial<Record<BeachFindId, FindEntry>>>;
+  /** Only bugs that have been caught have an entry. */
+  readonly bugs: Readonly<Partial<Record<BugId, BugEntry>>>;
 }
 
-export const EMPTY_BOOK: CollectionBook = { fish: {}, finds: {} };
+export const EMPTY_BOOK: CollectionBook = { fish: {}, finds: {}, bugs: {} };
 
 export type BookSection = keyof CollectionBook;
+
+/** The book's sections, in the order it shows them. */
+export const BOOK_SECTIONS: readonly BookSection[] = ["fish", "finds", "bugs"];
 
 /** Moments worth a little celebration, in the order they happened. */
 export type BookEvent =
   | { readonly type: "discovered"; readonly section: "fish"; readonly id: FishId }
   | { readonly type: "discovered"; readonly section: "finds"; readonly id: BeachFindId }
+  | { readonly type: "discovered"; readonly section: "bugs"; readonly id: BugId }
   /** A bigger one than ever before (not counting the first catch, which is a discovery). */
   | { readonly type: "new-record"; readonly fishId: FishId; readonly sizeCm: number; readonly previousCm: number }
   | { readonly type: "section-complete"; readonly section: BookSection }
@@ -108,6 +122,22 @@ export function recordFind(
   return { ok: true, book: { ...book, finds: { ...book.finds, [findId]: updated } }, events: [] };
 }
 
+/** Writes down a caught bug. */
+export function recordBug(book: CollectionBook, bugId: string, finder: Finder): BookResult<"unknown-bug"> {
+  if (!isBugId(bugId)) return { ok: false, reason: "unknown-bug" };
+  const entry = book.bugs[bugId];
+
+  if (entry === undefined) {
+    const first: BugEntry = { caught: 1, firstDay: finder.day, firstBy: finder.by };
+    const after = { ...book, bugs: { ...book.bugs, [bugId]: first } };
+    const events = discoveryEvents(book, after, { type: "discovered", section: "bugs", id: bugId });
+    return { ok: true, book: after, events };
+  }
+
+  const updated: BugEntry = { ...entry, caught: entry.caught + 1 };
+  return { ok: true, book: { ...book, bugs: { ...book.bugs, [bugId]: updated } }, events: [] };
+}
+
 /** How much of a section (or the whole book) is filled in. */
 export interface Completion {
   readonly found: number;
@@ -117,6 +147,7 @@ export interface Completion {
 export interface BookCompletion {
   readonly fish: Completion;
   readonly finds: Completion;
+  readonly bugs: Completion;
   readonly all: Completion;
 }
 
@@ -127,7 +158,13 @@ export function completion(book: CollectionBook): BookCompletion {
     found: BEACH_FIND_IDS.filter((id) => book.finds[id] !== undefined).length,
     total: BEACH_FIND_IDS.length,
   };
-  return { fish, finds, all: { found: fish.found + finds.found, total: fish.total + finds.total } };
+  const bugs = { found: BUG_IDS.filter((id) => book.bugs[id] !== undefined).length, total: BUG_IDS.length };
+  return {
+    fish,
+    finds,
+    bugs,
+    all: { found: fish.found + finds.found + bugs.found, total: fish.total + finds.total + bugs.total },
+  };
 }
 
 export function isComplete({ found, total }: Completion): boolean {
@@ -139,7 +176,7 @@ function discoveryEvents(before: CollectionBook, after: CollectionBook, discover
   const was = completion(before);
   const now = completion(after);
   const events: BookEvent[] = [discovered];
-  for (const section of ["fish", "finds"] as const) {
+  for (const section of BOOK_SECTIONS) {
     if (!isComplete(was[section]) && isComplete(now[section])) events.push({ type: "section-complete", section });
   }
   if (!isComplete(was.all) && isComplete(now.all)) events.push({ type: "book-complete" });

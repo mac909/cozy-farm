@@ -22,7 +22,22 @@ export interface WorldMap {
   store: Rect;
   /** The cottages (Milestone 4), each with its room: `house1` and `interior1` in Tiled, and so on. */
   houses: HousePlan[];
+  /**
+   * What the ground is, indexed [row][col], from the Ground layer's terrain set (Milestone 5): grass,
+   * sand, sea, or a mix along the edges. "other" where the Ground tile isn't part of the terrain set.
+   */
+  terrain: Terrain[][];
+  /** Tiles with something drawn on the Decor or Details layers (a palm, a tuft, a plank), indexed [row][col]. */
+  cluttered: boolean[][];
+  /** The deep water off the end of the dock, where the big fish are: `deepWater` rectangles in Tiled. */
+  deepWater: Rect[];
 }
+
+/**
+ * The ground on one tile, from its four corners: all grass, all sand or all sea, "shore" where sea
+ * meets sand, "edge" where grass meets sand, or "other" (not part of the beach terrain).
+ */
+export type Terrain = "grass" | "sand" | "sea" | "shore" | "edge" | "other";
 
 /** A cottage on the map and its one room, drawn out of sight at the bottom of the map. */
 export interface HousePlan {

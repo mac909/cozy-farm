@@ -166,7 +166,7 @@
   },
   "ui-icons": {
     "file": "ui-icons.png",
-    "width": 80,
+    "width": 112,
     "height": 16,
     "frameWidth": 16,
     "frameHeight": 16,
@@ -175,7 +175,9 @@
       "musicOff": 1,
       "arrange": 2,
       "turn": 3,
-      "done": 4
+      "done": 4,
+      "book": 5,
+      "stop": 6
     }
   },
   "seaside-furniture": {
@@ -215,5 +217,56 @@
       }
     },
     "note": "Each picture sits inside its 32×32 frame at the given rectangle; client/src/art/furnitureArt.ts cuts them out."
+  },
+  "fish": {
+    "file": "fish.png",
+    "width": 192,
+    "height": 16,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "frames": {
+      "sardine": 0,
+      "mackerel": 1,
+      "flounder": 2,
+      "sea_bream": 3,
+      "pufferfish": 4,
+      "red_snapper": 5,
+      "sea_bass": 6,
+      "squid": 7,
+      "moray_eel": 8,
+      "seahorse": 9,
+      "tuna": 10,
+      "moonfish": 11
+    },
+    "note": "One icon per fish, in FISH order (shared/content/fish.ts), facing right."
+  },
+  "bugs": {
+    "file": "bugs.png",
+    "width": 80,
+    "height": 96,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "rows": {
+      "red_admiral": 0,
+      "cabbage_white": 1,
+      "common_blue": 2,
+      "brimstone": 3,
+      "firefly": 4,
+      "luna_moth": 5
+    },
+    "layout": "One row per bug in BUGS order (shared/content/bugs.ts): 4 frames of fluttering, then its icon (column 4)."
+  },
+  "fishing": {
+    "file": "fishing.png",
+    "width": 48,
+    "height": 16,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "frames": {
+      "rod": 0,
+      "bobber": 1,
+      "dipped": 2
+    },
+    "note": "The rod is the pack's own, centred on a 16×16 frame."
   }
 }
