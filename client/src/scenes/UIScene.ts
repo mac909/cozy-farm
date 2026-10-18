@@ -81,9 +81,9 @@ interface Layout {
  * right end, emotes beside Action, bag on the left), sideways phone and laptop (hotbar bottom
  * centre, emotes stacked above Action, bag bottom left; key hints on a laptop).
  *
- * Emits "action", "emote" (EmoteId), "editLook", "bag" and "selectSlot" (slot, item) for WorldScene,
+ * Emits "action", "emote" (EmoteId), "editLook" (your face: the You card), "bag" and "selectSlot" (slot, item) for WorldScene,
  * which tells it what the Action button says with setAction().
- * Reads "netStatus", "look", "clock" and "bag" from the game registry, which WorldScene keeps up to date.
+ * Reads "netStatus", "look", "clock", "bag" and "youNew" from the game registry, which WorldScene keeps up to date.
  */
 export class UIScene extends Phaser.Scene {
   joystick?: Joystick;
@@ -254,6 +254,9 @@ export class UIScene extends Phaser.Scene {
       onPress: () => this.events.emit("editLook"),
     });
     this.onRegistry("look", (value: Look) => this.lookButton.setIcon(characterKey(value.character), 0));
+    // A level or a badge you haven't looked at yet (Milestone 7): a gold dot on your face.
+    this.lookButton.setDot(this.registry.get("youNew") === true);
+    this.onRegistry("youNew", (value: boolean) => this.lookButton.setDot(value === true));
 
     this.musicButton = new RoundButton(this, {
       size: SMALL_BUTTON_SIZE,

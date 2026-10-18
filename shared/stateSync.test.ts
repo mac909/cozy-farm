@@ -2,8 +2,9 @@ import { ArraySchema, MapSchema } from "@colyseus/schema";
 import { describe, expect, it } from "vitest";
 import { newInventory, starterInventory } from "./inventory/inventory";
 import type { FarmTile } from "./farming/farming";
-import { BagSlot, Clock, CrateEntry, FarmPlot } from "./schema";
-import { readBag, readClock, readCrate, readFarm, steppedMinute, writeBag, writeClock, writeCrate, writeFarm } from "./stateSync";
+import { BagSlot, Clock, CrateEntry, FarmPlot, ProgressState } from "./schema";
+import { readBag, readClock, readCrate, readFarm, readProgress, steppedMinute, writeBag, writeClock, writeCrate, writeFarm, writeProgress } from "./stateSync";
+import { EMPTY_PROGRESS, type FarmerProgress } from "./progress/farmerProgress";
 import type { TileKey } from "./world/world";
 
 describe("the clock", () => {
@@ -103,5 +104,38 @@ describe("the crate", () => {
     writeCrate(target, [{ itemId: "radish", count: 4 }]);
     target[0].itemId = "gold_bar";
     expect(readCrate(target)).toEqual([]);
+  });
+});
+describe("a farmer's progress", () => {
+  const progress: FarmerProgress = {
+    xp: { farming: 95, fishing: 31, foraging: 0 },
+    today: { day: 4, xp: { farming: 12, fishing: 0, foraging: 0 } },
+    stats: { crops: 20, fish: 6 },
+    kinds: ["radish", "sardine"],
+    badges: { first_harvest: 2, moved_in: 2 },
+    gifts: ["straw_hat"],
+  };
+
+  it("comes back as it was sent, but for the gifts, which only the server needs", () => {
+    const target = new ProgressState();
+    writeProgress(target, progress, 4);
+    expect(readProgress(target, 4)).toEqual({ ...progress, gifts: [] });
+  });
+
+  it("shows no experience today once the day has moved on", () => {
+    const target = new ProgressState();
+    writeProgress(target, progress, 5);
+    expect(readProgress(target, 5).today).toEqual({ day: 5, xp: { farming: 0, fishing: 0, foraging: 0 } });
+  });
+
+  it("drops counts and badges that went, and reads odd ones as nothing", () => {
+    const target = new ProgressState();
+    writeProgress(target, progress, 4);
+    writeProgress(target, EMPTY_PROGRESS, 4);
+    expect(readProgress(target, 4)).toEqual({ ...EMPTY_PROGRESS, today: { day: 4, xp: EMPTY_PROGRESS.xp } });
+    target.badges.set("gold_star", 3);
+    target.kinds.push("unicorn");
+    expect(readProgress(target, 4).badges).toEqual({});
+    expect(readProgress(target, 4).kinds).toEqual([]);
   });
 });

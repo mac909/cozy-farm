@@ -1,0 +1,225 @@
+/*
+ * The You card (client/src/ui/YouPanel.ts): skills, perks and badges, in the look of
+ * docs/plans/progression-mockups.html (mockups 8 and 9). The tabs and the info strip are the
+ * book's (book.css); the face ring and the bars are the board's (board.css).
+ */
+
+.you {
+  width: min(100%, 400px);
+}
+
+.you-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.you-name .panel-title {
+  flex: none;
+  line-height: 1.1;
+}
+
+.you-name small {
+  display: block;
+  color: #8a7556;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.you-tabs .book-tab {
+  min-height: 40px;
+  justify-content: center;
+}
+
+/* A skill: its picture, name, today's experience, level, bar and what's next. */
+.you-skill {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid #ead9b4;
+}
+
+.you-skill:first-child {
+  border-top: none;
+}
+
+.you-skill .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.you-skill small {
+  display: block;
+  font-size: 13px;
+  color: #8a7556;
+}
+
+.you-skill small b {
+  color: #4a3b2a;
+}
+
+.you-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 12px;
+  background: #efe2c4;
+}
+
+.you-icon img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.you-skill-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.you-level {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.you-today {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #6a9a3a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+
+/* The skill bars are green, the board's are coral. */
+.you-bar i {
+  background: #6a9a3a;
+}
+
+.you-bar.full i {
+  background: #d9a400;
+}
+
+.you-perks {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.you-quiet {
+  margin: 0;
+  font-size: 14px;
+  color: #8a7556;
+}
+
+/* Badges: a grid of medals, earned ones in gold. */
+.you-badges {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px 6px;
+}
+
+.you-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.you-badge.no {
+  color: #a9977a;
+}
+
+.you-medal {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex: none;
+  box-sizing: border-box;
+  border: 3px solid #8a5a1c;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff2b8, #f2c64e 55%, #c98f22);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+}
+
+.you-medal img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.you-medal.small {
+  width: 44px;
+  height: 44px;
+}
+
+.you-medal.small img {
+  width: 28px;
+  height: 28px;
+}
+
+.you-badge.no .you-medal,
+.you-medal.no {
+  border-color: #cdb98f;
+  background: #e6d9bc;
+  box-shadow: none;
+  color: #b9a57f;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.you-badge.picked .you-medal {
+  outline: 3px solid #ef7d6d;
+  outline-offset: 2px;
+}
+
+.you-badge-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* The strip about the badge you tapped stays in view at the bottom of the card while the grid scrolls. */
+.you-info {
+  position: sticky;
+  bottom: -16px;
+  margin: 12px -4px -4px;
+  box-shadow: 0 -6px 10px #fff8e7;
+}
+
+/* A level or a badge, on your own screen only: the picture without the face's round frame. */
+.celebrate-icon.skill {
+  width: 48px;
+  height: 48px;
+}
+
+.celebrate-icon.medal {
+  width: 44px;
+  height: 44px;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 3px solid #8a5a1c;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff2b8, #f2c64e 55%, #c98f22);
+  animation: none;
+}

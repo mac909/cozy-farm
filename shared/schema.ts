@@ -126,6 +126,23 @@ export class ForageState extends Schema {
   @type("uint16") row = 0;
 }
 
+/**
+ * A farmer's skills and badges (Milestone 7), copied from the farmer so their own You card is live.
+ * Every screen gets everyone's, but each only ever shows its own: skills are never compared.
+ */
+export class ProgressState extends Schema {
+  /** Total experience, by skill id. */
+  @type({ map: "uint32" }) xp = new MapSchema<number>();
+  /** Experience earned today, by skill id ("+36 today"). */
+  @type({ map: "uint32" }) today = new MapSchema<number>();
+  /** The counts badges go by, by count id. */
+  @type({ map: "uint32" }) stats = new MapSchema<number>();
+  /** The kinds of thing found ("every crop"), item ids. */
+  @type(["string"]) kinds = new ArraySchema<string>();
+  /** Badges earned, by badge id: the day each was. */
+  @type({ map: "uint32" }) badges = new MapSchema<number>();
+}
+
 /** One person in the world. Positions are in world pixels. */
 export class Player extends Schema {
   @type("number") x = 0;
@@ -144,6 +161,8 @@ export class Player extends Schema {
   @type("string") fishing = "";
   /** The farmer's bag: INVENTORY_SLOTS slots, the first HOTBAR_SLOTS of them the hotbar. */
   @type([BagSlot]) bag = new ArraySchema<BagSlot>();
+  /** The farmer's skills and badges (Milestone 7). */
+  @type(ProgressState) progress = new ProgressState();
 }
 
 /** Everything the server keeps in sync with every player. */

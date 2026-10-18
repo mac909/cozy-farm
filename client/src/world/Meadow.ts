@@ -61,10 +61,11 @@ export class MeadowView {
   }
 
   /** The bug close enough to catch from where you stand (its drawn place to your feet), if any: the closest. */
-  bugNear(position: Point): { id: string; bugId: BugId } | null {
+  bugNear(position: Point, extraTiles = 0): { id: string; bugId: BugId } | null {
     const feet = { x: position.x, y: position.y + FEET_OFFSET };
     let best: { id: string; bugId: BugId } | null = null;
-    let bestDistance = MEADOW.catchTiles * TILE_SIZE;
+    // Light step (Foraging level 3): a step further.
+    let bestDistance = (MEADOW.catchTiles + extraTiles) * TILE_SIZE;
     for (const { bug, sprite } of this.drawn.values()) {
       // A bug flies a little above the ground it's over.
       const distance = Math.hypot(sprite.x - feet.x, sprite.y + FLY_LIFT / 2 - feet.y);

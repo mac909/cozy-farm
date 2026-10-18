@@ -2,20 +2,22 @@ import type { Client } from "colyseus";
 import { collectFish } from "../../../shared/collection/collect";
 import type { FishId } from "../../../shared/content/fish";
 import { FISHING_ROD } from "../../../shared/content/items";
-import { cast, FISHING } from "../../../shared/fishing/fishing";
+import { cast, FISHING, fishingPerks } from "../../../shared/fishing/fishing";
+import { PERK } from "../../../shared/content/skills";
 import { bobberTile, fishingSpot } from "../../../shared/fishing/spots";
 import { countOf, roomFor } from "../../../shared/inventory/inventory";
-import type { CastMessage, CastStartedMessage, LandFishMessage } from "../../../shared/messages";
+import type { CastMessage, CastStartedMessage, LandFishMessage, ReelInMessage } from "../../../shared/messages";
 import { farmerOf } from "../../../shared/world/world";
 import { feetTile, inReach } from "../../../shared/world/places";
 import { applyCollected } from "./collection";
 import type { FarmRoom } from "./FarmRoom";
+import { credit, serverRandom } from "./progress";
 
 /**
- * A fish can't be landed sooner than this after its cast: the line flying out, the shortest wait
- * for a bite, and a quick reel, less a little for lag.
+ * A fish can't be hooked sooner than this after its cast: the line flying out and the shortest
+ * wait for a bite (with Quick bites), less a little for lag. Nor landed, or have got away.
  */
-const MIN_LAND_MS = FISHING.castMs + FISHING.biteDelayMs.min - 200;
+const MIN_LAND_MS = FISHING.castMs + FISHING.biteDelayMs.min * PERK.quickBites - 200;
 
 /** A cast nobody has landed or reeled in after this long is forgotten. */
 const CAST_FORGOTTEN_MS = 10 * 60 * 1000;
@@ -55,7 +57,8 @@ export function registerFishing(room: FarmRoom) {
     const { map } = room.today;
     const spot = fishingSpot(map, feet, water);
     if (!spot) return room.hint(client, { reason: "no-water" });
-    const line = cast(spot, room.world.clock.minute, Math.floor(Math.random() * 2 ** 32));
+    // The caster's fishing perks go with the line, so their device plays it out the same way.
+    const line = cast(spot, room.world.clock.minute, Math.floor(Math.random() * 2 ** 32), fishingPerks(farmer.progress));
     if (!line.ok) return room.hint(client, { reason: "nothing-biting" });
     if (roomFor(farmer.bag, line.state.fishId) < 1) return room.hint(client, { reason: "bag-full" });
 
@@ -77,12 +80,21 @@ export function registerFishing(room: FarmRoom) {
       return;
     }
     const sizeCm = typeof message?.sizeCm === "number" ? message.sizeCm : NaN;
-    if (applyCollected(room, client, collectFish(room.world, player.farmerId, line.fishId, sizeCm))) {
-      console.log(`${player.name} caught a ${line.fishId}`);
+    const result = collectFish(room.world, player.farmerId, line.fishId, sizeCm, serverRandom());
+    if (applyCollected(room, client, result) && result.ok) {
+      console.log(`${player.name} caught ${result.count === 2 ? "two" : "a"} ${line.fishId}`);
+      const record = result.events.some((event) => event.type === "new-record");
+      credit(room, player.farmerId, { kind: "fish", fishId: line.fishId, count: result.count, record, minute: room.world.clock.minute });
     }
   });
 
-  room.onMessage("reelIn", (client: Client) => stop(client));
+  room.onMessage("reelIn", (client: Client, message: ReelInMessage) => {
+    const player = room.state.players.get(client.sessionId);
+    const line = lines.get(client.sessionId);
+    stop(client);
+    // A hooked fish that got away still teaches you something (a little fishing experience).
+    if (player && line && message?.gotAway === true && Date.now() - line.at >= MIN_LAND_MS) credit(room, player.farmerId, { kind: "gotAway" });
+  });
 
   return { left: (client: Client) => lines.delete(client.sessionId) };
 }

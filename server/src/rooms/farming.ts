@@ -1,9 +1,11 @@
 import type { Client } from "colyseus";
+import { ITEMS } from "../../../shared/content/items";
 import { applyFarmAction, type FarmActionKind } from "../../../shared/farming/actions";
 import type { FarmActionMessage } from "../../../shared/messages";
 import { feetTile, inReach } from "../../../shared/world/places";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import type { FarmRoom } from "./FarmRoom";
+import { credit, serverRandom } from "./progress";
 
 const FARM_ACTIONS: readonly FarmActionKind[] = ["till", "plant", "water", "harvest"];
 
@@ -19,7 +21,8 @@ function tileOn(message: FarmActionMessage | undefined): { col: number; row: num
 /**
  * Dig, plant, water, pick: "till", "plant", "water" and "harvest" messages. The room checks the
  * message makes sense and the tile is within reach of where the player last said they were; the
- * shared rules check the rest (farmland, the right tool or seeds, room in the bag).
+ * shared rules check the rest (farmland, the right tool or seeds, room in the bag). A pick counts
+ * for farming (Milestone 7), and the picker's perks may bring a little extra.
  */
 export function registerFarming(room: FarmRoom) {
   for (const action of FARM_ACTIONS) {
@@ -31,15 +34,19 @@ export function registerFarming(room: FarmRoom) {
         room.hint(client, { reason: "too-far" });
         return;
       }
-      const result = applyFarmAction(room.world, room.today.map, {
-        farmerId: player.farmerId,
-        action,
-        col: tile.col,
-        row: tile.row,
-        slot: message?.slot,
-      });
-      if (result.ok) room.change(result.world);
-      else room.hint(client, result.hint);
+      const result = applyFarmAction(
+        room.world,
+        room.today.map,
+        { farmerId: player.farmerId, action, col: tile.col, row: tile.row, slot: message?.slot },
+        action === "harvest" ? serverRandom() : undefined,
+      );
+      if (!result.ok) {
+        room.hint(client, result.hint);
+        return;
+      }
+      room.change(result.world);
+      const picked = result.harvested ? ITEMS[result.harvested.itemId] : null;
+      if (picked?.category === "crop") credit(room, player.farmerId, { kind: "harvest", cropId: picked.cropId, regrown: result.regrown === true });
     });
   }
 }

@@ -5,6 +5,8 @@ import { collectForage } from "../../../shared/foraging/forage";
 import type { PickUpMessage } from "../../../shared/messages";
 import { feetTile, inReach } from "../../../shared/world/places";
 import { applyCollected } from "./collection";
+import { credit, serverRandom } from "./progress";
+import { isBeachFindId } from "../../../shared/content/beachFinds";
 import type { FarmRoom } from "./FarmRoom";
 
 /**
@@ -23,7 +25,10 @@ export function registerBeach(room: FarmRoom) {
       return;
     }
     const world = room.world;
-    const result = findAt(world.beach.finds, col, row) ? collectFind(world, player.farmerId, col, row) : collectForage(world, player.farmerId, col, row);
-    applyCollected(room, client, result);
+    const isFind = findAt(world.beach.finds, col, row) !== undefined;
+    const result = isFind ? collectFind(world, player.farmerId, col, row) : collectForage(world, player.farmerId, col, row, serverRandom());
+    if (!applyCollected(room, client, result) || !result.ok) return;
+    if (isFind && isBeachFindId(result.itemId)) credit(room, player.farmerId, { kind: "find", findId: result.itemId });
+    else credit(room, player.farmerId, { kind: "material", itemId: result.itemId, count: result.count });
   });
 }

@@ -10,6 +10,7 @@ import type { TilePos } from "../../../shared/world/map";
 import { feetTile } from "../../../shared/world/places";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import type { FarmRoom } from "./FarmRoom";
+import { credit } from "./progress";
 
 const isTurn = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) < 8;
 
@@ -41,20 +42,24 @@ function whereIs(room: FarmRoom, player: Player): { target: DecorTarget; local: 
  * shared rules check the rest: only the owner arranges a house, pieces fit where they go.
  */
 export function registerDecor(room: FarmRoom) {
-  const run = (client: Client, change: (farmerId: string, where: ReturnType<typeof whereIs>) => DecorResult) => {
+  const run = (client: Client, change: (farmerId: string, where: ReturnType<typeof whereIs>) => DecorResult): boolean => {
     const player = room.state.players.get(client.sessionId);
-    if (!player || room.isBusy(client)) return;
+    if (!player || room.isBusy(client)) return false;
     const result = change(player.farmerId, whereIs(room, player));
     if (result.ok) room.change(result.world);
     else room.hint(client, result.hint);
+    return result.ok;
   };
 
   room.onMessage("placePiece", (client: Client, message: PlacePieceMessage) => {
     if (!isTileNumber(message?.col) || !isTileNumber(message?.row) || !isTurn(message?.turn) || !Number.isInteger(message?.slot)) return;
-    run(client, (farmerId, { target, local }) => {
+    const placed = run(client, (farmerId, { target, local }) => {
       const at = local({ col: message.col, row: message.row });
       return placeFromBag(room.world, farmerId, target, message.slot, { ...at, turn: message.turn });
     });
+    // Putting a piece down counts for Homemaker.
+    const farmerId = room.farmerIdOf(client);
+    if (placed && farmerId) credit(room, farmerId, { kind: "placed" });
   });
 
   room.onMessage("movePiece", (client: Client, message: MovePieceMessage) => {

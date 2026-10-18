@@ -8,6 +8,7 @@ import type { CastingState } from "./fishing/fishing";
 import type { Facing } from "./movement";
 import type { Look } from "./player";
 import type { VillageEvent } from "./village/projects";
+import type { ProgressEvent } from "./progress/progress";
 import type { MorningReport } from "./world/world";
 
 /**
@@ -56,15 +57,18 @@ export interface EmoteEvent {
 
 /**
  * What a dev command does: start the night now, set the clock (value: game minutes after midnight),
- * add coins (value: how many), fill the open project's step as if everything was given, or build
- * what's been gathered now instead of overnight.
+ * add coins (value: how many), fill a project's step as if everything was given (project: which,
+ * or the open one), build what's been gathered now instead of overnight, or add experience to one
+ * of your skills (skill, value: how much).
  */
-export type DevCommand = "nextDay" | "setTime" | "addCoins" | "fillStep" | "build";
+export type DevCommand = "nextDay" | "setTime" | "addCoins" | "fillStep" | "build" | "xp";
 
 /** Client → server ("dev"): a shortcut for testing. Also on window.dev in the browser console. */
 export interface DevMessage {
   command: DevCommand;
   value?: number;
+  project?: string;
+  skill?: string;
 }
 
 // ---------- Who's playing ----------
@@ -228,8 +232,13 @@ export interface LandFishMessage {
   sizeCm: number;
 }
 
-/** Client → server ("reelIn"): stopped fishing without landing anything. */
-export type ReelInMessage = Record<string, never>;
+/**
+ * Client → server ("reelIn"): stopped fishing without landing anything. `gotAway`: a hooked fish
+ * got away (a little fishing experience: you learn from those too).
+ */
+export interface ReelInMessage {
+  gotAway?: boolean;
+}
 
 /** Client → server ("catchBug"): catch the bug with this id (it's fluttering next to me). */
 export interface CatchBugMessage {
@@ -285,3 +294,17 @@ export interface PlacedMessage {
   x: number;
   y: number;
 }
+
+// ---------- Skills and badges (Milestone 7) ----------
+
+/**
+ * Server → one farmer's device ("progress"): a level reached, a gift for it, a badge. Only ever sent
+ * to the farmer it's about: skills are personal, so the other screen never hears about them.
+ * (Village badges go to everyone because everyone earns them.)
+ */
+export interface ProgressMessage {
+  events: ProgressEvent[];
+}
+
+/** Client → server ("climb"): I've climbed the lit lighthouse for the view (Up the Lighthouse, after dark). */
+export type ClimbMessage = Record<string, never>;

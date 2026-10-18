@@ -4,11 +4,12 @@ import { findAt, type Beach, type BeachFind } from "../../../shared/beachcombing
 import { BEACH_ITEMS_KEY } from "../art/assets";
 import { itemIcon } from "../art/itemIcons";
 import { playBurst } from "./effects";
+import { PERK } from "../../../shared/content/skills";
 
 /** Finds lie on the sand: over the map's ground and decor layers, under everyone walking past. */
 const FIND_DEPTH = -500;
 
-/** Now and then one of them glints, so they catch the eye across the beach. */
+/** Now and then one of them glints, so they catch the eye across the beach (more often with Bright eyes). */
 const GLINT_MS = 1400;
 
 /**
@@ -19,9 +20,22 @@ export class BeachView {
   private finds: Beach = [];
   private readonly sprites = new Map<string, Phaser.GameObjects.Image>();
   private seen = false;
+  /** How many times as often finds glint: more with Bright eyes (Foraging level 2, Milestone 7). */
+  private glints = 1;
+  private ticks = 0;
 
   constructor(private readonly scene: Phaser.Scene) {
-    scene.time.addEvent({ delay: GLINT_MS, loop: true, callback: () => this.glint() });
+    scene.time.addEvent({ delay: GLINT_MS / PERK.brightEyes, loop: true, callback: () => this.tick() });
+  }
+
+  /** Bright eyes: finds glint more often on this screen. */
+  setBrightEyes(on: boolean) {
+    this.glints = on ? PERK.brightEyes : 1;
+  }
+
+  private tick() {
+    this.ticks = (this.ticks + 1) % PERK.brightEyes;
+    if (this.glints > 1 || this.ticks === 0) this.glint();
   }
 
   /** The find lying on tile (col, row), if any. */

@@ -7,10 +7,15 @@ import { el, openPanel, picture, type Panel } from "./panel";
 const BIG_MS = 4500;
 const SMALL_MS = 3000;
 
-/** A card to cheer: something new in the book, or a village step all in (with Marlow's face, and its own tap). */
+/**
+ * A card to cheer: something new in the book, a village step all in (with Marlow's face, and its
+ * own tap), or (Milestone 7, on your own screen only) a level, a gift or a badge.
+ */
 export interface CelebrationCard extends Celebration {
-  /** A picture instead of the item's (Marlow's face). */
+  /** A picture instead of the item's (Marlow's face, a skill, a badge). */
   picture?: string;
+  /** How the picture is framed: "face" (round, the default), "skill" (as it is) or "medal" (a badge). */
+  pictureClass?: "face" | "skill" | "medal";
   /** What tapping it does, instead of opening the book. */
   tap?: () => void;
 }
@@ -51,7 +56,7 @@ export class Celebrations {
     const panel = openPanel({ cardClass: `celebrate${celebration.big ? "" : " small"}`, passThrough: true, position: "top" });
     // Over any card that opens after it (the book, the bag), not dimmed behind it.
     panel.card.parentElement?.classList.add("over");
-    if (celebration.picture) panel.card.append(picture(celebration.picture, "celebrate-icon face"));
+    if (celebration.picture) panel.card.append(picture(celebration.picture, `celebrate-icon ${celebration.pictureClass ?? "face"}`));
     else if (celebration.itemId) panel.card.append(picture(this.options.icon(celebration.itemId), "celebrate-icon"));
     const words = el("div");
     words.append(el("div", "celebrate-title", celebration.title), el("div", "celebrate-line", celebration.line));

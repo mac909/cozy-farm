@@ -293,6 +293,38 @@
     },
     "note": "Gifts for reaching a skill level. Each picture sits inside its 32×32 frame at the given rectangle; client/src/art/furnitureArt.ts cuts them out."
   },
+  "porch": {
+    "file": "porch.png",
+    "width": 64,
+    "height": 48,
+    "frames": {
+      "deck": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 16
+      },
+      "bench": {
+        "x": 0,
+        "y": 16,
+        "w": 32,
+        "h": 32
+      },
+      "lanternOff": {
+        "x": 32,
+        "y": 16,
+        "w": 16,
+        "h": 32
+      },
+      "lanternOn": {
+        "x": 48,
+        "y": 16,
+        "w": 16,
+        "h": 32
+      }
+    },
+    "note": "A cottage's porch (Milestone 7): the decking (a cottage wide, drawn under everyone), a bench and a lantern on a post, dark and lit. Each stands on the bottom of its rectangle."
+  },
   "fish": {
     "file": "fish.png",
     "width": 240,

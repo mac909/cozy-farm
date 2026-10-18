@@ -31,8 +31,12 @@ import {
   HouseState,
   PieceState,
   ProjectState,
+  type ProgressState,
   type VillageState,
 } from "./schema";
+import { isBadgeId, type BadgeId } from "./content/badges";
+import { SKILL_IDS } from "./content/skills";
+import { EMPTY_PROGRESS, NO_XP, isStatId, xpToday, type FarmerProgress, type StatId } from "./progress/farmerProgress";
 import type { Farmer, FarmerId, House, TileKey } from "./world/world";
 import { HUD_MINUTE_STEP, type GameClock } from "./time/clock";
 
@@ -310,6 +314,55 @@ export function writeForage(target: ArraySchema<ForageState>, items: Forage): vo
 /** What's lying about as the rules see it. Anything that doesn't make sense is left out. */
 export function readForage(source: Iterable<ForageState>): Forage {
   return Array.from(source).flatMap((cell) => (isForageId(cell.itemId) ? [{ itemId: cell.itemId, col: cell.col, row: cell.row }] : []));
+}
+
+/** Writes a map of numbers, only the entries that changed, dropping the ones that went. */
+function writeCounts(target: MapSchema<number>, counts: Readonly<Record<string, number | undefined>>): void {
+  for (const key of [...target.keys()]) if (counts[key] === undefined) target.delete(key);
+  for (const [key, n] of Object.entries(counts)) if (n !== undefined && target.get(key) !== n) target.set(key, n);
+}
+
+/** Copies a farmer's progress in, with today's experience as of `day` (none from another day). */
+export function writeProgress(target: ProgressState, progress: FarmerProgress, day: number): void {
+  writeCounts(target.xp, progress.xp);
+  writeCounts(target.today, xpToday(progress, day));
+  writeCounts(target.stats, progress.stats);
+  writeCounts(target.badges, progress.badges);
+  while (target.kinds.length > progress.kinds.length) target.kinds.pop();
+  progress.kinds.forEach((kind, i) => {
+    if (target.kinds[i] !== kind) target.kinds[i] = kind;
+  });
+}
+
+/**
+ * A farmer's progress as the rules see it, from the network state (today's experience as of `day`).
+ * Anything that doesn't make sense is left out. Gifts aren't sent: only the server hands them over.
+ */
+export function readProgress(source: ProgressState, day: number): FarmerProgress {
+  const skills = (map: MapSchema<number>) => {
+    const xp = { ...NO_XP };
+    for (const skill of SKILL_IDS) {
+      const n = map.get(skill);
+      if (typeof n === "number" && n >= 0) xp[skill] = n;
+    }
+    return xp;
+  };
+  const stats: Partial<Record<StatId, number>> = {};
+  source.stats.forEach((n, key) => {
+    if (isStatId(key)) stats[key] = n;
+  });
+  const badges: Partial<Record<BadgeId, number>> = {};
+  source.badges.forEach((n, key) => {
+    if (isBadgeId(key)) badges[key] = n;
+  });
+  return {
+    ...EMPTY_PROGRESS,
+    xp: skills(source.xp),
+    today: { day, xp: skills(source.today) },
+    stats,
+    kinds: Array.from(source.kinds).filter(isItemId),
+    badges,
+  };
 }
 
 /** Someone who helped with a project, as the card shows them: their face and name. */

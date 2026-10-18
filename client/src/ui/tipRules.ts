@@ -18,7 +18,8 @@ export type TipId =
   | "book"
   | "board"
   | "forage"
-  | "point";
+  | "point"
+  | "you";
 
 export const TIPS: Readonly<Record<TipId, string>> = {
   dig: "Pick the hoe in your hotbar, walk into the farm field and tap the big round button to dig.",
@@ -38,6 +39,7 @@ export const TIPS: Readonly<Record<TipId, string>> = {
     "Marlow's board stands by the seed stand. Hold something it needs (driftwood, branches) and walk up to it: the big button says Give. Tap Board to see what's wanted.",
   forage: "Driftwood washes up on the beach and branches fall under the trees every morning. The board wants them: carry them over and tap Give.",
   point: "The lighthouse is lit! Fish bite at the point after dark, and at its door you can Climb up for the view.",
+  you: "Farming, fishing and foraging each get better as you do them, with a little something at every level. Tap your face at the top right to see your skills and badges.",
 };
 
 /** What just happened in the game that might call for a tip. */
@@ -57,7 +59,8 @@ export type TipEvent =
   | "discovered"
   | "metKeeper"
   | "pickedUpMaterial"
-  | "lit";
+  | "lit"
+  | "progressed";
 
 const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   started: "dig",
@@ -76,6 +79,7 @@ const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   metKeeper: "board",
   pickedUpMaterial: "forage",
   lit: "point",
+  progressed: "you",
 };
 
 /** A tip that makes another out of date: moving in answers "go and move in". */

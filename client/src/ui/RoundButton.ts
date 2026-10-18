@@ -19,10 +19,14 @@ interface RoundButtonOptions {
 /** A big, thumb-sized button with a pixel-art icon. It fires as soon as it's touched. */
 export class RoundButton extends Phaser.GameObjects.Container {
   private readonly icon: Phaser.GameObjects.Image;
+  private readonly radius: number;
+  /** A small gold dot in the top corner: something new behind this button. */
+  private dot: Phaser.GameObjects.Arc | null = null;
 
   constructor(scene: Phaser.Scene, { size, icon, iconFrame, iconScale, hint, square, label, onPress }: RoundButtonOptions) {
     super(scene);
     const radius = size / 2;
+    this.radius = radius;
     let touch: Phaser.GameObjects.GameObject;
     if (square) {
       const tile = scene.add.graphics();
@@ -89,6 +93,17 @@ export class RoundButton extends Phaser.GameObjects.Container {
     touch.on(Phaser.Input.Events.POINTER_UP, release);
     touch.on(Phaser.Input.Events.POINTER_OUT, release);
     scene.add.existing(this);
+  }
+
+  /** Shows or hides the gold dot in the top right corner (something new behind the button). */
+  setDot(on: boolean) {
+    if (on && !this.dot) {
+      const at = this.radius * 0.72;
+      this.dot = this.scene.add.circle(at, -at, 6, 0xf2c64e).setStrokeStyle(2, 0x8a5a1c, 1);
+      this.add(this.dot);
+    }
+    this.dot?.setVisible(on);
+    return this;
   }
 
   setIcon(key: string, frame?: number) {

@@ -200,7 +200,8 @@ export class Fishing {
       case "missed":
         this.options.me.hideBubble();
         this.options.me.showHint(MISS_TEXT[event.reason]);
-        this.options.room()?.send("reelIn", {} satisfies ReelInMessage);
+        // One that got away after it was hooked still teaches you a little (Milestone 7).
+        this.options.room()?.send("reelIn", { gotAway: event.reason === "got-away" } satisfies ReelInMessage);
         this.finish(false);
         break;
     }

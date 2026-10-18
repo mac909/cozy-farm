@@ -28,10 +28,11 @@ import {
   writeForage,
   writeHouses,
   writePieces,
+  writeProgress,
   writeVillage,
 } from "../../../shared/stateSync";
 import { makeRoom } from "../../../shared/decor/makeRoom";
-import { builtThings } from "../../../shared/village/built";
+import { builtKey, builtThings } from "../../../shared/village/built";
 import { startOfServer, type PlacesFor } from "../../../shared/world/night";
 import { canStandAt } from "../../../shared/world/places";
 import { todayFor, type Today } from "../../../shared/world/today";
@@ -61,6 +62,7 @@ import { registerHouses } from "./houses";
 import { Bedtime } from "./night";
 import { registerShop } from "./shop";
 import { registerVillage } from "./village";
+import { catchUp, checkEveryone } from "./progress";
 
 const WORLD_WIDTH = VILLAGE_MAP.width * TILE_SIZE;
 const WORLD_HEIGHT = VILLAGE_MAP.height * TILE_SIZE;
@@ -83,6 +85,8 @@ export class FarmRoom extends Room<FarmState> {
   private bedtime!: Bedtime;
   private fishing!: ReturnType<typeof registerFishing>;
   private meadow!: Meadow;
+  /** What was built at the last tick, to notice the lamp being lit at dusk (everyone's Lamplighter badge). */
+  private builtAt = "";
 
   onCreate() {
     this.setState(new FarmState());
@@ -136,6 +140,8 @@ export class FarmRoom extends Room<FarmState> {
     player.character = look.character;
     player.farmerId = farmerId;
     this.state.players.set(client.sessionId, player);
+    // A gift that waited for room, and badges that follow from the world as it is (Milestone 7).
+    catchUp(this, farmerId);
     this.syncWorld();
     console.log(`${player.name} (${client.sessionId}) joined${known ? "" : " as someone new"} (${this.state.players.size} online)`);
 
@@ -245,7 +251,9 @@ export class FarmRoom extends Room<FarmState> {
     writeForage(this.state.forage, world.forage.items);
     this.state.players.forEach((player) => {
       const farmer = farmerOf(world, player.farmerId);
-      if (farmer) writeBag(player.bag, farmer.bag);
+      if (!farmer) return;
+      writeBag(player.bag, farmer.bag);
+      writeProgress(player.progress, farmer.progress, world.clock.day);
     });
   }
 
@@ -263,6 +271,12 @@ export class FarmRoom extends Room<FarmState> {
     }
     this.bedtime.check();
     this.meadow.check();
+    // Something opened with the clock (the lamp lit at dusk): the village's badges go to everyone.
+    const built = builtKey(builtThings(this.world));
+    if (built !== this.builtAt) {
+      if (this.builtAt !== "") checkEveryone(this);
+      this.builtAt = built;
+    }
   }
 
   private movePlayer(client: Client, message: MoveMessage) {

@@ -78,6 +78,20 @@ export const BOARD_KEY = "village-board";
 /** Marlow: the pack's OldMan3, and his face. */
 export const KEEPER_KEY = "keeper";
 export const KEEPER_FACE_KEY = "keeper-face";
+/** Our porch (Milestone 7): the decking, the bench and the lantern, dark and lit, as named frames (PORCH_FRAME). */
+export const PORCH_KEY = "porch";
+export const PORCH_FRAME = { deck: "deck", bench: "bench", lanternOff: "lanternOff", lanternOn: "lanternOn" } as const;
+/** Where each porch piece is on porch.png (tools/sprites/porch.ts). */
+const PORCH_ON_SHEET: Readonly<Record<keyof typeof PORCH_FRAME, { x: number; y: number; w: number; h: number }>> = {
+  deck: { x: 0, y: 0, w: 64, h: 16 },
+  bench: { x: 0, y: 16, w: 32, h: 32 },
+  lanternOff: { x: 32, y: 16, w: 16, h: 32 },
+  lanternOn: { x: 48, y: 16, w: 16, h: 32 },
+};
+/** Badge pictures made at boot from bigger art (Milestone 7): the lit lighthouse's top, a little cottage, the porch. 32 × 32. */
+export const BADGE_LIGHTHOUSE_KEY = "badge-lighthouse";
+export const BADGE_COTTAGE_KEY = "badge-cottage";
+export const BADGE_PORCH_KEY = "badge-porch";
 /** Each character's face (the pack's facesets, 38 × 38), for the board's helpers. */
 export const faceKey = (id: CharacterId) => `face-${id}`;
 /** Furniture icons for the hotbar, the bag and the store: 32×32, made at boot from each piece's picture. */
@@ -130,6 +144,7 @@ export function loadArt(scene: Phaser.Scene): void {
   load.spritesheet(MATERIALS_KEY, `${CUSTOM}materials.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(LIGHTHOUSE_KEY, `${CUSTOM}lighthouse.png`, { frameWidth: 48, frameHeight: 96 });
   load.spritesheet(BOARD_KEY, `${CUSTOM}village-board.png`, { frameWidth: 32, frameHeight: 32 });
+  load.image(PORCH_KEY, `${CUSTOM}porch.png`);
   load.spritesheet(EMOTES_KEY, `${CUSTOM}emotes.png`, { frameWidth: 14, frameHeight: 13 });
   load.spritesheet(UI_ICONS_KEY, `${CUSTOM}ui-icons.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(SHIPPING_CRATE_KEY, `${CUSTOM}shipping-crate.png`, { frameWidth: 32, frameHeight: 32 });
@@ -194,6 +209,34 @@ function createTextures(scene: Phaser.Scene): void {
     scene.textures.get(sheetKey(art.sheet)).add(pieceFrame(id, turn), 0, art.x, art.y, art.w, art.h);
   }
   for (const id of FURNITURE_IDS) furnitureIcon(scene, id);
+
+  const porch = scene.textures.get(PORCH_KEY);
+  for (const [name, r] of Object.entries(PORCH_ON_SHEET)) porch.add(name, 0, r.x, r.y, r.w, r.h);
+  badgePictures(scene);
+}
+
+/**
+ * Pictures for badges and cards that the game draws bigger elsewhere (Milestone 7), each 32 × 32:
+ * the top of the lit lighthouse, the orange cottage at half size, and the porch's bench.
+ */
+function badgePictures(scene: Phaser.Scene) {
+  const draw = (key: string, paint: (ctx: CanvasRenderingContext2D) => void) => {
+    const canvas = scene.textures.createCanvas(key, 32, 32);
+    if (!canvas) return;
+    canvas.context.imageSmoothingEnabled = false;
+    paint(canvas.context);
+    canvas.refresh();
+  };
+  const source = (key: string) => scene.textures.get(key).getSourceImage() as HTMLImageElement;
+  // The lit lamp room: the top of the lit frame (the fourth, 48 wide).
+  draw(BADGE_LIGHTHOUSE_KEY, (ctx) => ctx.drawImage(source(LIGHTHOUSE_KEY), 3 * 48 + 8, 0, 32, 32, 0, 0, 32, 32));
+  const cottage = COTTAGES.orange;
+  draw(BADGE_COTTAGE_KEY, (ctx) => ctx.drawImage(source(HOUSE_SHEET_KEY), cottage.x, cottage.y, cottage.width, cottage.height, 0, 6, 32, 24));
+  draw(BADGE_PORCH_KEY, (ctx) => {
+    const sheet = source(PORCH_KEY);
+    const { bench } = PORCH_ON_SHEET;
+    ctx.drawImage(sheet, bench.x, bench.y + 12, bench.w, bench.h - 12, 0, 8, bench.w, bench.h - 12);
+  });
 }
 
 /**

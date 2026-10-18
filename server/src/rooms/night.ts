@@ -9,6 +9,7 @@ import { endNight } from "../../../shared/world/night";
 import { placeNear, SERVER_NEAR_TILES, wakeSpots } from "../../../shared/world/places";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { liveWorld } from "../world/liveWorld";
+import { checkEveryone, credit } from "./progress";
 import type { FarmRoom } from "./FarmRoom";
 
 /**
@@ -61,8 +62,19 @@ export class Bedtime {
    */
   startNight() {
     const before = this.room.world;
+    // Who went to bed (Milestone 7): together with someone (Side by Side), in someone else's house (Sleepover).
+    const sleepers = new Map<string, boolean>();
+    this.room.state.players.forEach((player) => {
+      if (!player.inBed || !player.farmerId) return;
+      const house = houseAt(VILLAGE_MAP, player);
+      const away = house !== null && before.houses[house.id] !== undefined && before.houses[house.id].owner !== player.farmerId;
+      sleepers.set(player.farmerId, (sleepers.get(player.farmerId) ?? false) || away);
+    });
     const { world, report } = endNight(before, this.room.placesFor);
     this.room.change(this.room.roomForBuilt(before, world));
+    for (const [farmerId, sleepover] of sleepers) credit(this.room, farmerId, { kind: "night", together: sleepers.size >= 2, sleepover });
+    // What the night built may have earned everyone a badge (a porch, the lighthouse).
+    checkEveryone(this.room);
     this.room.state.players.forEach((player) => (player.inBed = false));
     this.drops = [];
     liveWorld().saveNow();

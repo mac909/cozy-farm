@@ -22,6 +22,7 @@ import { MARKERS } from "./markers";
 import { seedStand } from "./seedStand";
 import { FRAME, SEASIDE, SEASIDE_FRAMES } from "./seaside";
 import { REWARDS, REWARD_FRAMES } from "./rewards";
+import { PORCH_FRAMES, bench, deck, lantern } from "./porch";
 import { SAND_GRASS, SAND_WATER, recolourBlock } from "./sand";
 import { soilTile } from "./soil";
 import { UI_ICONS } from "./ui";
@@ -199,6 +200,18 @@ function renderRewards(): void {
   });
 }
 
+function renderPorch(): void {
+  const sheet = new Img(64, 48);
+  sheet.blit(deck(), PORCH_FRAMES.deck.x, PORCH_FRAMES.deck.y);
+  sheet.blit(outline(bench()), PORCH_FRAMES.bench.x, PORCH_FRAMES.bench.y);
+  sheet.blit(outline(lantern(false)), PORCH_FRAMES.lanternOff.x, PORCH_FRAMES.lanternOff.y);
+  sheet.blit(outline(lantern(true)), PORCH_FRAMES.lanternOn.x, PORCH_FRAMES.lanternOn.y);
+  save("porch", sheet, {
+    frames: PORCH_FRAMES,
+    note: "A cottage's porch (Milestone 7): the decking (a cottage wide, drawn under everyone), a bench and a lantern on a post, dark and lit. Each stands on the bottom of its rectangle.",
+  });
+}
+
 function renderFish(): void {
   const frames = FISH_IDS.map((id) => outline(fromGrid(FISH_ART[id].grid, FISH_ART[id].legend)));
   save("fish", packRows([frames], T, T), {
@@ -270,6 +283,7 @@ renderEmotes();
 renderUiIcons();
 renderSeaside();
 renderRewards();
+renderPorch();
 renderFish();
 renderBugs();
 renderFishing();

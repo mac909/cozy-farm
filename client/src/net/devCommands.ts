@@ -8,8 +8,13 @@ export interface DevCommands {
   setTime(time: string | number): void;
   /** Add coins to the shared wallet. */
   addCoins(amount: number): void;
-  /** Fill the board's open step as if everything was given (the cheer comes on every screen). */
-  give(): void;
+  /**
+   * Fill the board's open step as if everything was given (the cheer comes on every screen):
+   * dev.give() for the village's (or else your porch), dev.give("house2:porch") for that one.
+   */
+  give(project?: string): void;
+  /** Experience in one of your skills: dev.xp("fishing", 100). Levels, gifts and badges come as in play. */
+  xp(skill: "farming" | "fishing" | "foraging", amount: number): void;
   /** Build whatever's been gathered now, instead of overnight. */
   build(): void;
   /**
@@ -74,7 +79,8 @@ export function installDevCommands(
       else send({ command: "setTime", value });
     },
     addCoins: (amount) => send({ command: "addCoins", value: amount }),
-    give: () => send({ command: "fillStep" }),
+    give: (project) => send({ command: "fillStep", ...(typeof project === "string" ? { project } : {}) }),
+    xp: (skill, amount) => send({ command: "xp", skill, value: amount }),
     build: () => send({ command: "build" }),
   };
 }

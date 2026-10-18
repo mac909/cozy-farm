@@ -11,6 +11,7 @@ import type {
   BuyMessage,
   CastStartedMessage,
   CatchBugMessage,
+  ClimbMessage,
   EmoteEvent,
   EmoteMessage,
   JoinOptions,
@@ -21,6 +22,7 @@ import type {
   MoveItemMessage,
   MoveMessage,
   PlacedMessage,
+  ProgressMessage,
   ShipMessage,
   SplitStackMessage,
   UnshipMessage,
@@ -36,7 +38,13 @@ import { EMPTY_VILLAGE, type BuiltStep, type Village } from "../../../shared/vil
 import { lookAt, NOTHING_BUILT } from "../../../shared/world/gates";
 import { villageRect } from "../../../shared/world/houses";
 import { todayFor, type Today } from "../../../shared/world/today";
-import { readForage, readVillage, type HelperView } from "../../../shared/stateSync";
+import { readForage, readProgress, readVillage, type HelperView } from "../../../shared/stateSync";
+import { PERK, SKILLS } from "../../../shared/content/skills";
+import { EMPTY_PROGRESS, hasPerk, type FarmerProgress } from "../../../shared/progress/farmerProgress";
+import { YouPanel } from "../ui/YouPanel";
+import { progressCards, seenNow, somethingNew } from "../ui/youText";
+import { loadSeen, saveSeen } from "../ui/youStorage";
+import { badgeIcon } from "../art/badgeArt";
 import { BoardPanel } from "../ui/BoardPanel";
 import { keeperNotes, type BoardState, type KeeperNote } from "../ui/boardText";
 import { showKeeperNote, showNotesList } from "../ui/KeeperNote";
@@ -202,6 +210,8 @@ export class WorldScene extends Phaser.Scene {
   private viewing = false;
   /** More sea below the village while looking at the view, so the rooms drawn down there stay out of sight. */
   private viewSea!: Phaser.GameObjects.Rectangle;
+  /** Your own skills and badges (Milestone 7), as the server last said. Never anyone else's. */
+  private progress: FarmerProgress = EMPTY_PROGRESS;
 
   constructor() {
     super("world");
@@ -215,6 +225,8 @@ export class WorldScene extends Phaser.Scene {
     this.farmerId = loadFarmerId();
     this.look = savedLook ?? { name: "", character: DEFAULT_CHARACTER };
     this.registry.set("look", this.look);
+    // Set before the HUD starts listening, so later changes reach it (a first set isn't a change).
+    this.registry.set("youNew", false);
 
     const spawn = tileCenter(VILLAGE_MAP.spawn.col, VILLAGE_MAP.spawn.row);
     this.player = this.physics.add.sprite(spawn.x, spawn.y, characterKey(this.look.character), 0);
@@ -259,7 +271,8 @@ export class WorldScene extends Phaser.Scene {
     this.scene.launch("ui");
     this.ui = this.scene.get("ui") as UIScene;
     this.ui.events.on("emote", (emote: EmoteId) => this.emote(emote));
-    this.ui.events.on("editLook", () => void this.changeLook());
+    // Your face at the top right: the You card (skills, badges, and changing your name or look).
+    this.ui.events.on("editLook", () => this.openYou());
     this.ui.events.on("bag", () => this.toggleBag());
     this.ui.events.on("book", () => this.toggleBook());
     this.celebrations = new Celebrations({
@@ -342,7 +355,7 @@ export class WorldScene extends Phaser.Scene {
       built: () => this.today.built,
       keeperTile: () => (this.homes.currentArea === VILLAGE ? this.villageView.keeperAt : null),
       wanted: (itemId) => this.wanted(itemId),
-      bugNear: (position) => this.meadow.bugNear(position),
+      bugNear: (position) => this.meadow.bugNear(position, hasPerk(this.progress, "lightStep") ? PERK.lightStepTiles : 0),
       on: {
         catchBug: (id, bugId) => this.catchBug(id, bugId),
         fish: (_spot, col, row) => this.fishing.start(col, row),
@@ -659,6 +672,7 @@ export class WorldScene extends Phaser.Scene {
     room.onMessage("castStarted", (message: CastStartedMessage) => this.fishing.started(message));
     room.onMessage("bookEvent", (message: BookEventMessage) => this.celebrate(message));
     room.onMessage("villageEvent", (message: VillageEventMessage) => this.onVillageEvent(message));
+    room.onMessage("progress", (message: ProgressMessage) => this.onProgress(message));
     // Where you were isn't somewhere you can stand any more: you're at the spawn point.
     room.onMessage("placed", (message: PlacedMessage) => {
       if (Number.isFinite(message?.x) && Number.isFinite(message?.y)) this.teleport(message.x, message.y, "down");
@@ -708,6 +722,8 @@ export class WorldScene extends Phaser.Scene {
       changed = true;
     }
     if (changed) this.refreshPanel();
+    // Your own skills and badges (Milestone 7).
+    if (me) this.readProgress(readProgress(me.progress, clock.day));
 
     this.farming.readFarm(state);
     this.homes.readState(state);
@@ -723,6 +739,81 @@ export class WorldScene extends Phaser.Scene {
       const free = VILLAGE_MAP.houses.some((plan) => !this.homes.houseViews[plan.id]);
       if (free) this.tips.event("homeless");
     }
+  }
+
+  // ---------- You: skills and badges (Milestone 7) ----------
+
+  /** Your skills and badges as the server last said: the You card follows, and the gold dot says if there's something new. */
+  private readProgress(progress: FarmerProgress) {
+    if (JSON.stringify(progress) === JSON.stringify(this.progress)) return;
+    this.progress = progress;
+    this.beach.setBrightEyes(hasPerk(progress, "brightEyes"));
+    if (this.panel instanceof YouPanel) {
+      this.panel.update(progress, this.clock.day);
+      if (this.farmerId) saveSeen(this.farmerId, seenNow(progress));
+    }
+    this.showYouDot();
+  }
+
+  /** The gold dot on your face: a level or a badge this device hasn't shown you yet. */
+  private showYouDot() {
+    const isNew = this.farmerId !== null && somethingNew(this.progress, loadSeen(this.farmerId));
+    if (this.registry.get("youNew") !== isNew) this.registry.set("youNew", isNew);
+  }
+
+  /** The You card: your skills, perks and badges, and Change name or look. */
+  private openYou(tab?: "skills" | "badges") {
+    if (this.panel instanceof YouPanel) {
+      this.closePanel();
+      return;
+    }
+    const you = this.openPanel(
+      (onClose) =>
+        new YouPanel({
+          name: this.look.name,
+          face: iconUrl(this.textures, { key: faceKey(this.look.character) }),
+          skillIcon: (skill) => iconUrl(this.textures, itemIcon(SKILLS[skill].icon)),
+          itemIcon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+          badgeIcon: (icon) => iconUrl(this.textures, badgeIcon(icon)),
+          tab,
+          changeLook: () => void this.changeLook(),
+          onClose,
+        }),
+    );
+    if (!you) return;
+    you.update(this.progress, this.clock.day);
+    if (this.farmerId) saveSeen(this.farmerId, seenNow(this.progress));
+    this.showYouDot();
+  }
+
+  /**
+   * A level, a gift or a badge: a small card at the top of your own screen (nobody else's), with
+   * the jingle and a sparkle over your head. Tapping it opens the You card.
+   */
+  private onProgress(message: ProgressMessage) {
+    const events = Array.isArray(message?.events) ? message.events : [];
+    for (const card of progressCards(events)) {
+      const picture =
+        "skill" in card.picture
+          ? iconUrl(this.textures, itemIcon(SKILLS[card.picture.skill].icon))
+          : "item" in card.picture
+            ? iconUrl(this.textures, itemIcon(card.picture.item))
+            : iconUrl(this.textures, badgeIcon(card.picture.badge));
+      this.celebrations.add({
+        title: card.title,
+        line: card.line,
+        itemId: null,
+        big: card.big,
+        picture,
+        pictureClass: "badge" in card.picture ? "medal" : "skill",
+        tap: () => {
+          if (!(this.panel instanceof YouPanel)) this.openYou(card.tab);
+        },
+      });
+      if (card.big && !this.me.hidden) playBurst(this, this.player.x, this.player.y - 10, "twinkle", this.player.depth + 5);
+    }
+    if (events.length > 0) this.tips.event("progressed");
+    this.showYouDot();
   }
 
   // ---------- The village: Marlow, the board, the lighthouse (Milestone 6) ----------
@@ -998,6 +1089,8 @@ export class WorldScene extends Phaser.Scene {
     camera.centerOn(lighthouse.x + lighthouse.width / 2, lighthouse.y);
     this.viewSea.setVisible(true);
     this.ui.setViewing(true);
+    // After dark, the view counts for Up the Lighthouse (Milestone 7).
+    this.room?.send("climb", {} satisfies ClimbMessage);
   }
 
   /** Back down the lighthouse. */
