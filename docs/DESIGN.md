@@ -25,10 +25,12 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Time | Only passes while playing (Stardew-style days) | 2026-10-17 |
 | Sharing | Shared farm and wallet; each player has their own house | 2026-10-17 |
 | Setting | Seaside village | 2026-10-17 |
-| Look | A name (up to 12 characters) and one of six preset shirt colors, picked on first join and remembered on that device. Change it any time from the button in the top right. | 2026-10-17 |
+| Look | A name (up to 12 characters) and one of 12 Ninja Adventure characters, picked on first join and remembered on that device. Change it any time from the button in the top right. Looks saved with the old shirt colors load as a similar-looking character. | 2026-10-18 |
 | Emotes | Wave and heart, as buttons in the bottom right (keys 1 and 2). A bubble shows above your head for 2 seconds, for everyone. | 2026-10-17 |
 | Farming rules | Crops never die; six starter crops, two of which regrow; the day ends when everyone online is in bed. Details under Time and Farming. | 2026-10-17 |
 | Art pack | Ninja Adventure (pixel-boy, CC0) as the base, plus our own matching sprites for crops, beach and shells. | 2026-10-17 |
+| Map | Painted in Tiled (`shared/world/village.json`). Hidden layers mark where nobody can walk and where farming is allowed; objects mark the spawn point and the shipping crate. The server reads the same file. | 2026-10-18 |
+| Music | "Calm Village" from the pack loops softly, starting at the first tap or key press. A music button next to the look button mutes it, remembered on that device. | 2026-10-18 |
 
 ## Setting
 
@@ -79,10 +81,11 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ## Art and sound
 
-- Placeholder art drawn in code until we pick a pack.
-- Candidate packs: Sprout Lands (Cup Nooble) and Cute Fantasy (Kenmi), both on itch.io. The pack needs beach and water tiles. Stick to one artist so styles don't clash.
-- Kenney packs (CC0) for UI and sound effects.
-- Calm music; tracks picked later.
+- Ninja Adventure (pixel-boy, CC0) for tiles, characters, critters, items, UI and music. One artist, so styles don't clash.
+- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, a wave emote.
+- Characters walk in four directions; you can walk behind tree tops.
+- Music: "Calm Village" on a soft loop. The pack's "Peaceful", "Sunny" and "Aquatic" are imported too, for later (other times of day or places).
+- Sound effects later, from the pack (already imported: menu, coin, water, grass, waves).
 
 ## Later ideas
 
@@ -90,6 +93,5 @@ Seasons, weather, day/night lighting, cooking, animals (chickens, our own pets),
 
 ## Open questions
 
-- Characters: beyond a name and shirt color, presets or a simple character creator? (Depends on the art pack.)
 - Our names and pets, if we want them in the game.
 - What's the game called?

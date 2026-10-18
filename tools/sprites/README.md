@@ -47,5 +47,7 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
 - `shipping-crate.png`: 32×32 frames, closed then open.
 - `sand-grass.png`, `sand-water.png`: same layout as the source blocks in the pack's `TilesetFloor.png` (from y 112)
   and `TilesetWater.png` (top-left block), so their autotile rules carry over.
+- `beach-terrain.png`: `sand-grass.png` stacked on `sand-water.png`, so the map's one Tiled terrain set ("Beach": grass, sand,
+  sea) covers both.
 - `emotes.png`: 14×13 frames (the pack's bubble size), in `EMOTES` order from `shared/content/emotes.ts`.
 - `ui-icons.png`, `map-markers.png`: one row of 16×16 frames, names in `manifest.json`.

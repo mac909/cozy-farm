@@ -62,7 +62,7 @@ export function parseTiledMap(input: unknown): WorldMap {
   }
   for (const tileset of json.tilesets) {
     if (tileset.source) {
-      throw new Error(`Tileset "${tileset.source}" is external: embed it in the map (Tiled: Map → Embed Tilesets)`);
+      throw new Error(`Tileset "${tileset.source}" is external: embed it in the map (Tiled: the Embed Tileset button in the Tilesets panel)`);
     }
   }
 

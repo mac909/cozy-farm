@@ -45,13 +45,29 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 | `npm run farm:backup` | Copies the real farm's save into `%OneDrive%\CozyFarm\backups`, keeping the newest 14. `scripts/backup-farm.ps1` has the nightly scheduled-task command. |
 | `npm run farm:restore` | Asks which backup to restore (or `-- <path>`), checks that it loads, then swaps it in and restarts the farm. The replaced save stays in the volume as `saves.before-restore-<date>_<time>.sqlite`; `scripts/restore-farm.ps1` says how to undo. |
 
+## Editing the map
+
+The village is a [Tiled](https://www.mapeditor.org/) map, `shared/world/village.json`. The client draws it, and the server reads its size, spawn point, collisions and farmland from the same file.
+
+- Install Tiled (free): `winget install Tiled.Tiled`. Open `shared/world/village.json` and save with Ctrl+S; it stays JSON.
+- Layers, top to bottom:
+  - `Above`: tree tops and palm fronds, drawn over the characters. Any tile layer with the bool property `aboveCharacters` set does this.
+  - `Decor` (trunks, fence, dock, boat), `Details` (flowers, grass tufts), `Ground` (grass, sand, sea). Every other tile layer is drawn too, under the characters, in Tiled's order.
+  - `Collision`, hidden in the game: paint the red marker wherever nobody can walk. Only feet collide, so block a tree's trunk row, not its top.
+  - `Farmland`, hidden in the game: the green marker where farming is allowed.
+  - `Objects`: the `spawn` point, the `shippingCrate` rectangle (the crate is drawn there), and `ripple` points on the sea. They're found by name.
+- Terrain brush: open View → Views and Toolbars → Terrain Sets, pick "Beach" in `beach-terrain`, and paint Grass, Sand or Sea; Tiled picks the edge tiles. Keep sand between grass and sea: there are no grass-to-sea tiles.
+- Anything new that should block the way (a tree, a fence) also needs `Collision` painted under it.
+- New tilesets: 16×16 tiles, the image inside `client/public/assets/`, and embedded in the map (tick "Embed in map" when creating it, or press Embed Tileset in the Tilesets panel), because Phaser can't read separate `.tsx` files. Keep Map → Map Properties → Tile Layer Format on CSV.
+- Run `npm test` after saving: it checks the map loads, the spawn is walkable, the whole farm field and the shipping crate can be reached, and every tileset image exists. `npm run dev` picks up the change when the page reloads.
+
 ## Rules
 
 - **The server owns the world.** Anything shared (crops, items, money, furniture, the clock) changes only in the server room, in response to client messages. Clients send intents ("water tile 12,4"), not results. One exception: each client moves its own character locally and reports its position.
 - **Game rules are pure functions in `shared/`**, with tests and no Phaser or Colyseus imports. Rooms and scenes call them.
 - **Content is data.** Define crops, items, furniture, critters, and maps in data files under `shared/`, never inline in logic.
 - **Touch first.** Every action must work with one thumb on a phone as well as with a keyboard. HUD and controls go in `UIScene` (camera zoom 1). The world goes in `WorldScene` (integer zoom only, so the pixels stay crisp).
-- **Pixel art:** 16×16 tiles, `pixelArt: true`. The art is the Ninja Adventure pack (CC0) in `client/public/assets/ninja-adventure/`, plus our own sprites in `client/public/assets/custom/`, drawn as data in `tools/sprites/` (see its README for style rules and sheet layouts). Until the art is wired in, the game still draws placeholder art in code in `client/src/art/placeholderArt.ts`; its frame order must match `shared/world/tiles.ts`. The dev-only page `/art-preview.html` shows the sprites next to the pack.
+- **Pixel art:** 16×16 tiles, `pixelArt: true`. The art is the Ninja Adventure pack (CC0) in `client/public/assets/ninja-adventure/`, plus our own sprites in `client/public/assets/custom/`, drawn as data in `tools/sprites/` (see its README for style rules and sheet layouts). `client/src/art/assets.ts` loads it all and names the texture keys; character sheets are 4 columns (facing down, up, left, right) with the walk cycle in rows 0–3. The village is a Tiled map (see Editing the map below). The dev-only page `/art-preview.html` shows our sprites next to the pack. Need more from the pack? It's free on itch.io (link in `CREDITS.md`); copy in only the files the game uses.
 - **Protect the real farm.** It runs in Docker on :8080, with saves in the `farm-data` volume. Never run `docker compose down -v`, never delete that volume, and never point dev at it. Dev uses its own ports and, from Milestone 2, its own `data-dev/` folder. Test the farm scripts by pointing their `-Container`, `-Volume` and `-Image` options at throwaway ones.
 - **Saves are versioned** (from Milestone 2). Every save carries a `version`. Changing the format means adding a migration, never breaking old saves. The save layer is `server/src/persistence/`: SQLite through Node's built-in `node:sqlite`, in the folder named by `DATA_DIR` (`data-dev/` in dev, the farm-data volume in Docker). The world's save format and its migrations are in `worldSave.ts`. If a save won't load, the server must stop rather than start a fresh world over it.
 - **Two trusted players.** No accounts, passwords, or anti-cheat. Validate messages only enough to avoid crashes or corrupt state (types, bounds).

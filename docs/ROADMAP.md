@@ -19,7 +19,7 @@ Every milestone ends with something playable. Tick items off as they land.
 - [x] Reconnect automatically after Wi-Fi blips or a server restart
 - [x] Pick the art pack: Ninja Adventure plus our own crop, soil, beach and crate sprites (in `client/public/assets/`)
 - [x] HTTPS address and home-screen install on phones
-- [ ] Use the new art in the game and move the map into Tiled
+- [x] Use the new art in the game and move the map into Tiled; pick a character; soft music with a mute button
 
 ## Milestone 2: Farming (the first version to show her)
 
@@ -50,4 +50,4 @@ Every milestone ends with something playable. Tick items off as they land.
 
 ## Later
 
-Seasons, weather, day/night, cooking, animals, villagers, music, festivals.
+Seasons, weather, day/night, cooking, animals, villagers, more music, festivals.
