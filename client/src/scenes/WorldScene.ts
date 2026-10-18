@@ -14,7 +14,9 @@ import type {
   MorningMessage,
   MoveItemMessage,
   MoveMessage,
+  ShipMessage,
   SplitStackMessage,
+  UnshipMessage,
   WakeUpMessage,
   YouMessage,
 } from "../../../shared/messages";
@@ -22,7 +24,8 @@ import { clampMove, type Facing, facingFor, isFacing, type Vec } from "../../../
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
 import { countOf, type Inventory } from "../../../shared/inventory/inventory";
-import { readBag, readClock } from "../../../shared/stateSync";
+import type { Crate } from "../../../shared/economy/shop";
+import { readBag, readClock, readCrate } from "../../../shared/stateSync";
 import type { GameClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { COLLISION_LAYER, FARMLAND_LAYER, isAboveCharacters, OBJECTS_LAYER } from "../../../shared/world/tiledMap";
@@ -48,6 +51,7 @@ import { loadFarmerId, saveFarmerId } from "../ui/farmerStorage";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
 import { BagPanel } from "../ui/BagPanel";
+import { CratePanel } from "../ui/CratePanel";
 import { Bedtime } from "../world/Bedtime";
 import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
@@ -97,6 +101,9 @@ export class WorldScene extends Phaser.Scene {
   private lastSent = { x: NaN, y: NaN, facing: "down" as Facing, at: 0 };
   private farming!: Farming;
   private bedtime!: Bedtime;
+  /** The shipping crate on the dock, and what's in it as the server last said. */
+  private crateSprite!: Phaser.GameObjects.Image;
+  private crate: Crate = [];
 
   constructor() {
     super("world");
@@ -168,7 +175,7 @@ export class WorldScene extends Phaser.Scene {
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
       busy: () => this.bedtime.asleep || this.panel?.isOpen === true,
-      places: { tent: () => this.bedtime.sleep() },
+      places: { tent: () => this.bedtime.sleep(), crate: () => this.openCrate() },
     });
     this.ui.events.on("action", () => this.farming.act());
 
@@ -227,7 +234,7 @@ export class WorldScene extends Phaser.Scene {
     collision.setCollisionByExclusion([-1]);
 
     const crate = VILLAGE_MAP.shippingCrate;
-    this.add
+    this.crateSprite = this.add
       .image(crate.x, crate.y, SHIPPING_CRATE_KEY, 0)
       .setOrigin(0, 0)
       .setDepth(crate.y + crate.height);
@@ -336,6 +343,13 @@ export class WorldScene extends Phaser.Scene {
       this.registry.set("coins", state.coins);
       changed = true;
     }
+    const crate = readCrate(state.crate);
+    if (JSON.stringify(crate) !== JSON.stringify(this.crate)) {
+      this.crate = crate;
+      // The lid stands open while something's waiting to be sold.
+      this.crateSprite.setFrame(crate.length > 0 ? 1 : 0);
+      changed = true;
+    }
     if (changed) this.refreshPanel();
 
     this.farming.readFarm(state);
@@ -434,9 +448,27 @@ export class WorldScene extends Phaser.Scene {
     bag?.update(this.registry.get("bag"), this.registry.get("coins"));
   }
 
-  /** Keeps an open panel up to date with the bag and coins. */
+  /** Next to the crate: opens the crate card. */
+  private openCrate() {
+    const crate = this.openPanel(
+      (onClose) =>
+        new CratePanel({
+          icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+          coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
+          ship: (slot, count) => this.room?.send("ship", { slot, count } satisfies ShipMessage),
+          unship: (itemId, count) => this.room?.send("unship", { itemId, count } satisfies UnshipMessage),
+          onClose,
+        }),
+    );
+    this.refreshPanel();
+    return crate;
+  }
+
+  /** Keeps an open panel up to date with the bag, the crate and the coins. */
   private refreshPanel() {
-    if (this.panel instanceof BagPanel) this.panel.update(this.registry.get("bag"), this.registry.get("coins"));
+    const bag = this.registry.get("bag") as Inventory | null;
+    if (this.panel instanceof BagPanel) this.panel.update(bag, this.registry.get("coins"));
+    if (this.panel instanceof CratePanel) this.panel.update(bag, this.crate);
   }
 
   private emote(emote: EmoteId) {

@@ -16,13 +16,14 @@ import type {
 import { isFacing } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import { FarmState, Player } from "../../../shared/schema";
-import { steppedMinute, writeBag, writeClock, writeFarm } from "../../../shared/stateSync";
+import { steppedMinute, writeBag, writeClock, writeCrate, writeFarm } from "../../../shared/stateSync";
 import { tickClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { addFarmer, farmerOf, isFarmerId, listFarmers, setFarmerLook, type FarmerId, type World } from "../../../shared/world/world";
 import { liveWorld } from "../world/liveWorld";
 import { registerBag } from "./bag";
+import { registerCrate } from "./crate";
 import { registerDevCommands } from "./dev";
 import { registerFarming } from "./farming";
 import { Bedtime } from "./night";
@@ -56,6 +57,7 @@ export class FarmRoom extends Room<FarmState> {
     // Each feature's messages live in their own file in this folder.
     registerFarming(this);
     registerBag(this);
+    registerCrate(this);
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
@@ -154,6 +156,7 @@ export class FarmRoom extends Room<FarmState> {
     writeClock(this.state.clock, world.clock);
     if (this.state.coins !== world.coins) this.state.coins = world.coins;
     writeFarm(this.state.farm, world.farm);
+    writeCrate(this.state.crate, world.crate);
     this.state.players.forEach((player) => {
       const farmer = farmerOf(world, player.farmerId);
       if (farmer) writeBag(player.bag, farmer.bag);

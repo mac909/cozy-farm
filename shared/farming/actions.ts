@@ -104,6 +104,12 @@ export type HintReason =
   | "no-can"
   | "no-seeds"
   | "not-near-tent"
+  | "not-near-crate"
+  | "not-sellable"
+  | "crate-bag-full"
+  | "not-near-stand"
+  | "not-enough-coins"
+  | "not-for-sale"
   | "coming-soon";
 
 /** A hint, with the details some of them need. */
@@ -131,6 +137,12 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "no-can": "You need the watering can for that.",
   "no-seeds": "Pick some seeds from your hotbar.",
   "not-near-tent": "Walk up to the tent first.",
+  "not-near-crate": "Walk up to the crate first.",
+  "not-sellable": "Tools can't be sold.",
+  "crate-bag-full": "Your bag is full, so some stayed in the crate.",
+  "not-near-stand": "Walk up to the seed stand first.",
+  "not-enough-coins": "Not enough coins for that.",
+  "not-for-sale": "The stand doesn't sell that.",
   "coming-soon": "Coming soon!",
 };
 

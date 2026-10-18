@@ -2,8 +2,8 @@ import { ArraySchema, MapSchema } from "@colyseus/schema";
 import { describe, expect, it } from "vitest";
 import { newInventory, starterInventory } from "./inventory/inventory";
 import type { FarmTile } from "./farming/farming";
-import { BagSlot, Clock, FarmPlot } from "./schema";
-import { readBag, readClock, readFarm, steppedMinute, writeBag, writeClock, writeFarm } from "./stateSync";
+import { BagSlot, Clock, CrateEntry, FarmPlot } from "./schema";
+import { readBag, readClock, readCrate, readFarm, steppedMinute, writeBag, writeClock, writeCrate, writeFarm } from "./stateSync";
 import type { TileKey } from "./world/world";
 
 describe("the clock", () => {
@@ -82,5 +82,26 @@ describe("the farm", () => {
     writeFarm(target, farm);
     writeFarm(target, { "4,5": farm["4,5"] });
     expect([...target.keys()]).toEqual(["4,5"]);
+  });
+});
+
+describe("the crate", () => {
+  it("comes back as it was sent, line by line", () => {
+    const target = new ArraySchema<CrateEntry>();
+    writeCrate(target, [{ itemId: "radish", count: 4 }, { itemId: "carrot", count: 120 }]);
+    expect(readCrate(target)).toEqual([{ itemId: "radish", count: 4 }, { itemId: "carrot", count: 120 }]);
+    const first = target[0];
+    writeCrate(target, [{ itemId: "radish", count: 5 }]);
+    expect(target[0]).toBe(first);
+    expect(readCrate(target)).toEqual([{ itemId: "radish", count: 5 }]);
+    writeCrate(target, []);
+    expect(target.length).toBe(0);
+  });
+
+  it("leaves out lines that don't make sense", () => {
+    const target = new ArraySchema<CrateEntry>();
+    writeCrate(target, [{ itemId: "radish", count: 4 }]);
+    target[0].itemId = "gold_bar";
+    expect(readCrate(target)).toEqual([]);
   });
 });

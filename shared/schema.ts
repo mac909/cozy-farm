@@ -32,6 +32,13 @@ export class FarmPlot extends Schema {
   @type("uint8") daysInStage = 0;
 }
 
+/** One line of the shipping crate: an item and how many (no stack limit in the crate). */
+export class CrateEntry extends Schema {
+  /** An ItemId. */
+  @type("string") itemId = "";
+  @type("uint32") count = 0;
+}
+
 /** One person in the world. Positions are in world pixels. */
 export class Player extends Schema {
   @type("number") x = 0;
@@ -58,4 +65,6 @@ export class FarmState extends Schema {
   @type("uint32") coins = 0;
   /** The dug farm tiles, keyed "col,row". Dug soil never goes back to grass, so this only grows. */
   @type({ map: FarmPlot }) farm = new MapSchema<FarmPlot>();
+  /** The shipping crate on the dock, shared, in the order things were first put in. It sells overnight. */
+  @type([CrateEntry]) crate = new ArraySchema<CrateEntry>();
 }

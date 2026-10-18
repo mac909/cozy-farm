@@ -122,6 +122,10 @@
   color: #9b8664;
 }
 
+.panel-head + .panel-label {
+  margin-top: 0;
+}
+
 .panel-text {
   margin: 6px 0 10px;
   color: #8a7556;

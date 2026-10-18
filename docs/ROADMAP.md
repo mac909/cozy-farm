@@ -24,16 +24,16 @@ Every milestone ends with something playable. Tick items off as they land.
 ## Milestone 2: Farming (the first version to show her)
 
 - [x] Hoe, seeds, watering can; touch-friendly hotbar and inventory (the bag screen)
+- [x] Shipping crate on the dock and the shared wallet (moved up from Milestone 3, so the radishes have somewhere to go)
 - [x] Day clock (only while playing); sleeping in the shared tent ends the day, with a morning card
 - [x] Crops grow day by day; harvest
 - [x] World saved to SQLite (versioned) and restored after restarts
 - [x] Separate dev save, so testing never touches the real farm
 - [ ] Nightly backup of the save to OneDrive (the script is ready: `npm run farm:backup`; the scheduled task comes once saving is wired in)
 
-## Milestone 3: Shop and coins
+## Milestone 3: Shop
 
-- [ ] Shipping crate and shared wallet
-- [ ] General store: seeds and furniture
+- [ ] General store: furniture (and the seeds, taking over from the seed stand)
 
 ## Milestone 4: Decorating
 

@@ -1,0 +1,79 @@
+/* The shipping crate (client/src/ui/CratePanel.ts). */
+
+.crate {
+  width: min(100%, 400px);
+}
+
+.crate-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.crate-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 10px;
+  background: #efe2c4;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.crate-line:active {
+  transform: scale(0.98);
+}
+
+.crate-line .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.crate-line small {
+  display: block;
+  color: #8a7556;
+  font-size: 12px;
+}
+
+.crate-price {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.crate-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 2px dashed #dcc79c;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.crate-total[hidden] {
+  display: none;
+}
+
+.crate-empty {
+  margin: 4px 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f6ecd4;
+  color: #8a7556;
+  text-align: center;
+}
+
+.crate-gap {
+  height: 3px;
+}

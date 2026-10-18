@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { formatTime, type GameClock } from "../../../shared/time/clock";
-import { MOON_KEY, SUN_KEY, ZZZ_KEY } from "../art/assets";
+import { COIN_KEY, MOON_KEY, SUN_KEY, ZZZ_KEY } from "../art/assets";
 import type { NetStatus } from "../net/connection";
 
 /** From 6 pm the sun turns into a moon. */
@@ -27,6 +27,8 @@ const STATUS_TEXT: Record<NetStatus, string> = {
 export interface ClockCardView {
   /** Null until the first clock arrives from the server. */
   clock: GameClock | null;
+  /** The shared wallet, or null until it arrives. */
+  coins: number | null;
   status: NetStatus;
   /** Who else is asleep, as words ("Pip is asleep"), or null. */
   sleepers: string | null;
@@ -40,6 +42,8 @@ export class ClockCard extends Phaser.GameObjects.Container {
   private readonly bg: Phaser.GameObjects.Graphics;
   private readonly icon: Phaser.GameObjects.Image;
   private readonly time: Phaser.GameObjects.Text;
+  private readonly coinIcon: Phaser.GameObjects.Image;
+  private readonly coins: Phaser.GameObjects.Text;
   private readonly note: Phaser.GameObjects.Text;
   private readonly chipBg: Phaser.GameObjects.Graphics;
   private readonly chipIcon: Phaser.GameObjects.Image;
@@ -60,6 +64,8 @@ export class ClockCard extends Phaser.GameObjects.Container {
     this.bg = scene.add.graphics();
     this.icon = scene.add.image(0, 0, SUN_KEY).setOrigin(0, 0.5);
     this.time = text(15).setOrigin(0, 0.5);
+    this.coinIcon = scene.add.image(0, 0, COIN_KEY).setScale(2).setOrigin(0, 0.5);
+    this.coins = text(14).setOrigin(0, 0.5);
     this.note = text(13).setOrigin(0, 0);
     this.chipBg = scene.add.graphics();
     this.chipIcon = scene.add.image(0, 0, ZZZ_KEY).setOrigin(0, 0.5);
@@ -75,7 +81,7 @@ export class ClockCard extends Phaser.GameObjects.Container {
         resolution: window.devicePixelRatio,
       })
       .setOrigin(0, 0);
-    this.add([this.bg, this.icon, this.time, this.note, this.chipBg, this.chipIcon, this.chipText, this.status]);
+    this.add([this.bg, this.icon, this.time, this.coinIcon, this.coins, this.note, this.chipBg, this.chipIcon, this.chipText, this.status]);
     scene.add.existing(this);
   }
 
@@ -84,9 +90,12 @@ export class ClockCard extends Phaser.GameObjects.Container {
     const key = JSON.stringify(view);
     if (key === this.shown) return;
     this.shown = key;
-    const { clock, status, sleepers } = view;
+    const { clock, coins, status, sleepers } = view;
 
     const hasClock = clock !== null;
+    const hasCoins = hasClock && coins !== null;
+    this.coinIcon.setVisible(hasCoins);
+    this.coins.setVisible(hasCoins).setText(hasCoins ? coins.toLocaleString("en-US") : "");
     const minute = clock?.minute ?? 0;
     const late = hasClock && minute >= LATE_MINUTE;
     this.bg.setVisible(hasClock);
@@ -105,6 +114,14 @@ export class ClockCard extends Phaser.GameObjects.Container {
     this.time.setPosition(PAD_X - 4 + this.icon.width + 4, y);
     let width = this.time.x + this.time.width;
     y += rowHeight / 2;
+    if (hasCoins) {
+      const coinRow = Math.max(this.coinIcon.displayHeight, this.coins.height);
+      y += 1 + coinRow / 2;
+      this.coinIcon.setPosition(PAD_X - 4 + (this.icon.width - this.coinIcon.displayWidth) / 2, y);
+      this.coins.setPosition(this.time.x, y);
+      width = Math.max(width, this.coins.x + this.coins.width);
+      y += coinRow / 2;
+    }
     if (late) {
       this.note.setPosition(PAD_X, y);
       width = Math.max(width, PAD_X + this.note.width);

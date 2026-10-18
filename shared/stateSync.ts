@@ -3,7 +3,8 @@ import { isCropId } from "./content/crops";
 import { isItemId } from "./content/items";
 import type { FarmTile } from "./farming/farming";
 import type { Inventory, Slot } from "./inventory/inventory";
-import { BagSlot, type Clock, FarmPlot } from "./schema";
+import type { Crate } from "./economy/shop";
+import { BagSlot, type Clock, CrateEntry, FarmPlot } from "./schema";
 import type { TileKey } from "./world/world";
 import { HUD_MINUTE_STEP, type GameClock } from "./time/clock";
 
@@ -89,6 +90,25 @@ export function readPlot(plot: FarmPlot): FarmTile {
     return { kind: "planted", watered: plot.watered, cropId: plot.cropId, stage: plot.stage, daysInStage: plot.daysInStage };
   }
   return { kind: "tilled", watered: plot.watered };
+}
+
+/** Copies the crate in, line by line, writing only what changed. */
+export function writeCrate(target: ArraySchema<CrateEntry>, crate: Crate): void {
+  while (target.length > crate.length) target.pop();
+  crate.forEach((stack, i) => {
+    let entry = target[i];
+    if (!entry) {
+      entry = new CrateEntry();
+      target.push(entry);
+    }
+    if (entry.itemId !== stack.itemId) entry.itemId = stack.itemId;
+    if (entry.count !== stack.count) entry.count = stack.count;
+  });
+}
+
+/** The crate as the rules see it. Lines that don't make sense are left out. */
+export function readCrate(source: Iterable<CrateEntry>): Crate {
+  return Array.from(source).flatMap((entry) => (isItemId(entry.itemId) && entry.count > 0 ? [{ itemId: entry.itemId, count: entry.count }] : []));
 }
 
 /** The whole farm as the rules see it. */

@@ -93,6 +93,7 @@ export class UIScene extends Phaser.Scene {
     this.onRegistry("netStatus", () => this.showClock());
     this.onRegistry("clock", () => this.showClock());
     this.onRegistry("sleepers", () => this.showClock());
+    this.onRegistry("coins", () => this.showClock());
     this.onRegistry("inBed", () => this.showBedMode());
 
     this.hotbar = new Hotbar(this, (slot, item) => this.onSelectSlot(slot, item));
@@ -289,6 +290,7 @@ export class UIScene extends Phaser.Scene {
     const clock = (this.registry.get("clock") as GameClock | undefined) ?? null;
     this.clockCard.show({
       clock,
+      coins: (this.registry.get("coins") as number | null | undefined) ?? null,
       status: this.registry.get("netStatus") as NetStatus,
       sleepers: (this.registry.get("sleepers") as string | null | undefined) ?? null,
     });

@@ -130,3 +130,25 @@ export interface SplitStackMessage {
   count: number;
   to?: number;
 }
+
+// ---------- The shipping crate ----------
+
+/** Client → server ("ship"), next to the crate: put `count` from my bag slot `slot` in the crate. */
+export interface ShipMessage {
+  slot: number;
+  count: number;
+}
+
+/** Client → server ("unship"), next to the crate: take `count` of `itemId` back out into my bag. */
+export interface UnshipMessage {
+  itemId: string;
+  count: number;
+}
+
+// ---------- The seed stand ----------
+
+/** Client → server ("buy"), next to the seed stand: buy `count` (1–99) of `itemId` with the shared coins. */
+export interface BuyMessage {
+  itemId: string;
+  count: number;
+}
