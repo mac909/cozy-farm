@@ -171,7 +171,7 @@ export class WorldScene extends Phaser.Scene {
       },
       coinIcon: () => iconUrl(this.textures, { key: COIN_KEY }),
       morningShown: (report) => playSound(this, report.sale.total > 0 ? "coin" : "morning"),
-      cardClosed: () => this.input.keyboard?.resetKeys(),
+      cardClosed: () => this.releaseKeys(),
     });
     this.ui.events.on("escape", () => this.bedtime.wake());
 
@@ -198,7 +198,11 @@ export class WorldScene extends Phaser.Scene {
       status: (status) => this.registry.set("netStatus", status),
       joined: (room) => this.onJoined(room),
       lost: () => this.onLost(),
-      replaced: () => void showOtherDevice(this.look.name).then(() => this.connection.resume()),
+      replaced: () =>
+        void showOtherDevice(this.look.name).then(() => {
+          this.releaseKeys();
+          this.connection.resume();
+        }),
     });
     // First time on this device: who's playing (and for someone new, their name and character) before
     // joining, so the other player sees who arrived and everyone gets their own bag.
@@ -225,6 +229,7 @@ export class WorldScene extends Phaser.Scene {
       move = clampMove(input.x, input.y);
     }
     this.player.setVelocity(move.x * WALK_SPEED, move.y * WALK_SPEED);
+    if (move.x !== 0 || move.y !== 0) this.farming.forgetPointer();
     this.facing = facingFor(move.x, move.y, this.facing);
     this.me.setMotion(this.facing, move.x !== 0 || move.y !== 0);
     this.sendPosition(time);
@@ -438,6 +443,16 @@ export class WorldScene extends Phaser.Scene {
   /** The panel that's open (bag, crate, seed stand), if any. Only one at a time. */
   private panel: OpenPanel | null = null;
 
+  /**
+   * Forgets which keys are held, in both scenes (each has its own keys: WASD here, Space in the
+   * HUD). A card over the game keeps key releases from the game, so without this a key let go
+   * while it was open would stay "down": walking on by itself, or Space ignored next time.
+   */
+  private releaseKeys() {
+    this.input.keyboard?.resetKeys();
+    this.ui.input.keyboard?.resetKeys();
+  }
+
   /** Closes the open panel, if any. */
   private closePanel() {
     const panel = this.panel;
@@ -452,10 +467,10 @@ export class WorldScene extends Phaser.Scene {
   private openPanel<T extends OpenPanel>(open: (onClose: () => void) => T): T | null {
     if (this.bedtime.asleep) return null;
     this.closePanel();
-    this.input.keyboard?.resetKeys();
+    this.releaseKeys();
     playSound(this, "open");
     const panel = open(() => {
-      this.input.keyboard?.resetKeys();
+      this.releaseKeys();
       if (this.panel === panel) this.panel = null;
     });
     this.panel = panel;
@@ -560,13 +575,14 @@ export class WorldScene extends Phaser.Scene {
 
   /** Opens the name and character picker, then remembers the choice on this device and tells the server. */
   private async changeLook(firstTime = false, initial: Look | null = null) {
-    this.input.keyboard?.resetKeys();
+    this.releaseKeys();
     const look = await pickLook({
       current: firstTime ? null : this.look,
       initial,
       frame: (character, frame) => this.textures.getBase64(characterKey(character), frame),
       walkFrames: walkFrames("down"),
     });
+    this.releaseKeys();
     if (!look) return;
     this.setLook(look);
     const message: LookMessage = look;

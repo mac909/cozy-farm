@@ -217,6 +217,15 @@ export class Farming {
     this.options.acted?.(action.kind);
   }
 
+  /**
+   * You walked: the mouse no longer picks the tile until it moves again. Otherwise a cursor left
+   * resting over the game would keep pointing at the same spot beside you (the camera follows you),
+   * and Space would act there instead of in front of you.
+   */
+  forgetPointer() {
+    this.pointer = null;
+  }
+
   /** A hint over your head. */
   hint(hint: Hint) {
     this.options.me.showHint(hintText(hint));
@@ -235,7 +244,8 @@ export class Farming {
     const bag = this.options.bag();
     const held = bag?.[this.options.selectedSlot()]?.itemId ?? null;
     const open = Object.keys(this.options.places) as PlaceId[];
-    const place = this.hover ? null : placeNear(VILLAGE_MAP, position, CLIENT_NEAR_TILES, open);
+    // Places win even with the mouse over a tile (they're never next to the farm field).
+    const place = placeNear(VILLAGE_MAP, position, CLIENT_NEAR_TILES, open);
     return { action: chooseAction(tile, farmland, held, place), target, tile, farmland, held, place };
   }
 
