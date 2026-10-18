@@ -1,6 +1,7 @@
 node_modules/
 dist/
-data/
-data-dev/
+# Save folders at the project root only (shared/data/ is game content and must be committed).
+/data/
+/data-dev/
 *.log
 .DS_Store
