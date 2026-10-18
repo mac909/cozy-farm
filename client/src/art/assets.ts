@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { BUGS, BUG_IDS, type BugId } from "../../../shared/content/bugs";
 import { CHARACTERS, type CharacterId } from "../../../shared/content/characters";
 import { EMOTES, type EmoteId } from "../../../shared/content/emotes";
 import { FURNITURE_IDS, type FurnitureId } from "../../../shared/content/furniture";
@@ -53,6 +54,8 @@ export const FISH_ICONS_KEY = "fish-icons";
 export const BUGS_KEY = "bugs";
 export const BUG_COLUMNS = 5;
 export const BUG_ICON_COLUMN = 4;
+/** Each bug's flutter: its row's first four frames. */
+export const bugAnimKey = (id: BugId) => `bug-${id}`;
 /** The fishing rod, the bobber and the bobber dipped under. */
 export const FISHING_KEY = "fishing";
 export const FISHING_FRAME = { rod: 0, bobber: 1, dipped: 2 } as const;
@@ -207,4 +210,14 @@ export function createAnimations(scene: Phaser.Scene): void {
     }
   }
   scene.anims.create({ key: RIPPLE_ANIM, frames: scene.anims.generateFrameNumbers(RIPPLES_KEY), frameRate: 4, repeat: -1 });
+  BUG_IDS.forEach((id, row) => {
+    const first = row * BUG_COLUMNS;
+    scene.anims.create({
+      key: bugAnimKey(id),
+      frames: scene.anims.generateFrameNumbers(BUGS_KEY, { start: first, end: first + 3 }),
+      // Fireflies drift and blink slowly; butterflies flap.
+      frameRate: BUGS[id].glows ? 4 : 10,
+      repeat: -1,
+    });
+  });
 }

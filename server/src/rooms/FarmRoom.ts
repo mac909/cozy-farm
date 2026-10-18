@@ -43,6 +43,7 @@ import {
 } from "../../../shared/world/world";
 import { liveWorld } from "../world/liveWorld";
 import { registerBag } from "./bag";
+import { Meadow } from "./bugs";
 import { registerBeach, VILLAGE_SHORE } from "./beach";
 import { registerCrate } from "./crate";
 import { registerDecor } from "./decor";
@@ -73,6 +74,7 @@ export class FarmRoom extends Room<FarmState> {
   autoDispose = false;
   private bedtime!: Bedtime;
   private fishing!: ReturnType<typeof registerFishing>;
+  private meadow!: Meadow;
 
   onCreate() {
     this.setState(new FarmState());
@@ -92,6 +94,8 @@ export class FarmRoom extends Room<FarmState> {
     registerDecor(this);
     registerBeach(this);
     this.fishing = registerFishing(this);
+    this.meadow = new Meadow(this);
+    this.meadow.check();
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
@@ -217,6 +221,7 @@ export class FarmRoom extends Room<FarmState> {
       this.change({ ...this.world, clock }, { save: stepped });
     }
     this.bedtime.check();
+    this.meadow.check();
   }
 
   private movePlayer(client: Client, message: MoveMessage) {

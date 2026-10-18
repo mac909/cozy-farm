@@ -9,6 +9,7 @@ import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type {
   BuyMessage,
   CastStartedMessage,
+  CatchBugMessage,
   EmoteEvent,
   EmoteMessage,
   JoinOptions,
@@ -27,7 +28,8 @@ import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
 import { countOf, type Inventory } from "../../../shared/inventory/inventory";
 import type { Crate } from "../../../shared/economy/shop";
-import { readBag, readBeach, readClock, readCrate } from "../../../shared/stateSync";
+import { readBag, readBeach, readBugs, readClock, readCrate } from "../../../shared/stateSync";
+import { roomFor } from "../../../shared/inventory/inventory";
 import type { GameClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { COLLISION_LAYER, FARMLAND_LAYER, isAboveCharacters, OBJECTS_LAYER } from "../../../shared/world/tiledMap";
@@ -69,6 +71,7 @@ import { Homes, type Resident } from "../world/Homes";
 import { Arrange } from "../world/Arrange";
 import { BeachView } from "../world/Beach";
 import { Fishing, OtherLines } from "../world/Fishing";
+import { MeadowView } from "../world/Meadow";
 import { homeOf } from "../../../shared/decor/decorate";
 import { targetTile, feetTile } from "../../../shared/world/places";
 import { areaOf, VILLAGE } from "../../../shared/world/houses";
@@ -137,6 +140,8 @@ export class WorldScene extends Phaser.Scene {
   /** Your own fishing, and everyone else's lines. */
   private fishing!: Fishing;
   private otherLines!: OtherLines;
+  /** The bugs in the meadow. */
+  private meadow!: MeadowView;
 
   constructor() {
     super("world");
@@ -203,6 +208,7 @@ export class WorldScene extends Phaser.Scene {
     this.homes.setZoom(this.zoom);
     this.physics.add.collider(this.player, this.homes.colliders);
     this.beach = new BeachView(this);
+    this.meadow = new MeadowView(this);
 
     this.bedtime = new Bedtime(this, {
       room: () => this.room,
@@ -242,9 +248,9 @@ export class WorldScene extends Phaser.Scene {
       spot: (position) => this.homes.spot(position),
       placing: () => this.homes.placing(),
       findAt: (col, row) => this.beach.findAt(col, row),
-      bugNear: () => null,
+      bugNear: (position) => this.meadow.bugNear(position),
       on: {
-        catchBug: () => {},
+        catchBug: (id, bugId) => this.catchBug(id, bugId),
         fish: (_spot, col, row) => this.fishing.start(col, row),
         sleep: () => this.bedtime.sleep(),
         crate: () => this.openCrate(),
@@ -388,6 +394,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.residents = residents;
     this.homes.update(this.player, this.arrange.isActive ? { x: 0, y: 0 } : input, residents);
+    this.meadow.tick();
     const canArrange = !this.bedtime.asleep && this.room !== null && this.homes.placing() !== null;
     if (this.registry.get("canArrange") !== canArrange) this.registry.set("canArrange", canArrange);
     // You only see who's where you are: the village, or the same room. Sleepers are tucked in.
@@ -558,11 +565,26 @@ export class WorldScene extends Phaser.Scene {
     this.farming.readFarm(state);
     this.homes.readState(state);
     this.beach.update(readBeach(state.beach));
+    this.meadow.update(readBugs(state.bugs));
     // Not moved in anywhere yet, with a cottage free: say where they are.
     if (this.farmerId && VILLAGE_MAP.houses.length > 0 && !homeOf(this.homes.houseViews, this.farmerId)) {
       const free = VILLAGE_MAP.houses.some((plan) => !this.homes.houseViews[plan.id]);
       if (free) this.tips.event("homeless");
     }
+  }
+
+  /** Catch: a gentle swish, and the bug's yours once the server agrees. */
+  private catchBug(id: string, bugId: ItemId) {
+    const bag = this.registry.get("bag") as Inventory | null;
+    if (bag && roomFor(bag, bugId) < 1) {
+      this.farming.hint({ reason: "bag-full" });
+      return;
+    }
+    this.me.swing(this.facing);
+    playSound(this, "pick", 0.7);
+    this.meadow.startCatch(id, { x: this.player.x, y: this.player.y });
+    this.room?.send("catchBug", { id } satisfies CatchBugMessage);
+    this.tips.event("caughtBug");
   }
 
   /** "+1 Radish" over your head for whatever just landed in your bag. */
