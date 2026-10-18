@@ -10,10 +10,22 @@ export interface WorldMap {
   blocked: boolean[][];
   /** Tiles where farming is allowed, indexed [row][col]. */
   farmland: boolean[][];
-  /** The tile players appear on. */
+  /** The tile players appear on, and wake up on: just in front of the tent. */
   spawn: TilePos;
-  /** Where the shipping crate stands, in world pixels (top left corner and size). */
-  shippingCrate: { x: number; y: number; width: number; height: number };
+  /** Where the shipping crate stands. */
+  shippingCrate: Rect;
+  /** Where the tent for sleeping goes (Milestone 2), beside the farm field. */
+  tent: Rect;
+  /** Where the seed stand goes (Milestone 2), at the top of the path down to the beach. */
+  seedStand: Rect;
+}
+
+/** An area in world pixels: top left corner and size. */
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface TilePos {

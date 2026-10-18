@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { isWalkable, tileAt, type TilePos, type WorldMap } from "./map";
+import { isWalkable, type Rect, tileAt, type TilePos, type WorldMap } from "./map";
 import { parseTiledMap, type TiledMapJson, tilesetImageUrl } from "./tiledMap";
 import { VILLAGE_MAP, VILLAGE_TILED } from "./villageMap";
 
@@ -27,6 +27,8 @@ function smallMap(): TiledMapJson {
         objects: [
           { name: "spawn", x: 24, y: 8, point: true },
           { name: "shippingCrate", x: 0, y: 16, width: 32, height: 16 },
+          { name: "tent", x: 32, y: 0, width: 16, height: 16 },
+          { name: "seedStand", x: 32, y: 16, width: 16, height: 16 },
         ],
       },
     ],
@@ -34,7 +36,7 @@ function smallMap(): TiledMapJson {
 }
 
 describe("parseTiledMap", () => {
-  it("reads the size, collisions, farmland, spawn and crate", () => {
+  it("reads the size, collisions, farmland, spawn and the named spots", () => {
     const map = parseTiledMap(smallMap());
     expect(map.width).toBe(3);
     expect(map.height).toBe(2);
@@ -46,6 +48,8 @@ describe("parseTiledMap", () => {
     expect(map.farmland[0][0]).toBe(false);
     expect(map.spawn).toEqual({ col: 1, row: 0 });
     expect(map.shippingCrate).toEqual({ x: 0, y: 16, width: 32, height: 16 });
+    expect(map.tent).toEqual({ x: 32, y: 0, width: 16, height: 16 });
+    expect(map.seedStand).toEqual({ x: 32, y: 16, width: 16, height: 16 });
   });
 
   it("requires exactly one spawn point", () => {
@@ -129,15 +133,42 @@ describe("the village map", () => {
     }
   });
 
-  it("lets you walk up to the shipping crate", () => {
+  it("lets you walk up to the shipping crate, the tent and the seed stand", () => {
     const walk = reachable(map, map.spawn);
-    const { x, y, width, height } = map.shippingCrate;
-    const first = tileAt(x, y);
-    const last = tileAt(x + width - 1, y + height - 1);
-    const beside: string[] = [];
-    for (let row = first.row - 1; row <= last.row + 1; row++)
-      for (let col = first.col - 1; col <= last.col + 1; col++) beside.push(`${col},${row}`);
-    expect(beside.some((tile) => walk.has(tile))).toBe(true);
+    /** The tiles in and around an area. */
+    const around = ({ x, y, width, height }: Rect) => {
+      const first = tileAt(x, y);
+      const last = tileAt(x + width - 1, y + height - 1);
+      const tiles: string[] = [];
+      for (let row = first.row - 1; row <= last.row + 1; row++)
+        for (let col = first.col - 1; col <= last.col + 1; col++) tiles.push(`${col},${row}`);
+      return tiles;
+    };
+    for (const spot of ["shippingCrate", "tent", "seedStand"] as const) {
+      expect(around(map[spot]).some((tile) => walk.has(tile)), spot).toBe(true);
+    }
+  });
+
+  it("wakes you up just in front of the tent", () => {
+    const { x, y, width, height } = map.tent;
+    const door = tileAt(x + width / 2, y + height);
+    expect(map.spawn).toEqual(door);
+  });
+
+  it("keeps the tent and seed stand off the farm field and the shipping crate", () => {
+    const crate = map.shippingCrate;
+    for (const spot of [map.tent, map.seedStand]) {
+      const first = tileAt(spot.x, spot.y);
+      const last = tileAt(spot.x + spot.width - 1, spot.y + spot.height - 1);
+      for (let row = first.row; row <= last.row; row++)
+        for (let col = first.col; col <= last.col; col++) {
+          expect(map.farmland[row][col]).toBe(false);
+          expect(map.blocked[row][col]).toBe(false);
+        }
+      const overlapsCrate =
+        spot.x < crate.x + crate.width && crate.x < spot.x + spot.width && spot.y < crate.y + crate.height && crate.y < spot.y + spot.height;
+      expect(overlapsCrate).toBe(false);
+    }
   });
 
   it("paints the ground everywhere", () => {

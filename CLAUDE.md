@@ -55,11 +55,11 @@ The village is a [Tiled](https://www.mapeditor.org/) map, `shared/world/village.
   - `Decor` (trunks, fence, dock, boat), `Details` (flowers, grass tufts), `Ground` (grass, sand, sea). Every other tile layer is drawn too, under the characters, in Tiled's order.
   - `Collision`, hidden in the game: paint the red marker wherever nobody can walk. Only feet collide, so block a tree's trunk row, not its top.
   - `Farmland`, hidden in the game: the green marker where farming is allowed.
-  - `Objects`: the `spawn` point, the `shippingCrate` rectangle (the crate is drawn there), and `ripple` points on the sea. They're found by name.
+  - `Objects`, found by name: the `spawn` point (also where you wake up, in front of the tent); rectangles for the `shippingCrate` (drawn there), the `tent` and the `seedStand` (both for Milestone 2, not drawn yet); and `ripple` points on the sea. When the tent and stand get drawn, paint `Collision` under their bottom rows.
 - Terrain brush: open View → Views and Toolbars → Terrain Sets, pick "Beach" in `beach-terrain`, and paint Grass, Sand or Sea; Tiled picks the edge tiles. Keep sand between grass and sea: there are no grass-to-sea tiles.
 - Anything new that should block the way (a tree, a fence) also needs `Collision` painted under it.
 - New tilesets: 16×16 tiles, the image inside `client/public/assets/`, and embedded in the map (tick "Embed in map" when creating it, or press Embed Tileset in the Tilesets panel), because Phaser can't read separate `.tsx` files. Keep Map → Map Properties → Tile Layer Format on CSV.
-- Run `npm test` after saving: it checks the map loads, the spawn is walkable, the whole farm field and the shipping crate can be reached, and every tileset image exists. `npm run dev` picks up the change when the page reloads.
+- Run `npm test` after saving: it checks the map loads, the spawn is walkable and in front of the tent, the whole farm field, the shipping crate, the tent and the seed stand can be reached, and every tileset image exists. `npm run dev` picks up the change when the page reloads.
 
 ## Rules
 

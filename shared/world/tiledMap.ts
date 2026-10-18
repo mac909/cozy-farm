@@ -1,5 +1,5 @@
 import { TILE_SIZE } from "../constants";
-import { tileAt, type WorldMap } from "./map";
+import { type Rect, tileAt, type WorldMap } from "./map";
 
 /**
  * Reads a map saved by Tiled (JSON format, see "Editing the map" in CLAUDE.md).
@@ -10,7 +10,7 @@ import { tileAt, type WorldMap } from "./map";
 /** Hidden tile layers: any tile painted on them counts, whatever it looks like. */
 export const COLLISION_LAYER = "Collision";
 export const FARMLAND_LAYER = "Farmland";
-/** The object layer with the spawn point and the shipping crate. */
+/** The object layer with the spawn point and the spots for the shipping crate, tent and seed stand. */
 export const OBJECTS_LAYER = "Objects";
 /** Tile layers with this bool property set draw over the characters (tree tops). */
 export const ABOVE_CHARACTERS_PROPERTY = "aboveCharacters";
@@ -91,7 +91,10 @@ export function parseTiledMap(input: unknown): WorldMap {
   if (spawn.col < 0 || spawn.row < 0 || spawn.col >= width || spawn.row >= height) {
     throw new Error("The spawn point is outside the map");
   }
-  const crate = one("shippingCrate");
+  const area = (name: string): Rect => {
+    const { x, y, width = 0, height = 0 } = one(name);
+    return { x, y, width, height };
+  };
 
   return {
     width,
@@ -99,7 +102,9 @@ export function parseTiledMap(input: unknown): WorldMap {
     blocked: painted(COLLISION_LAYER),
     farmland: painted(FARMLAND_LAYER),
     spawn,
-    shippingCrate: { x: crate.x, y: crate.y, width: crate.width ?? 0, height: crate.height ?? 0 },
+    shippingCrate: area("shippingCrate"),
+    tent: area("tent"),
+    seedStand: area("seedStand"),
   };
 }
 
