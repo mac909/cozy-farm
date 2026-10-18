@@ -10,9 +10,12 @@ import { fileURLToPath } from "node:url";
 import { BEACH_ITEMS, BEACH_LEGEND } from "./beach";
 import { crateClosed, crateOpen } from "./crate";
 import { CROP_ART, CROP_LEGEND, PACKET, PACKET_PICTURE, SEEDS } from "./crops";
+import { PACK_EMOTES, emoteFrames } from "./emotes";
 import { Img, fromGrid, outline, packRows } from "./lib/image";
+import { MARKERS } from "./markers";
 import { SAND_GRASS, SAND_WATER, recolourBlock } from "./sand";
 import { soilTile } from "./soil";
+import { UI_ICONS } from "./ui";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PACK = path.join(ROOT, "client/public/assets/ninja-adventure");
@@ -102,11 +105,44 @@ function renderSand(): void {
   }
 }
 
+function renderMarkers(): void {
+  const names = Object.keys(MARKERS) as (keyof typeof MARKERS)[];
+  save("map-markers", packRows([names.map((n) => MARKERS[n]())], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    frames: Object.fromEntries(names.map((n, i) => [n, i])),
+    note: "Painted on the map's hidden Collision and Farmland layers in Tiled. The game never draws them.",
+  });
+}
+
+function renderEmotes(): void {
+  const frames = emoteFrames((file) => Img.read(path.join(PACK, file)));
+  const [fw, fh] = [frames[0].w, frames[0].h];
+  save("emotes", packRows([frames], fw, fh), {
+    frameWidth: fw,
+    frameHeight: fh,
+    frames: { wave: 0, heart: 1 },
+    note: `In EMOTES order (shared/content/emotes.ts). Heart is the pack's ${PACK_EMOTES.heart}; wave is our hand in the pack's bubble.`,
+  });
+}
+
+function renderUiIcons(): void {
+  const names = Object.keys(UI_ICONS) as (keyof typeof UI_ICONS)[];
+  save("ui-icons", packRows([names.map((n) => UI_ICONS[n]())], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    frames: Object.fromEntries(names.map((n, i) => [n, i])),
+  });
+}
+
 console.log(`Rendering sprites into ${path.relative(ROOT, OUT)}${path.sep}`);
 renderCrops();
 renderSoil();
 renderBeachItems();
 renderCrate();
 renderSand();
+renderMarkers();
+renderEmotes();
+renderUiIcons();
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log("  manifest.json");

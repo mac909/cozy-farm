@@ -15,6 +15,9 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | `beach.ts` | Shells, sea glass, starfish |
 | `crate.ts` | The shipping crate, closed and open |
 | `sand.ts` | Beach sand: recolours of the pack's floor and water autotiles |
+| `emotes.ts` | Emote bubbles: the pack's heart, and our wave in the pack's bubble |
+| `ui.ts` | HUD icons the pack lacks: music on and off |
+| `markers.ts` | Marker tiles for the map's hidden Collision and Farmland layers |
 | `render.ts` | Puts it all together and writes the PNGs |
 | `lib/image.ts` | Tiny image helpers on top of `pngjs` |
 
@@ -44,3 +47,5 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
 - `shipping-crate.png`: 32×32 frames, closed then open.
 - `sand-grass.png`, `sand-water.png`: same layout as the source blocks in the pack's `TilesetFloor.png` (from y 112)
   and `TilesetWater.png` (top-left block), so their autotile rules carry over.
+- `emotes.png`: 14×13 frames (the pack's bubble size), in `EMOTES` order from `shared/content/emotes.ts`.
+- `ui-icons.png`, `map-markers.png`: one row of 16×16 frames, names in `manifest.json`.
