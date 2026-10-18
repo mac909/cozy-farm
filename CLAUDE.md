@@ -1,6 +1,6 @@
 # Cozy Farm
 
-A cozy 2D pixel-art farming game for a couple to play together: real time, in the browser, on laptops and phones, over the home Wi-Fi. Seaside village setting. One developer (a web dev) builds and maintains it with Claude doing most of the coding; the other player only plays.
+A cozy 2D pixel-art farming game for a couple to play together: real time, in the browser, on laptops and phones, connected through Tailscale. Seaside village setting. One developer (a web dev) builds and maintains it with Claude doing most of the coding; the other player only plays.
 
 Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far) and [docs/ROADMAP.md](docs/ROADMAP.md) (what's done and what's next) before starting a feature.
 
@@ -18,13 +18,21 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 - **Server** (`server/`): Colyseus 0.16 on Node, run with tsx. Serves the built client and hosts the one shared world room.
 - **Shared** (`shared/`): sync schema, map data, constants, and pure game logic used by both sides.
 - **Tests**: Vitest, mainly for `shared/`.
-- **Hosting**: one Docker container on the developer's Windows PC. Players connect over the LAN.
+- **Hosting**: one Docker container on the developer's Windows PC. Players connect through Tailscale (see Network below).
+
+## Network
+
+- The real farm's address is **http://100.82.139.111:8080** (the PC's Tailscale IP; `msi` in Tailscale). Always include `http://`: browsers otherwise try HTTPS, which the game doesn't serve, and fail.
+- Every device needs the Tailscale app switched on. It works at home and away.
+- The home router (Spectrum) blocks Wi-Fi devices from reaching each other, so `192.168.1.x` addresses don't work from phones. Tailscale goes through its relay instead (about 50–150 ms).
+- Windows Firewall: the Wi-Fi and Tailscale networks are set to Private, the "Docker Desktop Backend" rule allows Private, and a "Cozy Farm (port 8080)" rule allows the local subnet. Changing firewall rules needs an admin window, so the developer runs those commands.
+- Security Center still lists an old, uninstalled Norton as the firewall. Ignore it; Windows Firewall is the one in effect.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Game server on :2567 and Vite on :5173. Phones on the Wi-Fi can open the "Network" URL Vite prints. |
+| `npm run dev` | Game server on :2567 and Vite on :5173. Open http://localhost:5173. |
 | `npm test` | Unit tests |
 | `npm run typecheck` | TypeScript check across client, server, and shared |
 | `npm run build` | Builds the client into `dist/client` |

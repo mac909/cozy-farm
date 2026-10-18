@@ -8,7 +8,7 @@ Every milestone ends with something playable. Tick items off as they land.
 - [x] Placeholder seaside village map with collisions
 - [x] One character walking, with keyboard and an on-screen joystick
 - [x] Client connects to the server (status shown in the corner)
-- [ ] Real farm runs in Docker on :8080 and opens on a phone over Wi-Fi
+- [x] Real farm runs in Docker on :8080 and opens on a phone (through Tailscale)
 - [x] Git repo with a first commit
 
 ## Milestone 1: Together
@@ -48,4 +48,4 @@ Every milestone ends with something playable. Tick items off as they land.
 
 ## Later
 
-Seasons, weather, day/night, cooking, animals, villagers, music, festivals, playing away from home.
+Seasons, weather, day/night, cooking, animals, villagers, music, festivals.

@@ -19,7 +19,7 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 |---|---|---|
 | Players | Two, playing at the same time, each on their own device | 2026-10-17 |
 | Devices | Laptop browsers (keyboard) and phone browsers (touch) | 2026-10-17 |
-| Hosting | Docker on the home PC, home Wi-Fi only | 2026-10-17 |
+| Hosting | Docker on the home PC. Devices connect through Tailscale (free), because the home router blocks Wi-Fi devices from reaching each other. This also works away from home. | 2026-10-17 |
 | Art | 2D pixel art, 16×16 tiles, free asset packs only | 2026-10-17 |
 | Activities | Farming, decorating, collecting. Villagers maybe later. | 2026-10-17 |
 | Time | Only passes while playing (Stardew-style days) | 2026-10-17 |
@@ -70,7 +70,7 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ## Later ideas
 
-Seasons, weather, day/night lighting, cooking, animals (chickens, our own pets), villagers and friendship, festivals, restoring the lighthouse, playing away from home via Tailscale.
+Seasons, weather, day/night lighting, cooking, animals (chickens, our own pets), villagers and friendship, festivals, restoring the lighthouse.
 
 ## Open questions
 
