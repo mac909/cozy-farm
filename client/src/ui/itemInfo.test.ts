@@ -18,6 +18,10 @@ describe("itemInfo", () => {
     );
   });
 
+  it("says where furniture goes", () => {
+    expect(itemInfo({ itemId: "sofa", count: 1 }).detail).toBe(`For your house · 2 × 1 · sells back for ${ITEMS.sofa.sellPrice}`);
+  });
+
   it("says tools can't be sold", () => {
     expect(itemInfo({ itemId: "hoe", count: 1 })).toEqual({ title: "Hoe", detail: "A tool: it never wears out, and can't be sold" });
   });

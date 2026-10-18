@@ -1,4 +1,4 @@
-import type { ItemId } from "../../../shared/content/items";
+import { furnitureOf, type ItemId } from "../../../shared/content/items";
 import { INVENTORY_SLOTS, type Inventory } from "../../../shared/inventory/inventory";
 import "./bag.css";
 import { itemInfo } from "./itemInfo";
@@ -12,6 +12,8 @@ export interface BagPanelOptions {
   move(from: number, to: number): void;
   /** Asks the server to split `count` off the stack in `from` into the first empty slot. */
   split(from: number, count: number): void;
+  /** Closes the bag and starts putting down the furniture in `slot`. */
+  place(slot: number): void;
   onClose(): void;
 }
 
@@ -101,6 +103,9 @@ export class BagPanel {
     const words = el("div", "grow");
     words.append(el("b", "", title), el("small", "", detail));
     this.info.append(picture(this.options.icon(stack.itemId)), words);
+    if (furnitureOf(stack.itemId)) {
+      this.info.append(button("Place", "panel-button bag-split", () => this.options.place(from)));
+    }
     const hasRoom = this.bag?.includes(null) ?? false;
     if (stack.count > 1 && hasRoom) {
       this.info.append(
@@ -112,6 +117,6 @@ export class BagPanel {
         }),
       );
     }
-    this.tip.textContent = "Tap another slot to move it there.";
+    this.tip.textContent = furnitureOf(stack.itemId) ? "Place puts it down, or tap another slot to move it." : "Tap another slot to move it there.";
   }
 }

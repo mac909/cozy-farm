@@ -11,6 +11,8 @@ interface RoundButtonOptions {
   hint?: string;
   /** A rounded square instead of a circle. */
   square?: boolean;
+  /** A word on a tag across the bottom, like the Action button's ("Turn"). */
+  label?: string;
   onPress: () => void;
 }
 
@@ -18,7 +20,7 @@ interface RoundButtonOptions {
 export class RoundButton extends Phaser.GameObjects.Container {
   private readonly icon: Phaser.GameObjects.Image;
 
-  constructor(scene: Phaser.Scene, { size, icon, iconFrame, iconScale, hint, square, onPress }: RoundButtonOptions) {
+  constructor(scene: Phaser.Scene, { size, icon, iconFrame, iconScale, hint, square, label, onPress }: RoundButtonOptions) {
     super(scene);
     const radius = size / 2;
     let touch: Phaser.GameObjects.GameObject;
@@ -55,6 +57,28 @@ export class RoundButton extends Phaser.GameObjects.Container {
         })
         .setOrigin(0.5);
       this.add(label);
+    }
+
+    if (label) {
+      const text = scene.add
+        .text(0, 0, label, {
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          fontSize: "11px",
+          fontStyle: "bold",
+          color: "#4a3b2a",
+          resolution: window.devicePixelRatio,
+        })
+        .setOrigin(0.5);
+      const w = text.width + 12;
+      const h = 16;
+      const box = scene.add.graphics();
+      box
+        .fillStyle(0xfff8e7, 1)
+        .fillRoundedRect(-w / 2, -h / 2, w, h, 7)
+        .lineStyle(2, 0x1d2f3b, 1)
+        .strokeRoundedRect(-w / 2, -h / 2, w, h, 7);
+      this.add(scene.add.container(0, radius - 1, [box, text]));
+      this.icon.setY(-3);
     }
 
     touch.on(Phaser.Input.Events.POINTER_DOWN, () => {

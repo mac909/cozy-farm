@@ -2,8 +2,6 @@ import { TILE_SIZE } from "../constants";
 import { floorSize, frontOfDoor, keepClearTile } from "../world/houses";
 import { isWalkable, tileAt, type HousePlan, type Rect, type WorldMap } from "../world/map";
 import { wakeSpots } from "../world/places";
-import type { World } from "../world/world";
-import { isDug } from "./decorate";
 import type { Board } from "./pieces";
 
 /**
@@ -61,8 +59,16 @@ export function farmKeepClear(map: WorldMap): Set<string> {
   return clear;
 }
 
-/** The farm's open ground, in map tiles. `occupied` says where people stand. */
-export function farmBoard(map: WorldMap, world: World, occupied?: (col: number, row: number) => boolean, keepClear = farmKeepClear(map)): Board {
+/**
+ * The farm's open ground, in map tiles. `dug` says which tiles have been dug (decorations stay off
+ * the soil); `occupied` says where people stand.
+ */
+export function farmBoard(
+  map: WorldMap,
+  dug: (col: number, row: number) => boolean,
+  occupied?: (col: number, row: number) => boolean,
+  keepClear = farmKeepClear(map),
+): Board {
   const inRoom = (col: number, row: number) =>
     map.houses.some(({ interior: r }) => {
       const x = col * TILE_SIZE;
@@ -74,7 +80,7 @@ export function farmBoard(map: WorldMap, world: World, occupied?: (col: number, 
     open: (col, row) =>
       isWalkable(map, col, row) &&
       !map.farmland[row][col] &&
-      !isDug(world, col, row) &&
+      !dug(col, row) &&
       !keepClear.has(key({ col, row })) &&
       !inRoom(col, row),
     occupied,

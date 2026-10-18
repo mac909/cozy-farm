@@ -24,6 +24,7 @@ import { addFarmer, farmerOf, isFarmerId, listFarmers, setFarmerLook, type Farme
 import { liveWorld } from "../world/liveWorld";
 import { registerBag } from "./bag";
 import { registerCrate } from "./crate";
+import { registerDecor } from "./decor";
 import { registerDevCommands } from "./dev";
 import { registerFarming } from "./farming";
 import { registerHouses } from "./houses";
@@ -62,6 +63,7 @@ export class FarmRoom extends Room<FarmState> {
     registerCrate(this);
     registerShop(this);
     registerHouses(this);
+    registerDecor(this);
     this.bedtime = new Bedtime(this);
     registerDevCommands(this, () => this.bedtime.startNight());
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);

@@ -65,6 +65,8 @@ import { Bedtime } from "../world/Bedtime";
 import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
 import { Homes, type Resident } from "../world/Homes";
+import { Arrange } from "../world/Arrange";
+import { targetTile, feetTile } from "../../../shared/world/places";
 import { areaOf, VILLAGE } from "../../../shared/world/houses";
 import { Outline } from "../world/Outline";
 import type { UIScene } from "./UIScene";
@@ -117,6 +119,9 @@ export class WorldScene extends Phaser.Scene {
   private farming!: Farming;
   private bedtime!: Bedtime;
   private homes!: Homes;
+  private arrange!: Arrange;
+  /** Everyone and where they're drawn, as of this frame. */
+  private residents: Resident[] = [];
   private readonly tips = new Tips();
   /** The shipping crate on the dock, and what's in it as the server last said. */
   private crateSprite!: Phaser.GameObjects.Image;
@@ -184,7 +189,10 @@ export class WorldScene extends Phaser.Scene {
       me: this.me,
       wakeAt: (x, y) => this.teleport(x, y, "down"),
       fade: (atDark, done) => this.ui.nightFade(atDark, done),
-      closePanels: () => this.closePanel(),
+      closePanels: () => {
+        this.closePanel();
+        this.arrange.stop();
+      },
       show: ({ inBed, sleepers }) => {
         if (this.registry.get("inBed") !== inBed) this.registry.set("inBed", inBed);
         if (this.registry.get("sleepers") !== sleepers) this.registry.set("sleepers", sleepers);
@@ -193,7 +201,7 @@ export class WorldScene extends Phaser.Scene {
       morningShown: (report) => playSound(this, report.sale.total > 0 ? "coin" : "morning"),
       cardClosed: () => this.releaseKeys(),
     });
-    this.ui.events.on("escape", () => this.bedtime.wake());
+    this.ui.events.on("escape", () => (this.arrange.isActive ? this.arrange.stop() : this.bedtime.wake()));
 
     this.farming = new Farming(this, new Outline(this), {
       me: this.me,
@@ -203,7 +211,7 @@ export class WorldScene extends Phaser.Scene {
       bag: () => this.registry.get("bag") as Inventory | null,
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
-      busy: () => this.bedtime.asleep || this.panel?.isOpen === true,
+      busy: () => this.bedtime.asleep || this.panel?.isOpen === true || this.arrange.isActive,
       spot: (position) => this.homes.spot(position),
       placing: () => this.homes.placing(),
       on: {
@@ -213,7 +221,7 @@ export class WorldScene extends Phaser.Scene {
         shop: () => this.openShop(generalStoreCatalog(), "store"),
         enter: (houseId, how) => this.homes.enter(houseId, how),
         leave: (houseId) => this.homes.leave(houseId),
-        place: () => this.me.showHint("Coming soon!"),
+        place: () => this.arrange.start(this.registry.get("selectedSlot") as number),
       },
       holding: () => this.ui.actionHeld(),
       acted: (kind) => {
@@ -222,7 +230,30 @@ export class WorldScene extends Phaser.Scene {
         if (kind === "harvest") this.tips.event("picked");
       },
     });
-    this.ui.events.on("action", () => this.farming.act());
+    this.arrange = new Arrange(this, {
+      homes: this.homes,
+      me: this.me,
+      player: this.player,
+      facingTile: () => targetTile(feetTile(this.player), this.facing),
+      room: () => this.room,
+      bag: () => this.registry.get("bag") as Inventory | null,
+      selectedSlot: () => this.registry.get("selectedSlot") as number,
+      dug: (col, row) => this.farming.view.tileAt(col, row).kind !== "untilled",
+      residents: () => this.residents,
+      showAction: (view) => this.ui.setAction(view),
+      showHud: (view) => {
+        if (JSON.stringify(this.registry.get("arrange")) !== JSON.stringify(view)) this.registry.set("arrange", view);
+      },
+      overHud: (pointer) => this.ui.input.hitTestPointer(pointer).length > 0,
+    });
+    this.ui.events.on("action", () => (this.arrange.isActive ? this.arrange.act() : this.farming.act()));
+    this.ui.events.on("arrange", () => {
+      if (this.arrange.isActive) this.arrange.stop();
+      else if (!this.bedtime.asleep && this.panel === null) this.arrange.start();
+    });
+    this.ui.events.on("turn", () => this.arrange.turn());
+    this.ui.events.on("putAway", () => this.arrange.putAway());
+    this.ui.events.on("done", () => this.arrange.stop());
 
     this.connection = new FarmConnection(() => this.joinOptions(), {
       status: (status) => this.registry.set("netStatus", status),
@@ -251,6 +282,9 @@ export class WorldScene extends Phaser.Scene {
     if (this.bedtime.holdStill(input)) {
       // In bed you stay put; moving gets you up instead.
       move = { x: 0, y: 0 };
+    } else if (this.arrange.isActive) {
+      // Arranging: the stick moves the cursor, not you.
+      move = { x: 0, y: 0 };
     } else if (input === this.ui.joystick?.vector && turnsOnly(input)) {
       // A light push on the joystick turns you on the spot, so lining up on a tile is easy.
       move = { x: 0, y: 0 };
@@ -263,7 +297,12 @@ export class WorldScene extends Phaser.Scene {
     this.facing = facingFor(move.x, move.y, this.facing);
     this.me.setMotion(this.facing, move.x !== 0 || move.y !== 0);
     this.sendPosition(time);
-    this.farming.update();
+    if (this.arrange.isActive) {
+      this.farming.pause();
+      this.arrange.update(input);
+    } else {
+      this.farming.update();
+    }
     this.tips.update(!this.bedtime.asleep && !this.bedtime.cardOpen && this.panel === null && this.room !== null);
 
     const now = performance.now();
@@ -280,7 +319,10 @@ export class WorldScene extends Phaser.Scene {
       remote.character.setMotion(pose.facing, now - remote.lastMovedAt < REMOTE_STILL_MS);
       residents.push({ name: remote.name, farmerId: remote.farmerId, x: pose.x, y: pose.y, inBed: remote.inBed });
     }
-    this.homes.update(this.player, input, residents);
+    this.residents = residents;
+    this.homes.update(this.player, this.arrange.isActive ? { x: 0, y: 0 } : input, residents);
+    const canArrange = !this.bedtime.asleep && this.room !== null && this.homes.placing() !== null;
+    if (this.registry.get("canArrange") !== canArrange) this.registry.set("canArrange", canArrange);
     // You only see who's where you are: the village, or the same room. Sleepers are tucked in.
     for (const remote of this.remotes.values()) {
       const { sprite } = remote.character;
@@ -517,6 +559,7 @@ export class WorldScene extends Phaser.Scene {
    */
   private openPanel<T extends OpenPanel>(open: (onClose: () => void) => T): T | null {
     if (this.bedtime.asleep) return null;
+    this.arrange.stop();
     this.closePanel();
     this.releaseKeys();
     playSound(this, "open");
@@ -541,6 +584,10 @@ export class WorldScene extends Phaser.Scene {
           coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
           move: (from, to) => this.room?.send("moveItem", { from, to } satisfies MoveItemMessage),
           split: (from, count) => this.room?.send("splitStack", { from, count } satisfies SplitStackMessage),
+          place: (slot) => {
+            this.closePanel();
+            this.arrange.start(slot);
+          },
           onClose,
         }),
     );

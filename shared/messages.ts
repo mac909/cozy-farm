@@ -163,3 +163,32 @@ export interface BuyMessage {
 export interface MoveInMessage {
   house: string;
 }
+
+// ---------- Arranging furniture and decorations ----------
+// All in map tiles. The server works out where you are from your position: in your own house's
+// room (furniture), or out in the village (decorations on the farm).
+
+/** Client → server ("placePiece"): put one piece of furniture from my bag slot `slot` down at col, row, turned `turn`. */
+export interface PlacePieceMessage {
+  slot: number;
+  col: number;
+  row: number;
+  turn: number;
+}
+
+/** Client → server ("movePiece"): move (or turn) the `itemId` whose top-left tile is col, row to toCol, toRow, turned `turn`. */
+export interface MovePieceMessage {
+  itemId: string;
+  col: number;
+  row: number;
+  toCol: number;
+  toRow: number;
+  turn: number;
+}
+
+/** Client → server ("takePiece"): put the `itemId` whose top-left tile is col, row back in my bag. */
+export interface TakePieceMessage {
+  itemId: string;
+  col: number;
+  row: number;
+}

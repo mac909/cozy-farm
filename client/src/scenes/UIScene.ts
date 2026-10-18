@@ -12,6 +12,7 @@ import { Hotbar, slotName } from "../ui/Hotbar";
 import { Joystick } from "../ui/Joystick";
 import { RoundButton } from "../ui/RoundButton";
 import { EVENING_COLOR, eveningTint, IN_BED_TINT } from "../ui/evening";
+import type { ArrangeHud } from "../world/Arrange";
 import { safeArea } from "../ui/safeArea";
 
 /** The colour the screen fades to when the night comes. */
@@ -65,6 +66,12 @@ export class UIScene extends Phaser.Scene {
   private musicButton!: RoundButton;
   private bagButton!: RoundButton;
   private actionButton!: ActionButton;
+  /** Arrange furniture or decorations (shown in your own house and outdoors), and its mode's buttons. */
+  private arrangeButton!: RoundButton;
+  private turnButton!: RoundButton;
+  private putAwayButton!: RoundButton;
+  private doneButton!: RoundButton;
+  private arrangeHud: ArrangeHud | null = null;
   private toast!: Phaser.GameObjects.Text;
   private toastTimer?: Phaser.Time.TimerEvent;
   /** The evening tint over the world (deeper while you're in bed), under the HUD. */
@@ -140,6 +147,45 @@ export class UIScene extends Phaser.Scene {
       onPress: () => this.events.emit("bag"),
     });
 
+    const hint = (key: string) => (this.keyHints ? key : undefined);
+    this.arrangeButton = new RoundButton(this, {
+      size: SMALL_BUTTON_SIZE,
+      icon: UI_ICONS_KEY,
+      iconFrame: UI_ICON.arrange,
+      iconScale: 2,
+      hint: hint("F"),
+      label: "Arrange",
+      onPress: () => this.events.emit("arrange"),
+    });
+    this.turnButton = new RoundButton(this, {
+      size: SMALL_BUTTON_SIZE,
+      icon: UI_ICONS_KEY,
+      iconFrame: UI_ICON.turn,
+      iconScale: 2,
+      hint: hint("R"),
+      label: "Turn",
+      onPress: () => this.events.emit("turn"),
+    });
+    this.putAwayButton = new RoundButton(this, {
+      size: SMALL_BUTTON_SIZE,
+      icon: BAG_KEY,
+      iconScale: 2,
+      hint: hint("Del"),
+      label: "Put away",
+      onPress: () => this.events.emit("putAway"),
+    });
+    this.doneButton = new RoundButton(this, {
+      size: SMALL_BUTTON_SIZE,
+      icon: UI_ICONS_KEY,
+      iconFrame: UI_ICON.done,
+      iconScale: 2,
+      hint: hint("Esc"),
+      label: "Done",
+      onPress: () => this.events.emit("done"),
+    });
+    this.onRegistry("arrange", (view: ArrangeHud | null) => this.showArrangeMode(view));
+    this.onRegistry("canArrange", () => this.showArrangeMode(this.arrangeHud));
+
     const look: Look = this.registry.get("look");
     this.lookButton = new RoundButton(this, {
       size: SMALL_BUTTON_SIZE,
@@ -164,6 +210,7 @@ export class UIScene extends Phaser.Scene {
     this.bindKeys();
     this.layout();
     this.showBedMode();
+    this.showArrangeMode(null);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
   }
@@ -203,8 +250,22 @@ export class UIScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_WHEEL, (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       if (dy !== 0) this.hotbar.select(this.hotbar.selected + Math.sign(dy));
     });
-    // Panels catch Esc themselves while they're open; this is for getting out of bed.
+    // Panels catch Esc themselves while they're open; this is for getting out of bed, or finishing arranging.
     onKey("ESC", () => this.events.emit("escape"));
+    onKey("F", () => {
+      this.arrangeButton.press();
+      this.events.emit("arrange");
+    });
+    onKey("R", () => {
+      this.turnButton.press();
+      this.events.emit("turn");
+    });
+    for (const key of ["DELETE", "BACKSPACE"]) {
+      onKey(key, () => {
+        this.putAwayButton.press();
+        this.events.emit("putAway");
+      });
+    }
   }
 
   /** Where everything goes, from the screen size and safe area (the notch and home bar). */
@@ -266,6 +327,13 @@ export class UIScene extends Phaser.Scene {
     this.hotbar.layout(L.hotbar.x, L.hotbar.y, L.hotbar.size, L.hotbar.gap, this.keyHints);
     this.emoteButtons.forEach((button, i) => button.setPosition(L.emotes[i].x + s / 2, L.emotes[i].y + s / 2));
     this.bagButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
+    // Arrange sits above the bag. In arrange mode Turn and Put away take the emotes' places and
+    // Done the bag's.
+    this.arrangeButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y - 14 - s / 2);
+    const [first, second] = L.emotes;
+    this.putAwayButton.setPosition(first.x + s / 2, first.y + s / 2);
+    this.turnButton.setPosition(second.x + s / 2, second.y + s / 2);
+    this.doneButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
     this.actionButton.setPosition(L.action.x + ACTION_SIZE / 2, L.action.y + ACTION_SIZE / 2);
     this.toast.setPosition(width / 2, L.toastY);
     this.events.emit("layout", L);
@@ -321,10 +389,27 @@ export class UIScene extends Phaser.Scene {
     const inBed = this.registry.get("inBed") === true;
     this.hotbar.setVisible(!inBed);
     this.actionButton.setVisible(!inBed);
-    this.bagButton.setVisible(!inBed);
-    for (const button of this.emoteButtons) button.setVisible(!inBed);
     if (inBed) this.toast.setVisible(false);
+    this.showArrangeMode(this.arrangeHud);
     this.showTint();
+  }
+
+  /**
+   * Arranging: Turn, Put away and Done instead of the emotes and the bag, faded when there's
+   * nothing to turn or put away. Otherwise the usual buttons, and Arrange where it works.
+   */
+  private showArrangeMode(view: ArrangeHud | null) {
+    const before = this.arrangeHud?.carrying ?? null;
+    this.arrangeHud = view;
+    const inBed = this.registry.get("inBed") === true;
+    const arranging = view !== null && !inBed;
+    for (const button of this.emoteButtons) button.setVisible(!inBed && !arranging);
+    this.bagButton.setVisible(!inBed && !arranging);
+    this.arrangeButton.setVisible(!inBed && !arranging && this.registry.get("canArrange") === true);
+    this.turnButton.setVisible(arranging).setAlpha(view?.canTurn ? 1 : 0.4);
+    this.putAwayButton.setVisible(arranging).setAlpha(view?.canPutAway ? 1 : 0.4);
+    this.doneButton.setVisible(arranging);
+    if (arranging && view.carrying && view.carrying !== before) this.showToast(view.carrying);
   }
 
   /**

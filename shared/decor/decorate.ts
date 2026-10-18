@@ -126,3 +126,6 @@ export function putAway(world: World, farmerId: FarmerId, target: DecorTarget, a
 export function isDug(world: World, col: number, row: number): boolean {
   return farmTileAt(world, col, row).kind !== "untilled";
 }
+
+/** The dug-soil check for farmBoard, from a world. */
+export const dugIn = (world: World) => (col: number, row: number) => isDug(world, col, row);

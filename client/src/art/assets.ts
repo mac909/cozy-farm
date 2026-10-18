@@ -17,9 +17,9 @@ export const tilesetKey = (name: string) => `tileset-${name}`;
 export const characterKey = (id: CharacterId) => `character-${id}`;
 /** Speech bubbles, one frame per emote in EMOTES order. */
 export const EMOTES_KEY = "emotes";
-/** HUD icons: music on, music off. */
+/** HUD icons: music on, music off, arrange, turn, done. */
 export const UI_ICONS_KEY = "ui-icons";
-export const UI_ICON = { musicOn: 0, musicOff: 1 } as const;
+export const UI_ICON = { musicOn: 0, musicOff: 1, arrange: 2, turn: 3, done: 4 } as const;
 export const SHIPPING_CRATE_KEY = "shipping-crate";
 /** Our seed stand, 32×32, drawn at the map's seedStand spot. */
 export const SEED_STAND_KEY = "seed-stand";

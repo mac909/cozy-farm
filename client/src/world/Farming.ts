@@ -199,6 +199,13 @@ export class Farming {
     this.options.showAction(this.viewFor(aim));
   }
 
+  /** While something else has the Action button (arranging): no outline, and no holding to repeat. */
+  pause() {
+    this.outlineHost.hide();
+    this.holdArmed = false;
+    this.repeatFrom = null;
+  }
+
   /** The Action button (or Space, or a click on a tile next to you). */
   act() {
     if (this.options.busy()) return;

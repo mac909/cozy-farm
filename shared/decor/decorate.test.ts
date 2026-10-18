@@ -3,7 +3,7 @@ import { INVENTORY_SLOTS, countOf, type Inventory } from "../inventory/inventory
 import { addFarmer, newWorld, setFarmTile, setFarmerBag, type World } from "../world/world";
 import { VILLAGE_MAP } from "../world/villageMap";
 import { farmBoard, farmKeepClear, houseBoard } from "./boards";
-import { doorKind, homeOf, moveIn, movePiece, placeFromBag, putAway, type DecorTarget } from "./decorate";
+import { doorKind, dugIn, homeOf, moveIn, movePiece, placeFromBag, putAway, type DecorTarget } from "./decorate";
 import { pieceAt, placeRefusal, type Board, type PlacedPiece } from "./pieces";
 
 const pip = { name: "Pip", character: "woman" as const };
@@ -149,7 +149,7 @@ describe("the boards", () => {
 
   it("keeps decorations off the field, the soil, paths to doors and stands, and out of the rooms", () => {
     const farm = setFarmTile(world(), 30, 10, { kind: "tilled", watered: false });
-    const board = farmBoard(VILLAGE_MAP, farm);
+    const board = farmBoard(VILLAGE_MAP, dugIn(farm));
     // Open meadow.
     expect(board.open(25, 8)).toBe(true);
     // The farm field.
@@ -168,7 +168,7 @@ describe("the boards", () => {
   });
 
   it("puts decorations on the farm for anyone, and takes them back", () => {
-    const farmTarget: DecorTarget = { kind: "farm", board: farmBoard(VILLAGE_MAP, world()) };
+    const farmTarget: DecorTarget = { kind: "farm", board: farmBoard(VILLAGE_MAP, dugIn(world())) };
     const start = setFarmerBag(world(), "juno", [{ itemId: "fence", count: 3 }, ...Array(INVENTORY_SLOTS - 1).fill(null)]);
     const placed = placeFromBag(start, "juno", farmTarget, 0, { col: 25, row: 8, turn: 2 });
     expect(placed.ok).toBe(true);

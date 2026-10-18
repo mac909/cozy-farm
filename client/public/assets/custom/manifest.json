@@ -166,13 +166,16 @@
   },
   "ui-icons": {
     "file": "ui-icons.png",
-    "width": 32,
+    "width": 80,
     "height": 16,
     "frameWidth": 16,
     "frameHeight": 16,
     "frames": {
       "musicOn": 0,
-      "musicOff": 1
+      "musicOff": 1,
+      "arrange": 2,
+      "turn": 3,
+      "done": 4
     }
   }
 }
