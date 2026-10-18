@@ -30,6 +30,18 @@ export function stickToMove(dx: number, dy: number, radius: number): Vec {
   return { x: (dx / len) * strength, y: (dy / len) * strength };
 }
 
+/**
+ * A joystick push lighter than this (but past the dead zone) turns you on the spot without
+ * walking, so lining up on one tile is easy.
+ */
+export const TURN_ONLY_STRENGTH = 0.4;
+
+/** Whether a joystick direction only turns you (a light push), rather than walking. */
+export function turnsOnly(stick: Vec): boolean {
+  const strength = Math.hypot(stick.x, stick.y);
+  return strength > 0 && strength < TURN_ONLY_STRENGTH;
+}
+
 /** Which way a character faces while moving in direction (x, y). Standing still keeps the current facing. */
 export function facingFor(x: number, y: number, current: Facing): Facing {
   if (x === 0 && y === 0) return current;

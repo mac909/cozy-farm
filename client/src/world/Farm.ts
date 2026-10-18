@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { TILE_SIZE } from "../../../shared/constants";
-import { UNTILLED, type FarmTile } from "../../../shared/farming/farming";
+import { isRipe, UNTILLED, type FarmTile } from "../../../shared/farming/farming";
 import { parseTileKey, tileKey, type TileKey } from "../../../shared/world/world";
 import { CROPS_KEY, SOIL_KEY } from "../art/assets";
 import { cropStageFrame } from "../art/cropFrames";
@@ -16,6 +16,8 @@ interface DrawnTile {
   tile: FarmTile;
   soil: Phaser.GameObjects.Image;
   crop?: Phaser.GameObjects.Image;
+  /** The bob of a ripe crop. */
+  bob?: Phaser.Tweens.Tween;
 }
 
 /**
@@ -42,6 +44,7 @@ export class FarmView {
 
     for (const [key, drawn] of this.tiles) {
       if (Object.hasOwn(farm, key)) continue;
+      drawn.bob?.remove();
       drawn.soil.destroy();
       drawn.crop?.destroy();
       this.tiles.delete(key);
@@ -79,6 +82,7 @@ export class FarmView {
 
   destroy() {
     for (const drawn of this.tiles.values()) {
+      drawn.bob?.remove();
       drawn.soil.destroy();
       drawn.crop?.destroy();
     }
@@ -88,19 +92,39 @@ export class FarmView {
   private drawCrop(drawn: DrawnTile, col: number, row: number) {
     const { tile } = drawn;
     if (tile.kind !== "planted") {
+      drawn.bob?.remove();
+      drawn.bob = undefined;
       drawn.crop?.destroy();
       drawn.crop = undefined;
       return;
     }
     const frame = cropStageFrame(tile.cropId, tile.stage);
+    const y = row * TILE_SIZE - CROP_LIFT;
     if (!drawn.crop) {
       drawn.crop = this.scene.add
-        .image(col * TILE_SIZE, row * TILE_SIZE - CROP_LIFT, CROPS_KEY, frame)
+        .image(col * TILE_SIZE, y, CROPS_KEY, frame)
         .setOrigin(0, 0)
         // Sorted with the characters: someone standing on the tile below is drawn in front.
         .setDepth(row * TILE_SIZE + TILE_SIZE / 2 - 1);
     } else {
       drawn.crop.setFrame(frame);
+    }
+    // Ripe crops bob a pixel, so you can spot them across the field. Each starts at its own moment.
+    if (isRipe(tile) && !drawn.bob) {
+      drawn.bob = this.scene.tweens.add({
+        targets: drawn.crop,
+        y: y - 1,
+        duration: 450,
+        yoyo: true,
+        repeat: -1,
+        repeatDelay: 700,
+        delay: ((col * 7 + row * 13) % 10) * 90,
+        ease: "Stepped",
+      });
+    } else if (!isRipe(tile) && drawn.bob) {
+      drawn.bob.remove();
+      drawn.bob = undefined;
+      drawn.crop.setY(y);
     }
   }
 }

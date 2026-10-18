@@ -73,6 +73,8 @@ export class UIScene extends Phaser.Scene {
   /** Over everything, for the fade into the night and out into the morning. */
   private fader!: Phaser.GameObjects.Rectangle;
   private fadeChain?: Phaser.Tweens.TweenChain;
+  /** Space and Enter, for hold to repeat. */
+  private actionKeys: Phaser.Input.Keyboard.Key[] = [];
   private keyHints = false;
   /** Kept here because Phaser applies sound.mute a moment later, so reading it straight back can be stale. */
   private muted = loadMuted();
@@ -180,6 +182,7 @@ export class UIScene extends Phaser.Scene {
       }),
     );
     keyboard.addCapture(["SPACE", "ENTER"]);
+    this.actionKeys = [keyboard.addKey("SPACE"), keyboard.addKey("ENTER")];
     for (const key of ["SPACE", "ENTER"]) {
       onKey(key, () => {
         this.actionButton.press();
@@ -271,6 +274,11 @@ export class UIScene extends Phaser.Scene {
   /** What the Action button says. Cheap to call every frame. Does nothing until the HUD exists. */
   setAction(view: ActionView) {
     this.actionButton?.show(view);
+  }
+
+  /** Whether the Action button, Space or Enter is being held down (hold to repeat). */
+  actionHeld(): boolean {
+    return (this.actionButton?.held ?? false) || this.actionKeys.some((key) => key.isDown);
   }
 
   private onSelectSlot(slot: number, item: Slot) {

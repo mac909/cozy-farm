@@ -9,7 +9,7 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 ## Pillars
 
 1. **Together, not competing.** Everything is nicer with two, but nothing requires two. No scores, no racing each other.
-2. **No stress.** Nothing dies, nothing is lost, no timer punishes you. **(proposed)**
+2. **No stress.** Nothing dies, nothing is lost, no timer punishes you. The watering can never runs dry and there's no energy bar.
 3. **Always something to look forward to.** Crops ripening tomorrow, a new shop item, a rare fish.
 4. **Made for us.** Room for inside jokes, real places, and our pets.
 
@@ -33,6 +33,13 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Map | Painted in Tiled (`shared/world/village.json`). Hidden layers mark where nobody can walk and where farming is allowed; objects mark the spawn point and the spots for the shipping crate, tent and seed stand. The server reads the same file. | 2026-10-18 |
 | Places | The tent stands on the grass just left of the farm field's gate, and you appear (and wake up) at its door. The seed stand is beside the top of the sandy path down to the beach. The shipping crate is on the dock. Decided by Claude while the developer was away; easy to move in Tiled. | 2026-10-18 |
 | Music | "Calm Village" from the pack loops softly, starting at the first tap or key press. A music button next to the look button mutes it, remembered on that device. | 2026-10-18 |
+| Controls | An Action button for the tile in front of you (the plan's scheme A), saying what it will do; ripe crops get picked whatever you're holding; places (tent, crate, seed stand) take over the button; hold to repeat; a light joystick push turns on the spot. The game never switches tools for you, for now: watch how she plays. Details under Controls. | 2026-10-18 |
+| Phone held | Both upright and sideways work; the layout starts from upright with one thumb. Still to find out: how she holds it on the first evening. | 2026-10-18 |
+| No stress, made concrete | The watering can never runs dry, there's no energy bar, crops never die, and midnight just sends everyone to bed. | 2026-10-18 |
+| Bedtime | A shared tent by the farm gate until the houses (Milestone 4). The night starts when everyone online is in bed; if someone's phone drops while they're still up, it waits 30 seconds for them, then starts. A morning card says what grew and what sold. Details under Time. | 2026-10-18 |
+| Shop in Milestone 2 | The shipping crate and a seed stand came into Milestone 2, so the radishes have somewhere to go and the coins something to buy. Milestone 3 becomes the general store with furniture. | 2026-10-18 |
+| First-day tips | Four one-time tips per device (dig; plant and water; the tent ends the day; the crate), on top of the Action button's hints. | 2026-10-18 |
+| Digging up crops | Left out of Milestone 2. Crops never die, so a wrong one just ripens. Add it if she asks. | 2026-10-18 |
 
 ## Controls
 
@@ -40,9 +47,14 @@ One way of playing on every device: an Action button for the tile in front of yo
 
 - **Hotbar:** the first 8 slots of your bag along the bottom. Tap a slot (or 1–8, Q/E, the mouse wheel) to hold what's in it; its name shows for a moment. The choice is remembered on the device, and a slot stays picked when it empties.
 - **Action button** (bottom right, the biggest thing on screen; Space or Enter): it says what it will do for the tile in front of your feet, which gets a pulsing outline: **Dig** (hoe on farm-field grass), **Plant** (seeds on bare dug soil), **Water** (can on dry soil), **Pick** (a ripe crop, whatever you're holding). Next to a place it takes over: **Sleep** at the tent, **Crate** at the shipping crate, **Seeds** at the seed stand. When nothing would happen it fades, and tapping it gives a hint over your head instead ("Dig it with the hoe first."). These hints are the tutorial.
-- On a laptop, clicking one of the 8 tiles around you acts there.
+- **Hold to repeat:** keep Action (or Space) held after a press and walk: each new tile you face gets dug, planted, watered or picked, so a row is one stroke. On a phone, steer with one thumb and hold Action with the other.
+- **Turn on the spot:** a light push on the joystick turns you without walking, so lining up on one tile is easy; push further to walk.
+- On a laptop, clicking one of the 8 tiles around you acts there. Tapping a tile on a phone doesn't: a touch steers the joystick, and telling a tap from the start of a walk would make the stick flicker. Revisit if it's missed on a real phone.
+- **Sounds** from the pack, soft: a scuff for digging and planting, a splash for watering, a pop for picking, coins for buying and for a morning with a sale, a little jingle for a quiet morning, and a click for the crate and opening cards. The other player's farming sounds play at half volume when it happens on your screen. The music button mutes everything.
+- Ripe crops bob a pixel, so you can spot them across the field.
 - **Bag** (the bag button, B or Tab): a card with all 24 slots, 8 × 3, the top row being the hotbar. Tap a stack to pick it up (a strip says what it is and what it sells for), then tap another slot to move it there: it moves, joins a stack of the same thing, or swaps. **Split** halves a stack into the first empty slot. With a mouse, drag and drop works too. Close with ×, Esc, B or Tab. Tap, then tap, is the main way on a phone: a drag starting on a small slot is easy to fumble, and tapping can't drop anything by mistake.
 - **Emotes:** wave and heart next to Action (Z and X).
+- **First-day tips:** four small cards near the top of the screen, each shown once per device, that don't stop play (OK, or they go by themselves after 10 seconds): how to dig (on first joining), plant and water (after your first dig), the tent ends the day (after your first watering, or at 6 pm), and the crate (after your first pick). The words are in `client/src/ui/tipRules.ts`.
 - **Esc** closes whatever card is open, and gets you out of bed.
 - Time never stops while a card is open: it's shared time.
 - The watering can never runs dry and there's no energy bar ("no stress").
@@ -85,7 +97,9 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 - Either player can water or harvest anything on the shared farm.
 - Starter crops: radish, carrot, sea samphire, potato, strawberry, pumpkin. Samphire and strawberry regrow after harvest: the plant drops back one stage and ripens again.
 - Growth times and prices live in `shared/content/crops.ts`. They're first guesses, to be tuned by playing.
-- Not decided yet: digging up a crop you don't want.
+- Dug soil stays dug forever. Watering lasts until the night; each morning shows which tiles need water again.
+- One player alone can farm and end the day.
+- Digging up a crop you don't want: left out for now (see Decisions).
 
 ## Money and shops
 
@@ -112,10 +126,10 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 ## Art and sound
 
 - Ninja Adventure (pixel-boy, CC0) for tiles, characters, critters, items, UI and music. One artist, so styles don't clash.
-- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, a wave emote.
+- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, the seed stand, a wave emote. The tent is the pack's own camp tent.
 - Characters walk in four directions; you can walk behind tree tops.
 - Music: "Calm Village" on a soft loop. The pack's "Peaceful", "Sunny" and "Aquatic" are imported too, for later (other times of day or places).
-- Sound effects later, from the pack (already imported: menu, coin, water, grass, waves).
+- Sound effects from the pack (see Controls). The waves sound is imported for later, for the beach.
 
 ## Later ideas
 

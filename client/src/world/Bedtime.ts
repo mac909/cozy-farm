@@ -32,6 +32,10 @@ export interface BedtimeOptions {
   show(view: { inBed: boolean; sleepers: string | null }): void;
   /** The coin picture, as an image URL for the morning card. */
   coinIcon(): string;
+  /** The morning card just opened (for its sound). */
+  morningShown?(report: MorningReport): void;
+  /** The morning card was closed (keys let go while it was open are forgotten). */
+  cardClosed?(): void;
 }
 
 /**
@@ -152,9 +156,21 @@ export class Bedtime {
     else this.showMorning(report);
   }
 
+  /** The morning card is up. */
+  get cardOpen(): boolean {
+    return this.morningOpen;
+  }
+
+  private morningOpen = false;
+
   private showMorning(report: MorningReport) {
     saveMorningShown(report.day);
-    void showMorningCard(report, this.options.coinIcon());
+    this.morningOpen = true;
+    this.options.morningShown?.(report);
+    void showMorningCard(report, this.options.coinIcon()).then(() => {
+      this.morningOpen = false;
+      this.options.cardClosed?.();
+    });
   }
 
   private showBanner(inBed: boolean) {

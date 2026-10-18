@@ -28,6 +28,12 @@
   padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
+/* Under the clock card and the buttons in the top corners. */
+.panel.top {
+  justify-content: flex-start;
+  padding-top: calc(96px + env(safe-area-inset-top, 0px));
+}
+
 /* Touches around the card go through to the game (the bed banner: the joystick gets you up). */
 .panel.through {
   background: none;

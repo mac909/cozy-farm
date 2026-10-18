@@ -61,11 +61,26 @@ export class ActionButton extends Phaser.GameObjects.Container {
           .setOrigin(0.5),
       );
     }
-    disc.on(Phaser.Input.Events.POINTER_DOWN, () => {
+    disc.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+      this.heldBy = pointer.id;
       this.press();
       onPress();
     });
+    // Let go anywhere (a thumb often slides off the button while walking).
+    const release = (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === this.heldBy) this.heldBy = null;
+    };
+    scene.input.on(Phaser.Input.Events.POINTER_UP, release);
+    scene.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, release);
     scene.add.existing(this);
+  }
+
+  /** Which pointer is holding the button down, if any. */
+  private heldBy: number | null = null;
+
+  /** Whether it's being held down (hold to repeat). */
+  get held(): boolean {
+    return this.heldBy !== null && this.visible;
   }
 
   /** Shows a quick press, as if tapped (for Space and Enter). */

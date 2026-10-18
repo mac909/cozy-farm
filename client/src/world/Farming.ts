@@ -11,6 +11,7 @@ import {
   hintText,
   seedCrop,
   type Action,
+  type FarmActionKind,
   type Hint,
 } from "../../../shared/farming/actions";
 import type { FarmTile } from "../../../shared/farming/farming";
@@ -23,8 +24,10 @@ import type { TilePos } from "../../../shared/world/map";
 import { CLIENT_NEAR_TILES, feetTile, isNeighbour, placeNear, targetTile, type PlaceId } from "../../../shared/world/places";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { tileKey, type TileKey } from "../../../shared/world/world";
+import { TILE_SIZE } from "../../../shared/constants";
 import { CAMP_KEY, SHIPPING_CRATE_KEY, TENT_FRAME } from "../art/assets";
 import { itemIcon } from "../art/itemIcons";
+import { playSound, type SoundId } from "../audio/sounds";
 import type { ActionView } from "../ui/ActionButton";
 import type { Character } from "./Character";
 import { playFarmEffect } from "./effects";
@@ -41,6 +44,17 @@ const ACTION_EFFECT: Record<"till" | "plant" | "water" | "harvest", FarmChange> 
   water: "watered",
   harvest: "picked",
 };
+
+/** The sound that goes with each farm change. */
+const CHANGE_SOUND: Record<FarmChange, SoundId> = {
+  dug: "dig",
+  planted: "plant",
+  watered: "water",
+  picked: "pick",
+};
+
+/** The other player's farming sounds play this loud, and only when it happens on your screen. */
+const REMOTE_LOUDNESS = 0.5;
 
 /** What the Action button would do right now, and where. */
 interface Aim {
@@ -68,6 +82,15 @@ export interface FarmingOptions {
   busy(): boolean;
   /** The places that take over the Action button when you're next to them, and what tapping it there does. */
   places: Partial<Record<PlaceId, () => void>>;
+  /** Whether the Action button or Space is being held down (hold to repeat). */
+  holding(): boolean;
+  /** You dug, planted, watered or picked (asked the server to): for the first-day tips. */
+  acted?(kind: FarmActionKind): void;
+}
+
+/** Whether an action changes a farm tile (the ones hold-to-repeat repeats). */
+function isFarmAction(action: Action): action is Extract<Action, { kind: FarmActionKind }> {
+  return action.kind === "till" || action.kind === "plant" || action.kind === "water" || action.kind === "harvest";
 }
 
 /**
@@ -84,6 +107,10 @@ export class Farming {
   private readonly recent = new Map<TileKey, number>();
   /** Effects wait for the first look at the farm after joining, so it doesn't puff everywhere at once. */
   private seenFarm = false;
+  /** The Action button (or Space) was pressed and is still held: new tiles get acted on as you walk. */
+  private holdArmed = false;
+  /** The last tile tried during this hold, so it isn't tried again every frame. */
+  private repeatFrom: TileKey | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -118,17 +145,30 @@ export class Farming {
       return;
     }
     const now = performance.now();
+    const view = this.scene.cameras.main.worldView;
     for (const { col, row, change } of changes) {
       const shownAt = this.recent.get(tileKey(col, row));
       if (shownAt !== undefined && now - shownAt < LOCAL_EFFECT_MS) continue;
       playFarmEffect(this.scene, col, row, change);
+      if (view.contains(col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2)) {
+        playSound(this.scene, CHANGE_SOUND[change], REMOTE_LOUDNESS);
+      }
     }
   }
 
   /** Every frame: where the outline goes, and what the Action button says. */
   update() {
     this.hover = this.hoveredTile();
-    const aim = this.aim();
+    let aim = this.aim();
+    // Hold to repeat: while Action (or Space) stays held after a press, each new tile you face
+    // gets the same treatment, so a row of soil is one stroke.
+    if (!this.options.holding()) {
+      this.holdArmed = false;
+      this.repeatFrom = null;
+    } else if (this.holdArmed && isFarmAction(aim.action) && tileKey(aim.target.col, aim.target.row) !== this.repeatFrom) {
+      this.act();
+      aim = this.aim();
+    }
     const { action, held, target, place } = aim;
     const faded = action.kind === "none";
     const holdingTool = held === HOE || held === WATERING_CAN || seedCrop(held) !== null;
@@ -141,6 +181,7 @@ export class Farming {
   /** The Action button (or Space, or a click on a tile next to you). */
   act() {
     if (this.options.busy()) return;
+    this.holdArmed = true;
     const aim = this.aim();
     const { action, target, place } = aim;
     if (action.kind === "none") {
@@ -151,6 +192,8 @@ export class Farming {
       if (place) this.options.places[place]?.();
       return;
     }
+    // Even if it's refused below, holding the button doesn't try this tile again every frame.
+    this.repeatFrom = tileKey(target.col, target.row);
     if (action.kind === "harvest") {
       const bag = this.options.bag();
       if (bag && roomFor(bag, cropItemId(action.cropId)) < CROPS[action.cropId].harvestAmount) {
@@ -169,7 +212,9 @@ export class Farming {
     this.options.face(facingFor(target.col - feet.col, target.row - feet.row, this.options.facing()));
     this.options.me.swing(this.options.facing());
     playFarmEffect(this.scene, target.col, target.row, ACTION_EFFECT[action.kind]);
+    playSound(this.scene, CHANGE_SOUND[ACTION_EFFECT[action.kind]]);
     this.recent.set(tileKey(target.col, target.row), performance.now());
+    this.options.acted?.(action.kind);
   }
 
   /** A hint over your head. */

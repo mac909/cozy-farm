@@ -1,0 +1,30 @@
+/* The first-day tips (client/src/ui/Tips.ts): a small card that doesn't stop play. */
+
+.tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 360px);
+  padding: 10px 10px 10px 14px;
+  border: 2px solid #ef7d6d;
+}
+
+.tip-text {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+}
+
+.tip-ok {
+  flex: none;
+  min-width: 48px;
+  min-height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: #ef7d6d;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}

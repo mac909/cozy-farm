@@ -21,7 +21,7 @@ import type {
   WakeUpMessage,
   YouMessage,
 } from "../../../shared/messages";
-import { clampMove, type Facing, facingFor, isFacing, type Vec } from "../../../shared/movement";
+import { clampMove, type Facing, facingFor, isFacing, turnsOnly, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
 import { countOf, type Inventory } from "../../../shared/inventory/inventory";
@@ -55,6 +55,9 @@ import { loadLook, saveLook } from "../ui/lookStorage";
 import { BagPanel } from "../ui/BagPanel";
 import { CratePanel } from "../ui/CratePanel";
 import { ShopPanel } from "../ui/ShopPanel";
+import { Tips } from "../ui/Tips";
+import { EVENING_MINUTE } from "../ui/ClockCard";
+import { playSound } from "../audio/sounds";
 import { Bedtime } from "../world/Bedtime";
 import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
@@ -104,6 +107,7 @@ export class WorldScene extends Phaser.Scene {
   private lastSent = { x: NaN, y: NaN, facing: "down" as Facing, at: 0 };
   private farming!: Farming;
   private bedtime!: Bedtime;
+  private readonly tips = new Tips();
   /** The shipping crate on the dock, and what's in it as the server last said. */
   private crateSprite!: Phaser.GameObjects.Image;
   private crate: Crate = [];
@@ -166,6 +170,8 @@ export class WorldScene extends Phaser.Scene {
         if (this.registry.get("sleepers") !== sleepers) this.registry.set("sleepers", sleepers);
       },
       coinIcon: () => iconUrl(this.textures, { key: COIN_KEY }),
+      morningShown: (report) => playSound(this, report.sale.total > 0 ? "coin" : "morning"),
+      cardClosed: () => this.input.keyboard?.resetKeys(),
     });
     this.ui.events.on("escape", () => this.bedtime.wake());
 
@@ -179,6 +185,12 @@ export class WorldScene extends Phaser.Scene {
       showAction: (view) => this.ui.setAction(view),
       busy: () => this.bedtime.asleep || this.panel?.isOpen === true,
       places: { tent: () => this.bedtime.sleep(), crate: () => this.openCrate(), seedStand: () => this.openShop() },
+      holding: () => this.ui.actionHeld(),
+      acted: (kind) => {
+        if (kind === "till") this.tips.event("dug");
+        if (kind === "water") this.tips.event("watered");
+        if (kind === "harvest") this.tips.event("picked");
+      },
     });
     this.ui.events.on("action", () => this.farming.act());
 
@@ -201,13 +213,23 @@ export class WorldScene extends Phaser.Scene {
 
   update(time: number) {
     const input = this.readInput();
-    // In bed you stay put; moving gets you up instead.
-    const move = this.bedtime.holdStill(input) ? { x: 0, y: 0 } : clampMove(input.x, input.y);
+    let move: Vec;
+    if (this.bedtime.holdStill(input)) {
+      // In bed you stay put; moving gets you up instead.
+      move = { x: 0, y: 0 };
+    } else if (input === this.ui.joystick?.vector && turnsOnly(input)) {
+      // A light push on the joystick turns you on the spot, so lining up on a tile is easy.
+      move = { x: 0, y: 0 };
+      this.facing = facingFor(input.x, input.y, this.facing);
+    } else {
+      move = clampMove(input.x, input.y);
+    }
     this.player.setVelocity(move.x * WALK_SPEED, move.y * WALK_SPEED);
     this.facing = facingFor(move.x, move.y, this.facing);
     this.me.setMotion(this.facing, move.x !== 0 || move.y !== 0);
     this.sendPosition(time);
     this.farming.update();
+    this.tips.update(!this.bedtime.asleep && !this.bedtime.cardOpen && this.panel === null && this.room !== null);
 
     const now = performance.now();
     const drawAt = now - REMOTE_DELAY_MS;
@@ -312,6 +334,7 @@ export class WorldScene extends Phaser.Scene {
     room.onMessage("morning", (report: MorningMessage) => this.bedtime.morning(report));
     $(room.state).players.onRemove((_player, sessionId) => this.removeRemote(sessionId));
     this.farming.joined();
+    this.tips.event("started");
     room.onStateChange((state) => this.readState(state));
     room.onMessage("hint", (hint: unknown) => {
       if (isHint(hint)) this.farming.hint(hint);
@@ -335,6 +358,7 @@ export class WorldScene extends Phaser.Scene {
     if (!shown || shown.day !== clock.day || shown.minute !== clock.minute) {
       this.registry.set("clock", clock);
       this.bedtime.clock(clock);
+      if (clock.minute >= EVENING_MINUTE) this.tips.event("evening");
     }
     if (this.room) this.bedtime.readState(state, this.room.sessionId);
 
@@ -429,6 +453,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.bedtime.asleep) return null;
     this.closePanel();
     this.input.keyboard?.resetKeys();
+    playSound(this, "open");
     const panel = open(() => {
       this.input.keyboard?.resetKeys();
       if (this.panel === panel) this.panel = null;
@@ -463,8 +488,14 @@ export class WorldScene extends Phaser.Scene {
         new CratePanel({
           icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
           coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
-          ship: (slot, count) => this.room?.send("ship", { slot, count } satisfies ShipMessage),
-          unship: (itemId, count) => this.room?.send("unship", { itemId, count } satisfies UnshipMessage),
+          ship: (slot, count) => {
+            playSound(this, "tap");
+            this.room?.send("ship", { slot, count } satisfies ShipMessage);
+          },
+          unship: (itemId, count) => {
+            playSound(this, "tap");
+            this.room?.send("unship", { itemId, count } satisfies UnshipMessage);
+          },
           onClose,
         }),
     );
@@ -479,7 +510,10 @@ export class WorldScene extends Phaser.Scene {
         new ShopPanel({
           icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
           coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
-          buy: (itemId, count) => this.room?.send("buy", { itemId, count } satisfies BuyMessage),
+          buy: (itemId, count) => {
+            playSound(this, "coin");
+            this.room?.send("buy", { itemId, count } satisfies BuyMessage);
+          },
           onClose,
         }),
     );

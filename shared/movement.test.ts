@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampMove, facingFor, isFacing, stickToMove } from "./movement";
+import { clampMove, facingFor, isFacing, stickToMove, turnsOnly } from "./movement";
 
 describe("clampMove", () => {
   it("keeps diagonal movement as fast as straight movement", () => {
@@ -45,5 +45,15 @@ describe("isFacing", () => {
     expect(isFacing("left")).toBe(true);
     expect(isFacing("sideways")).toBe(false);
     expect(isFacing(undefined)).toBe(false);
+  });
+});
+
+describe("turnsOnly", () => {
+  it("turns on the spot for a light push, and walks for a firm one", () => {
+    expect(turnsOnly({ x: 0, y: 0 })).toBe(false);
+    expect(turnsOnly({ x: 0.2, y: 0 })).toBe(true);
+    expect(turnsOnly({ x: 0, y: -0.3 })).toBe(true);
+    expect(turnsOnly({ x: 0.6, y: 0 })).toBe(false);
+    expect(turnsOnly({ x: 1, y: 0 })).toBe(false);
   });
 });

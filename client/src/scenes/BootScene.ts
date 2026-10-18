@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { createAnimations, loadArt } from "../art/assets";
+import { loadSounds } from "../audio/sounds";
 
 /** Loads the art and prepares shared state, then starts the world. */
 export class BootScene extends Phaser.Scene {
@@ -9,6 +10,7 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     loadArt(this);
+    loadSounds(this);
   }
 
   create() {

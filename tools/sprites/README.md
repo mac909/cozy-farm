@@ -46,6 +46,7 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
   tilled neighbour to the north, east, south, west.
 - `beach-items.png`: one row, frame order in `manifest.json`.
 - `shipping-crate.png`: 32×32 frames, closed then open.
+- `seed-stand.png`: one 32×32 frame, the counter on the bottom of the frame.
 - `sand-grass.png`, `sand-water.png`: same layout as the source blocks in the pack's `TilesetFloor.png` (from y 112)
   and `TilesetWater.png` (top-left block), so their autotile rules carry over.
 - `beach-terrain.png`: `sand-grass.png` stacked on `sand-water.png`, so the map's one Tiled terrain set ("Beach": grass, sand,

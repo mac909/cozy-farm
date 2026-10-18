@@ -3,8 +3,8 @@ import "./panel.css";
 export interface PanelOptions {
   /** Extra class names for the card (each panel styles its own insides). */
   cardClass?: string;
-  /** "bottom" sits the card at the bottom of the screen. */
-  position?: "center" | "bottom";
+  /** "bottom" sits the card at the bottom of the screen; "top" just under the clock card. */
+  position?: "center" | "bottom" | "top";
   /**
    * Touches and keys around the card go through to the game, and the screen isn't darkened
    * (the bed banner, so the joystick and Esc get you up). Otherwise the panel keeps the keys
@@ -28,7 +28,8 @@ export interface Panel {
 /** Opens a cream card over the game. Close it with close(), Escape, or the options' keys. */
 export function openPanel(options: PanelOptions = {}): Panel {
   const overlay = document.createElement("div");
-  overlay.className = `panel${options.position === "bottom" ? " bottom" : ""}${options.passThrough ? " through" : ""}`;
+  const position = options.position && options.position !== "center" ? ` ${options.position}` : "";
+  overlay.className = `panel${position}${options.passThrough ? " through" : ""}`;
   const card = document.createElement("div");
   card.className = `panel-card${options.cardClass ? ` ${options.cardClass}` : ""}`;
   card.setAttribute("role", "dialog");
