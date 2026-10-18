@@ -3,17 +3,20 @@
  * teach the rest. Edit the words here.
  */
 
-export type TipId = "dig" | "plant" | "bedtime" | "crate";
+export type TipId = "dig" | "plant" | "bedtime" | "crate" | "houses" | "home" | "arrange";
 
 export const TIPS: Readonly<Record<TipId, string>> = {
   dig: "Pick the hoe in your hotbar, walk into the farm field and tap the big round button to dig.",
   plant: "Now pick the seeds and plant them in the dug soil, then water them with the can. Watered crops grow overnight.",
   bedtime: "The day ends when everyone's in bed in the tent by the farm gate. Walk up to its door and tap Sleep.",
   crate: "Sell what you pick in the shipping crate on the dock. It pays out overnight, into the coins you share.",
+  houses: "Two empty cottages are waiting in the meadow above the farm. Walk up to one's door and tap Move in to make it yours.",
+  home: "Welcome home! The general store by the path sells furniture. Tap Arrange (the hammer) to put things where you like.",
+  arrange: "Move the frame with the stick (or tap a tile), then Place. Turn turns it, Lift picks up what's there, and Done when you're finished.",
 };
 
 /** What just happened in the game that might call for a tip. */
-export type TipEvent = "started" | "dug" | "watered" | "evening" | "picked";
+export type TipEvent = "started" | "dug" | "watered" | "evening" | "picked" | "homeless" | "movedIn" | "arranging";
 
 const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   started: "dig",
@@ -21,6 +24,9 @@ const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   watered: "bedtime",
   evening: "bedtime",
   picked: "crate",
+  homeless: "houses",
+  movedIn: "home",
+  arranging: "arrange",
 };
 
 /** The tip an event brings up, unless it's been shown on this device already. */

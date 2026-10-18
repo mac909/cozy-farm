@@ -66,6 +66,7 @@ import { Character } from "../world/Character";
 import { Farming } from "../world/Farming";
 import { Homes, type Resident } from "../world/Homes";
 import { Arrange } from "../world/Arrange";
+import { homeOf } from "../../../shared/decor/decorate";
 import { targetTile, feetTile } from "../../../shared/world/places";
 import { areaOf, VILLAGE } from "../../../shared/world/houses";
 import { Outline } from "../world/Outline";
@@ -179,6 +180,9 @@ export class WorldScene extends Phaser.Scene {
       myFarmerId: () => this.farmerId,
       room: () => this.room,
       teleport: (x, y, facing) => this.teleport(x, y, facing),
+      arrived: (_area, how) => {
+        if (how === "moveIn") this.tips.event("movedIn");
+      },
     });
     this.homes.setZoom(this.zoom);
     this.physics.add.collider(this.player, this.homes.colliders);
@@ -245,6 +249,7 @@ export class WorldScene extends Phaser.Scene {
         if (JSON.stringify(this.registry.get("arrange")) !== JSON.stringify(view)) this.registry.set("arrange", view);
       },
       overHud: (pointer) => this.ui.input.hitTestPointer(pointer).length > 0,
+      started: () => this.tips.event("arranging"),
     });
     this.ui.events.on("action", () => (this.arrange.isActive ? this.arrange.act() : this.farming.act()));
     this.ui.events.on("arrange", () => {
@@ -480,6 +485,11 @@ export class WorldScene extends Phaser.Scene {
 
     this.farming.readFarm(state);
     this.homes.readState(state);
+    // Not moved in anywhere yet, with a cottage free: say where they are.
+    if (this.farmerId && VILLAGE_MAP.houses.length > 0 && !homeOf(this.homes.houseViews, this.farmerId)) {
+      const free = VILLAGE_MAP.houses.some((plan) => !this.homes.houseViews[plan.id]);
+      if (free) this.tips.event("homeless");
+    }
   }
 
   /** "+1 Radish" over your head for whatever just landed in your bag. */

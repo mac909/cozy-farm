@@ -14,6 +14,7 @@ import { PACK_EMOTES, emoteFrames } from "./emotes";
 import { Img, fromGrid, outline, packRows } from "./lib/image";
 import { MARKERS } from "./markers";
 import { seedStand } from "./seedStand";
+import { FRAME, SEASIDE, SEASIDE_FRAMES } from "./seaside";
 import { SAND_GRASS, SAND_WATER, recolourBlock } from "./sand";
 import { soilTile } from "./soil";
 import { UI_ICONS } from "./ui";
@@ -154,6 +155,16 @@ function renderUiIcons(): void {
   });
 }
 
+function renderSeaside(): void {
+  const names = Object.keys(SEASIDE) as (keyof typeof SEASIDE)[];
+  save("seaside-furniture", packRows([names.map((n) => outline(SEASIDE[n]()))], FRAME, FRAME), {
+    frameWidth: FRAME,
+    frameHeight: FRAME,
+    frames: Object.fromEntries(names.map((n, i) => [n, { frame: i, ...SEASIDE_FRAMES[n] }])),
+    note: "Each picture sits inside its 32×32 frame at the given rectangle; client/src/art/furnitureArt.ts cuts them out.",
+  });
+}
+
 console.log(`Rendering sprites into ${path.relative(ROOT, OUT)}${path.sep}`);
 renderCrops();
 renderSoil();
@@ -164,5 +175,6 @@ renderSand();
 renderMarkers();
 renderEmotes();
 renderUiIcons();
+renderSeaside();
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log("  manifest.json");

@@ -15,6 +15,13 @@ describe("first-day tips", () => {
     expect(tipFor("evening", new Set(["bedtime"]))).toBeNull();
   });
 
+  it("points out the cottages, then the store and arranging once you've moved in", () => {
+    expect(tipFor("homeless", new Set(["dig", "plant", "bedtime", "crate"]))).toBe("houses");
+    expect(tipFor("movedIn", new Set())).toBe("home");
+    expect(tipFor("arranging", new Set())).toBe("arrange");
+    expect(tipFor("arranging", new Set(["arrange"]))).toBeNull();
+  });
+
   it("reads what the device remembers, ignoring anything odd", () => {
     expect(parseSeen(null)).toEqual(new Set());
     expect(parseSeen("dig,crate,nonsense,")).toEqual(new Set(["dig", "crate"]));

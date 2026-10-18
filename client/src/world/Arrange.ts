@@ -65,6 +65,8 @@ export interface ArrangeOptions {
   showHud(view: ArrangeHud | null): void;
   /** Whether a pointer is over one of the HUD's buttons (so a click isn't also a click on the world). */
   overHud(pointer: Phaser.Input.Pointer): boolean;
+  /** Arranging started: for the tips. */
+  started?(): void;
 }
 
 /**
@@ -146,6 +148,7 @@ export class Arrange {
     this.followCursor();
     this.scene.cameras.main.startFollow(this.focus, true, 0.25, 0.25);
     playSound(this.scene, "open");
+    this.options.started?.();
   }
 
   /** Stops arranging. A lifted piece that wasn't put down stays where it was. */

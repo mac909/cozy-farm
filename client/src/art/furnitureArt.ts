@@ -2,8 +2,8 @@ import { FURNITURE_IDS, type FurnitureId } from "../../../shared/content/furnitu
 
 /**
  * Where each piece of furniture's picture is, one per way it can turn (in the same order as its
- * `turns` in shared/content/furniture.ts). All from the Ninja Adventure pack. Data only, no Phaser,
- * so tests and tools can read it.
+ * `turns` in shared/content/furniture.ts). From the Ninja Adventure pack, plus a few seaside pieces
+ * of our own. Data only, no Phaser, so tests and tools can read it.
  *
  * A picture is drawn with its bottom middle on the bottom middle of the tiles the piece covers, so
  * tall things (a lamp, a bookshelf) rise above their footprint, and you can walk behind their tops.
@@ -16,6 +16,8 @@ export const FURNITURE_SHEETS = {
   element: { url: `${PACK}Backgrounds/Tilesets/TilesetElement.png`, mapTileset: null },
   bed: { url: `${PACK}Backgrounds/Tilesets/tileset_bed.png`, mapTileset: null },
   fishNet: { url: `${PACK}Backgrounds/Vehicles/FishNet.png`, mapTileset: null },
+  /** Our own seaside pieces (tools/sprites/seaside.ts), one 32×32 frame each. */
+  seaside: { url: "/assets/custom/seaside-furniture.png", mapTileset: null },
   house: { url: null, mapTileset: "TilesetHouse" },
   nature: { url: null, mapTileset: "TilesetNature" },
   floorDetail: { url: null, mapTileset: "TilesetFloorDetail" },
@@ -80,6 +82,11 @@ export const FURNITURE_ART: Readonly<Record<FurnitureId, readonly PieceArt[]>> =
   fishing_net: [at("fishNet", 0, 0, 33, 25)],
   red_banner: [at("house", 368, 320, 16, 32)],
   green_banner: [at("house", 400, 320, 16, 32)],
+  // Inside their 32×32 frames, as in tools/sprites/seaside.ts.
+  life_ring: [at("seaside", 8, 0, 16, 32)],
+  anchor: [at("seaside", 40, 0, 16, 32)],
+  beach_umbrella: [at("seaside", 64, 0, 32, 32)],
+  ship_in_bottle: [at("seaside", 104, 16, 16, 16)],
 };
 
 /** The picture for a piece turned `turn` times (wrapping round, like footprintOf). */

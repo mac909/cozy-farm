@@ -105,6 +105,12 @@ const furnitureData = {
   fishing_net: { id: "fishing_net", name: "Fishing Net", price: 80, where: ANYWHERE, turns: [{ width: 2, height: 2 }], flat: true },
   red_banner: { id: "red_banner", name: "Red Banner", price: 60, where: FARM, turns: [ONE] },
   green_banner: { id: "green_banner", name: "Green Banner", price: 60, where: FARM, turns: [ONE] },
+
+  // ---------- Seaside pieces of our own (tools/sprites/seaside.ts) ----------
+  ship_in_bottle: { id: "ship_in_bottle", name: "Ship in a Bottle", price: 160, where: HOUSE, turns: [ONE] },
+  life_ring: { id: "life_ring", name: "Life Ring", price: 70, where: ANYWHERE, turns: [ONE] },
+  anchor: { id: "anchor", name: "Anchor", price: 90, where: ANYWHERE, turns: [ONE] },
+  beach_umbrella: { id: "beach_umbrella", name: "Beach Umbrella", price: 150, where: FARM, turns: [ONE] },
 } satisfies Record<string, FurnitureDef>;
 
 export type FurnitureId = keyof typeof furnitureData;

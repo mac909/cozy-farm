@@ -177,5 +177,43 @@
       "turn": 3,
       "done": 4
     }
+  },
+  "seaside-furniture": {
+    "file": "seaside-furniture.png",
+    "width": 128,
+    "height": 32,
+    "frameWidth": 32,
+    "frameHeight": 32,
+    "frames": {
+      "life_ring": {
+        "frame": 0,
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 32
+      },
+      "anchor": {
+        "frame": 1,
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 32
+      },
+      "beach_umbrella": {
+        "frame": 2,
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "ship_in_bottle": {
+        "frame": 3,
+        "x": 8,
+        "y": 16,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "note": "Each picture sits inside its 32×32 frame at the given rectangle; client/src/art/furnitureArt.ts cuts them out."
   }
 }

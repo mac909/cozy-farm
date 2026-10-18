@@ -19,6 +19,6 @@ Every art, sound and music pack in the game, with its license. Add a section her
 ## Our own sprites
 
 - **Folder:** `custom/`
-- Made for Cozy Farm in Ninja Adventure's style, for things the pack doesn't have: crop growth stages, harvested crops and seed packets, tilled and watered soil, beachcombing finds (shells, sea glass, a starfish), the shipping crate, the seed stand, beach sand, a wave emote, music on/off icons, and the map's marker tiles.
+- Made for Cozy Farm in Ninja Adventure's style, for things the pack doesn't have: crop growth stages, harvested crops and seed packets, tilled and watered soil, beachcombing finds (shells, sea glass, a starfish), the shipping crate, the seed stand, beach sand, a wave emote, music on/off and arrange/turn/done icons, the map's marker tiles, and seaside furniture (a life ring on a post, an anchor, a beach umbrella, a ship in a bottle).
 - The beach sand sheets are recolours of the pack's own floor and water autotiles (CC0), so their edges match the pack exactly. The emote sheet reuses the pack's speech bubble and heart.
 - They're drawn as data in `tools/sprites/` and rendered with `npm run sprites`. Edit the data and re-render rather than editing the PNGs.
