@@ -1,8 +1,10 @@
-import { ArraySchema } from "@colyseus/schema";
+import { ArraySchema, MapSchema } from "@colyseus/schema";
 import { describe, expect, it } from "vitest";
 import { newInventory, starterInventory } from "./inventory/inventory";
-import { BagSlot, Clock } from "./schema";
-import { readBag, readClock, steppedMinute, writeBag, writeClock } from "./stateSync";
+import type { FarmTile } from "./farming/farming";
+import { BagSlot, Clock, FarmPlot } from "./schema";
+import { readBag, readClock, readFarm, steppedMinute, writeBag, writeClock, writeFarm } from "./stateSync";
+import type { TileKey } from "./world/world";
 
 describe("the clock", () => {
   it("is copied rounded down to the 10-minute step, and only when that changes", () => {
@@ -50,5 +52,35 @@ describe("bags", () => {
     target[1].itemId = "radish";
     expect(readBag(target)[0]).toBeNull();
     expect(readBag(target)[1]).toBeNull();
+  });
+});
+
+describe("the farm", () => {
+  const farm: Record<TileKey, FarmTile> = {
+    "4,5": { kind: "tilled", watered: true },
+    "5,5": { kind: "planted", watered: false, cropId: "potato", stage: 1, daysInStage: 1 },
+  };
+
+  it("comes back as it was sent", () => {
+    const target = new MapSchema<FarmPlot>();
+    writeFarm(target, farm);
+    expect(readFarm(target)).toEqual(farm);
+  });
+
+  it("keeps each tile's plot, changing only what changed", () => {
+    const target = new MapSchema<FarmPlot>();
+    writeFarm(target, farm);
+    const plot = target.get("5,5");
+    const next: Record<TileKey, FarmTile> = { ...farm, "5,5": { kind: "tilled", watered: false }, "6,5": { kind: "tilled", watered: false } };
+    writeFarm(target, next);
+    expect(target.get("5,5")).toBe(plot);
+    expect(readFarm(target)).toEqual(next);
+  });
+
+  it("drops tiles that are gone", () => {
+    const target = new MapSchema<FarmPlot>();
+    writeFarm(target, farm);
+    writeFarm(target, { "4,5": farm["4,5"] });
+    expect([...target.keys()]).toEqual(["4,5"]);
   });
 });

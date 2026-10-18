@@ -8,7 +8,7 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 
 - Claude writes most of the code. The developer steers, tests, and judges how things feel. Briefly explain non-obvious decisions in chat.
 - One feature per session. Use plan mode for anything bigger than a small change.
-- Before calling a feature done: `npm run typecheck`, `npm test`, and check it in the browser pane. Two tabs means two players; open the second at http://127.0.0.1:5173 so it keeps its own saved name and look. The pane shows one tab at a time and hidden tabs pause their game loop, so check the other tab's view after switching to it. Use the mobile viewport to check the touch layout.
+- Before calling a feature done: `npm run typecheck`, `npm test`, and check it in the browser pane. Two tabs means two players; open the second at http://127.0.0.1:5173 so it keeps its own saved name and look. The pane shows one tab at a time and hidden tabs pause their game loop, so check the other tab's view after switching to it. Use the mobile viewport to check the touch layout. If the pane is hidden, the game's animation frames stop; add `?loop=timer` to the URL (dev only) to run it on timers instead.
 - When a design decision is made or changed, update docs/DESIGN.md. Tick items off in docs/ROADMAP.md as they land.
 - Commit after each working step, with a message that says what changed for the players.
 - `main` is backed up to the private GitHub repo mac909/cozy-farm (`origin`). After committing or merging on `main`, run `git push`. Never push session or worktree branches, and never make the repo public: it has the developer's network details, and asset licenses may forbid redistribution.

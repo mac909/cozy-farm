@@ -1,4 +1,4 @@
-import { CROPS, type CropId } from "../content/crops";
+import { CROPS, isCropId, type CropId } from "../content/crops";
 import { ITEMS, cropItemId, isItemId, type ItemId } from "../content/items";
 import { addItems, countOf, isSlotIndex, removeFromSlot, roomFor, type ItemStack } from "../inventory/inventory";
 import type { PlaceId } from "../world/places";
@@ -70,6 +70,22 @@ export function chooseAction(
   return { kind: "none" };
 }
 
+const ACTION_WORD: Record<Action["kind"], string | null> = {
+  sleep: "Sleep",
+  crate: "Crate",
+  seeds: "Seeds",
+  harvest: "Pick",
+  till: "Dig",
+  plant: "Plant",
+  water: "Water",
+  none: null,
+};
+
+/** The word on the Action button's tag, or null when it's faded. */
+export function actionWord(action: Action): string | null {
+  return ACTION_WORD[action.kind];
+}
+
 /** Why an action can't happen. Each one has a line of text in HINT_TEXT. */
 export type HintReason =
   | "not-farmland"
@@ -118,11 +134,17 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "coming-soon": "Coming soon!",
 };
 
+/** True for a hint the client can show; use it on hints that arrive from the server. */
+export function isHint(value: unknown): value is Hint {
+  const reason = (value as { reason?: unknown } | null)?.reason;
+  return typeof reason === "string" && (reason === "growing" || Object.hasOwn(HINT_TEXT, reason));
+}
+
 /** The words in the speech bubble for a hint. */
 export function hintText(hint: Hint): string {
   if (hint.reason !== "growing") return HINT_TEXT[hint.reason];
-  const name = hint.cropId ? CROPS[hint.cropId].name : "It";
-  const days = Math.max(1, hint.days ?? 1);
+  const name = isCropId(hint.cropId) ? CROPS[hint.cropId].name : "It";
+  const days = Number.isFinite(hint.days) ? Math.max(1, Math.round(hint.days as number)) : 1;
   if (days === 1 && hint.watered) return `${name}: ripe tomorrow!`;
   return `${name}: about ${days} more watered day${days === 1 ? "" : "s"}.`;
 }

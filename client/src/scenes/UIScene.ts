@@ -6,6 +6,7 @@ import type { GameClock } from "../../../shared/time/clock";
 import { BAG_KEY, characterKey, EMOTES_KEY, emoteFrame, UI_ICON, UI_ICONS_KEY } from "../art/assets";
 import { loadMuted, saveMuted } from "../audio/music";
 import type { NetStatus } from "../net/connection";
+import { ActionButton, type ActionView } from "../ui/ActionButton";
 import { ClockCard } from "../ui/ClockCard";
 import { Hotbar, slotName } from "../ui/Hotbar";
 import { Joystick } from "../ui/Joystick";
@@ -47,7 +48,8 @@ interface Layout {
  * right end, emotes beside Action, bag on the left), sideways phone and laptop (hotbar bottom
  * centre, emotes stacked above Action, bag bottom left; key hints on a laptop).
  *
- * Emits "emote" (EmoteId), "editLook", "bag" and "selectSlot" (slot, item) for WorldScene.
+ * Emits "action", "emote" (EmoteId), "editLook", "bag" and "selectSlot" (slot, item) for WorldScene,
+ * which tells it what the Action button says with setAction().
  * Reads "netStatus", "look", "clock" and "bag" from the game registry, which WorldScene keeps up to date.
  */
 export class UIScene extends Phaser.Scene {
@@ -58,10 +60,10 @@ export class UIScene extends Phaser.Scene {
   private lookButton!: RoundButton;
   private musicButton!: RoundButton;
   private bagButton!: RoundButton;
+  private actionButton!: ActionButton;
   private toast!: Phaser.GameObjects.Text;
   private toastTimer?: Phaser.Time.TimerEvent;
   private keyHints = false;
-  private layoutNow!: Layout;
   /** Kept here because Phaser applies sound.mute a moment later, so reading it straight back can be stale. */
   private muted = loadMuted();
 
@@ -109,6 +111,9 @@ export class UIScene extends Phaser.Scene {
         }),
     );
 
+    this.actionButton = new ActionButton(this, ACTION_SIZE, this.keyHints ? "Space" : undefined, () => this.events.emit("action"));
+    this.actionButton.show({ icon: null, iconScale: 3, word: null, faded: true });
+
     this.bagButton = new RoundButton(this, {
       size: BAG_BUTTON_SIZE,
       square: true,
@@ -155,6 +160,13 @@ export class UIScene extends Phaser.Scene {
         this.events.emit("emote", id);
       }),
     );
+    keyboard.addCapture(["SPACE", "ENTER"]);
+    for (const key of ["SPACE", "ENTER"]) {
+      onKey(key, () => {
+        this.actionButton.press();
+        this.events.emit("action");
+      });
+    }
     SLOT_KEYS.forEach((key, slot) => onKey(key, () => this.hotbar.select(slot)));
     onKey("Q", () => this.hotbar.select(this.hotbar.selected - 1));
     onKey("E", () => this.hotbar.select(this.hotbar.selected + 1));
@@ -197,7 +209,8 @@ export class UIScene extends Phaser.Scene {
         toastY: action.y - 8,
       };
     }
-    const action = { x: right - ACTION_SIZE, y: hotbar.y + size - ACTION_SIZE };
+    // Lifted a little so the word tag hanging off its bottom stays on screen.
+    const action = { x: right - ACTION_SIZE, y: hotbar.y + size - ACTION_SIZE - 10 };
     const stackX = action.x + (ACTION_SIZE - s) / 2;
     return {
       upright,
@@ -215,7 +228,7 @@ export class UIScene extends Phaser.Scene {
   private layout() {
     const { width } = this.scale;
     const safe = safeArea();
-    const L = (this.layoutNow = this.computeLayout());
+    const L = this.computeLayout();
     const right = width - safe.right - MARGIN;
     const top = safe.top + (L.upright ? 8 : MARGIN);
 
@@ -227,13 +240,14 @@ export class UIScene extends Phaser.Scene {
     this.hotbar.layout(L.hotbar.x, L.hotbar.y, L.hotbar.size, L.hotbar.gap, this.keyHints);
     this.emoteButtons.forEach((button, i) => button.setPosition(L.emotes[i].x + s / 2, L.emotes[i].y + s / 2));
     this.bagButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
+    this.actionButton.setPosition(L.action.x + ACTION_SIZE / 2, L.action.y + ACTION_SIZE / 2);
     this.toast.setPosition(width / 2, L.toastY);
     this.events.emit("layout", L);
   }
 
-  /** Where the Action button goes (its top-left corner), for whoever draws it. */
-  get actionSpot(): { x: number; y: number } {
-    return this.layoutNow.action;
+  /** What the Action button says. Cheap to call every frame. Does nothing until the HUD exists. */
+  setAction(view: ActionView) {
+    this.actionButton?.show(view);
   }
 
   private onSelectSlot(slot: number, item: Slot) {

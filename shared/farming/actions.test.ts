@@ -6,11 +6,13 @@ import { addFarmer, farmTileAt, setFarmTile, setFarmerBag, newWorld, type World 
 import {
   HOE,
   WATERING_CAN,
+  actionWord,
   applyFarmAction,
   chooseAction,
   daysLeft,
   hintFor,
   hintText,
+  isHint,
   type FarmActionResult,
   type FarmRequest,
 } from "./actions";
@@ -68,6 +70,31 @@ describe("chooseAction", () => {
     expect(chooseAction(UNTILLED, true, null, null)).toEqual({ kind: "none" });
     expect(chooseAction(DRY, true, "radish", null)).toEqual({ kind: "none" });
     expect(chooseAction(YOUNG_RADISH, true, HOE, null)).toEqual({ kind: "none" });
+  });
+});
+
+describe("actionWord", () => {
+  it("says what the button will do, and nothing when it's faded", () => {
+    expect(actionWord({ kind: "sleep" })).toBe("Sleep");
+    expect(actionWord({ kind: "crate" })).toBe("Crate");
+    expect(actionWord({ kind: "seeds" })).toBe("Seeds");
+    expect(actionWord({ kind: "harvest", cropId: "radish" })).toBe("Pick");
+    expect(actionWord({ kind: "till" })).toBe("Dig");
+    expect(actionWord({ kind: "plant", cropId: "radish" })).toBe("Plant");
+    expect(actionWord({ kind: "water" })).toBe("Water");
+    expect(actionWord({ kind: "none" })).toBeNull();
+  });
+});
+
+describe("isHint", () => {
+  it("accepts hints the client knows how to say", () => {
+    expect(isHint({ reason: "bag-full" })).toBe(true);
+    expect(isHint({ reason: "growing", cropId: "radish", days: 2 })).toBe(true);
+    for (const bad of [null, {}, { reason: "toString" }, { reason: "explode" }, "bag-full"]) expect(isHint(bad)).toBe(false);
+  });
+
+  it("copes with a growing hint about a crop it doesn't know", () => {
+    expect(hintText({ reason: "growing", cropId: "kale" as never, days: 2 })).toBe("It: about 2 more watered days.");
   });
 });
 

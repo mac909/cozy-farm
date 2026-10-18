@@ -3,13 +3,16 @@ import { EMOTE_SHOW_MS } from "../../../shared/constants";
 import type { EmoteId } from "../../../shared/content/emotes";
 import type { Facing } from "../../../shared/movement";
 import type { Look } from "../../../shared/player";
-import { characterKey, EMOTES_KEY, emoteFrame, idleFrame, walkAnimKey } from "../art/assets";
+import { characterKey, EMOTES_KEY, emoteFrame, idleFrame, swingFrame, walkAnimKey } from "../art/assets";
 
 /** Name tags and bubbles draw above every character, and above tree tops. */
 const OVERHEAD_DEPTH = 1_000_000;
 
 /** Name tag text size in screen pixels, whatever the camera zoom. */
 const NAME_FONT_PX = 12;
+
+/** How long the tool-swing pose shows, in milliseconds. */
+const SWING_MS = 250;
 
 /** How long a hint's speech bubble stays, in milliseconds. */
 const HINT_SHOW_MS = 2500;
@@ -25,6 +28,7 @@ export class Character {
   private hint?: Phaser.GameObjects.Container;
   private hintTween?: Phaser.Tweens.TweenChain;
   private zoom = 1;
+  private swingTimer?: Phaser.Time.TimerEvent;
   private look: Look;
   private facing: Facing = "down";
   private moving = false;
@@ -62,10 +66,30 @@ export class Character {
 
   /** Which way the character faces, and whether it's walking (animated) or standing still. */
   setMotion(facing: Facing, moving: boolean) {
-    if (facing === this.facing && moving === this.moving) return;
+    if (this.swingTimer) {
+      // Walking off cuts the swing short; standing still lets it finish.
+      if (!moving) return;
+      this.swingTimer.remove();
+      this.swingTimer = undefined;
+    } else if (facing === this.facing && moving === this.moving) {
+      return;
+    }
     this.facing = facing;
     this.moving = moving;
     this.showPose();
+  }
+
+  /** Swings the tool for a moment (the pack's attack pose), facing `facing`. */
+  swing(facing: Facing) {
+    this.facing = facing;
+    this.moving = false;
+    this.swingTimer?.remove();
+    this.sprite.stop();
+    this.sprite.setTexture(characterKey(this.look.character), swingFrame(facing));
+    this.swingTimer = this.scene.time.delayedCall(SWING_MS, () => {
+      this.swingTimer = undefined;
+      this.showPose();
+    });
   }
 
   /** The world is zoomed in, so shrink the name tag by the same amount to keep it a steady, crisp size on screen. */
@@ -175,6 +199,7 @@ export class Character {
   }
 
   destroy() {
+    this.swingTimer?.remove();
     this.bubbleTween?.stop();
     this.bubble?.destroy();
     this.hintTween?.stop();

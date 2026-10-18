@@ -3,12 +3,14 @@ import { getStateCallbacks, type Room } from "colyseus.js";
 import { POSITION_SEND_MS, TILE_SIZE, WALK_SPEED } from "../../../shared/constants";
 import { DEFAULT_CHARACTER } from "../../../shared/content/characters";
 import type { EmoteId } from "../../../shared/content/emotes";
+import { ITEMS, type ItemId } from "../../../shared/content/items";
+import { isHint } from "../../../shared/farming/actions";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type { EmoteEvent, EmoteMessage, JoinOptions, LookMessage, MoveMessage, YouMessage } from "../../../shared/messages";
 import { clampMove, type Facing, facingFor, isFacing, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
-import type { Inventory } from "../../../shared/inventory/inventory";
+import { countOf, type Inventory } from "../../../shared/inventory/inventory";
 import { readBag, readClock } from "../../../shared/stateSync";
 import type { GameClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
@@ -33,6 +35,8 @@ import { loadFarmerId, saveFarmerId } from "../ui/farmerStorage";
 import { pickLook } from "../ui/LookPicker";
 import { loadLook, saveLook } from "../ui/lookStorage";
 import { Character } from "../world/Character";
+import { Farming } from "../world/Farming";
+import { Outline } from "../world/Outline";
 import type { UIScene } from "./UIScene";
 
 /** The camera picks the whole-number zoom that shows about this many tiles across the screen's shorter side. */
@@ -70,6 +74,7 @@ export class WorldScene extends Phaser.Scene {
   private zoom = 1;
   private facing: Facing = "down";
   private lastSent = { x: NaN, y: NaN, facing: "down" as Facing, at: 0 };
+  private farming!: Farming;
 
   constructor() {
     super("world");
@@ -119,6 +124,19 @@ export class WorldScene extends Phaser.Scene {
     startMusic(this);
     installDevCommands((message) => this.room?.send("dev", message));
 
+    this.farming = new Farming(this, new Outline(this), {
+      me: this.me,
+      facing: () => this.facing,
+      face: (facing) => (this.facing = facing),
+      room: () => this.room,
+      bag: () => this.registry.get("bag") as Inventory | null,
+      selectedSlot: () => this.registry.get("selectedSlot") as number,
+      showAction: (view) => this.ui.setAction(view),
+      busy: () => false,
+      places: {},
+    });
+    this.ui.events.on("action", () => this.farming.act());
+
     this.connection = new FarmConnection(() => this.joinOptions(), {
       status: (status) => this.registry.set("netStatus", status),
       joined: (room) => this.onJoined(room),
@@ -143,6 +161,7 @@ export class WorldScene extends Phaser.Scene {
     this.facing = facingFor(move.x, move.y, this.facing);
     this.me.setMotion(this.facing, move.x !== 0 || move.y !== 0);
     this.sendPosition(time);
+    this.farming.update();
 
     const now = performance.now();
     const drawAt = now - REMOTE_DELAY_MS;
@@ -237,7 +256,11 @@ export class WorldScene extends Phaser.Scene {
       });
     });
     $(room.state).players.onRemove((_player, sessionId) => this.removeRemote(sessionId));
+    this.farming.joined();
     room.onStateChange((state) => this.readState(state));
+    room.onMessage("hint", (hint: unknown) => {
+      if (isHint(hint)) this.farming.hint(hint);
+    });
     room.onMessage("you", (message: YouMessage) => {
       if (!isFarmerId(message?.farmerId)) return;
       this.farmerId = message.farmerId;
@@ -258,7 +281,22 @@ export class WorldScene extends Phaser.Scene {
 
     const me = this.room ? state.players.get(this.room.sessionId) : undefined;
     const bag = me ? readBag(me.bag) : null;
-    if (JSON.stringify(bag) !== JSON.stringify(this.registry.get("bag") as Inventory | null)) this.registry.set("bag", bag);
+    const before = this.registry.get("bag") as Inventory | null;
+    if (JSON.stringify(bag) !== JSON.stringify(before)) {
+      if (before && bag) this.announceNewItems(before, bag);
+      this.registry.set("bag", bag);
+    }
+
+    this.farming.readFarm(state);
+  }
+
+  /** "+1 Radish" over your head for whatever just landed in your bag. */
+  private announceNewItems(before: Inventory, after: Inventory) {
+    const ids = new Set(after.flatMap((slot) => (slot ? [slot.itemId] : [])));
+    for (const itemId of ids as Set<ItemId>) {
+      const gained = countOf(after, itemId) - countOf(before, itemId);
+      if (gained > 0) this.me.floatText(`+${gained} ${ITEMS[itemId].name}`);
+    }
   }
 
   /** The connection dropped: other players will come back when we rejoin (with new session ids). */

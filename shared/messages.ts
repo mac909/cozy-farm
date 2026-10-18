@@ -2,6 +2,7 @@
 
 import type { CharacterId } from "./content/characters";
 import type { EmoteId } from "./content/emotes";
+import type { Hint } from "./farming/actions";
 import type { Facing } from "./movement";
 import type { Look } from "./player";
 
@@ -77,3 +78,19 @@ export interface YouMessage {
  * being disconnected (with close code REPLACED_CLOSE_CODE) and mustn't reconnect by itself.
  */
 export type ReplacedMessage = Record<string, never>;
+
+// ---------- Farming ----------
+
+/**
+ * Client → server ("till", "plant", "water" or "harvest"): do this to the farm tile at col, row.
+ * Messages name the action, so a late "harvest" (the other player picked it first) just fails
+ * rather than turning into something else. "plant" says which bag slot holds the seeds.
+ */
+export interface FarmActionMessage {
+  col: number;
+  row: number;
+  slot?: number;
+}
+
+/** Server → client ("hint"): an action failed for a reason the client couldn't see coming. */
+export type HintMessage = Hint;

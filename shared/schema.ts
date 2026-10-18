@@ -20,6 +20,18 @@ export class BagSlot extends Schema {
   @type("uint16") count = 0;
 }
 
+/** One dug farm tile. Tiles nobody has dug aren't in the farm at all. */
+export class FarmPlot extends Schema {
+  /** "tilled" (bare soil) or "planted". */
+  @type("string") kind = "tilled";
+  @type("boolean") watered = false;
+  /** A CropId when planted, otherwise "". */
+  @type("string") cropId = "";
+  @type("uint8") stage = 0;
+  /** Watered days in the current stage, for the "about 2 more days" hint. */
+  @type("uint8") daysInStage = 0;
+}
+
 /** One person in the world. Positions are in world pixels. */
 export class Player extends Schema {
   @type("number") x = 0;
@@ -42,4 +54,6 @@ export class FarmState extends Schema {
   @type(Clock) clock = new Clock();
   /** The shared wallet. */
   @type("uint32") coins = 0;
+  /** The dug farm tiles, keyed "col,row". Dug soil never goes back to grass, so this only grows. */
+  @type({ map: FarmPlot }) farm = new MapSchema<FarmPlot>();
 }

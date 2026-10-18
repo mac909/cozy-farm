@@ -35,6 +35,9 @@ void whenSized(parent).then(() => {
     scale: { mode: Phaser.Scale.RESIZE, width: "100%", height: "100%" },
     physics: { default: "arcade", arcade: { debug: false } },
     input: { activePointers: 3 },
+    // Dev only: ?loop=timer runs the game on timers instead of animation frames, so it keeps going
+    // in a browser view that isn't on screen (as when Claude checks a change with no one watching).
+    fps: { forceSetTimeOut: import.meta.env.DEV && new URLSearchParams(location.search).get("loop") === "timer" },
     // Order matters: later scenes draw on top, so the UI sits above the world.
     scene: [BootScene, WorldScene, UIScene],
   });

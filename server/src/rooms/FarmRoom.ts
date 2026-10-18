@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { type Client, Room } from "colyseus";
 import { REPLACED_CLOSE_CODE, TILE_SIZE } from "../../../shared/constants";
+import type { Hint } from "../../../shared/farming/actions";
 import type {
   EmoteEvent,
   EmoteMessage,
+  HintMessage,
   JoinOptions,
   LookMessage,
   MoveMessage,
@@ -13,13 +15,14 @@ import type {
 import { isFacing } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import { FarmState, Player } from "../../../shared/schema";
-import { steppedMinute, writeBag, writeClock } from "../../../shared/stateSync";
+import { steppedMinute, writeBag, writeClock, writeFarm } from "../../../shared/stateSync";
 import { tickClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { addFarmer, farmerOf, isFarmerId, listFarmers, setFarmerLook, type FarmerId, type World } from "../../../shared/world/world";
 import { liveWorld } from "../world/liveWorld";
 import { registerDevCommands } from "./dev";
+import { registerFarming } from "./farming";
 
 const WORLD_WIDTH = VILLAGE_MAP.width * TILE_SIZE;
 const WORLD_HEIGHT = VILLAGE_MAP.height * TILE_SIZE;
@@ -46,6 +49,8 @@ export class FarmRoom extends Room<FarmState> {
     this.onMessage("move", (client, message: MoveMessage) => this.movePlayer(client, message));
     this.onMessage("look", (client, message: LookMessage) => this.changeLook(client, message));
     this.onMessage("emote", (client, message: EmoteMessage) => this.emote(client, message));
+    // Each feature's messages live in their own file in this folder.
+    registerFarming(this);
     registerDevCommands(this);
     this.setSimulationInterval((deltaMs) => this.tick(deltaMs), TICK_MS);
   }
@@ -98,6 +103,16 @@ export class FarmRoom extends Room<FarmState> {
     }
   }
 
+  /** Tells one player why what they tried didn't work. */
+  hint(client: Client, hint: Hint) {
+    client.send("hint", hint satisfies HintMessage);
+  }
+
+  /** Whether a player can't act right now. */
+  isBusy(_client: Client): boolean {
+    return false;
+  }
+
   /** The farmer a connected player is, if they're still here. */
   farmerIdOf(client: Client): FarmerId | undefined {
     return this.state.players.get(client.sessionId)?.farmerId || undefined;
@@ -127,6 +142,7 @@ export class FarmRoom extends Room<FarmState> {
     const world = this.world;
     writeClock(this.state.clock, world.clock);
     if (this.state.coins !== world.coins) this.state.coins = world.coins;
+    writeFarm(this.state.farm, world.farm);
     this.state.players.forEach((player) => {
       const farmer = farmerOf(world, player.farmerId);
       if (farmer) writeBag(player.bag, farmer.bag);
