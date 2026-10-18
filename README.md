@@ -24,13 +24,17 @@ The first time you open it from the home screen, it asks **Who's playing?**, bec
 | | Phone | Laptop |
 |---|---|---|
 | Walk | Put a thumb down anywhere and drag (a light push just turns you) | W A S D or the arrow keys |
-| Do what the round button says (Dig, Plant, Water, Pick, Sleep, Crate, Seeds) | Tap the big round button; hold it while walking to do a whole row | Space or Enter (hold to repeat), or click a tile next to you |
+| Do what the round button says (Dig, Plant, Water, Pick, Sleep, Crate, Seeds, Shop, Home, Visit, Move in, Leave, Place) | Tap the big round button; hold it while walking to do a whole row | Space or Enter (hold to repeat), or click a tile next to you |
+| Go in or out of a house | Walk into its door, or off the mat inside (or tap Home, Visit, Leave) | The same, with the keys |
+| Arrange furniture or decorations | The hammer (Arrange) above the bag, or Place with furniture in hand. Then drag to move the frame (or tap a tile), Place, Turn, Put away, Done | F; then the arrow keys or the mouse, Space or a click, R, Del, Esc |
 | Pick what's in your hand | Tap a slot along the bottom | 1–8, Q / E, or the mouse wheel |
 | Open your bag | The bag button | B or Tab |
 | Wave / heart | The two small buttons | Z / X |
-| Close a card, get out of bed | The × or Get up | Esc |
+| Close a card, get out of bed, stop arranging | The ×, Get up or Done | Esc |
 
 Dig in the farm field, plant seeds, water them, and go to bed in the tent by the farm gate: watered crops grow overnight. Pick what's ripe, put it in the shipping crate on the dock, and it sells overnight for coins you share. Buy more seeds at the stand by the beach path.
+
+Move into one of the two cottages in the meadow above the farm, visit each other, and sleep in your own bed. Buy furniture and decorations at the little green shop by the path, and arrange them in your house or out on the farm.
 
 ## Develop
 

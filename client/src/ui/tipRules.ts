@@ -29,6 +29,9 @@ const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   arranging: "arrange",
 };
 
+/** A tip that makes another out of date: moving in answers "go and move in". */
+export const SUPERSEDES: Readonly<Partial<Record<TipId, TipId>>> = { home: "houses" };
+
 /** The tip an event brings up, unless it's been shown on this device already. */
 export function tipFor(event: TipEvent, seen: ReadonlySet<TipId>): TipId | null {
   const tip = TIP_FOR[event];

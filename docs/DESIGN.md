@@ -153,7 +153,7 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 ## Art and sound
 
 - Ninja Adventure (pixel-boy, CC0) for tiles, characters, critters, items, UI and music. One artist, so styles don't clash.
-- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, the seed stand, a wave emote. The tent is the pack's own camp tent.
+- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, the seed stand, a wave emote, the arrange/turn/done icons, and four seaside pieces for the store (a ship in a bottle, a life ring on a post, an anchor, a beach umbrella). The tent is the pack's own camp tent; the store and the cottages are the pack's houses; the rooms are its interior walls and floors; furniture is its beds, furniture and house props.
 - Characters walk in four directions; you can walk behind tree tops.
 - Music: "Calm Village" on a soft loop. The pack's "Peaceful", "Sunny" and "Aquatic" are imported too, for later (other times of day or places).
 - Sound effects from the pack (see Controls). The waves sound is imported for later, for the beach.
