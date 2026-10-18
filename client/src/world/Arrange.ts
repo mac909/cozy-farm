@@ -65,6 +65,12 @@ export interface ArrangeOptions {
   showHud(view: ArrangeHud | null): void;
   /** Whether a pointer is over one of the HUD's buttons (so a click isn't also a click on the world). */
   overHud(pointer: Phaser.Input.Pointer): boolean;
+  /**
+   * The HUD scene's input. Taps and clicks are listened for there: it's on top, so it hears every
+   * one, while the world below misses the first after a HUD button is let go (Phaser counts the
+   * pointer leaving the button as the HUD handling it).
+   */
+  hudInput: Phaser.Input.InputPlugin;
   /** Arranging started: for the tips. */
   started?(): void;
 }
@@ -98,11 +104,12 @@ export class Arrange {
   ) {
     this.frame = scene.add.graphics().setDepth(GHOST_DEPTH + 1).setVisible(false);
     this.focus = scene.add.zone(0, 0, 1, 1);
-    scene.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => {
+    const input = options.hudInput;
+    input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => {
       if (!this.active || pointer.wasTouch || options.overHud(pointer)) return;
       this.pointAt(pointer);
     });
-    scene.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+    input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
       if (!this.active || options.overHud(pointer)) return;
       if (pointer.wasTouch) {
         this.downAt = { x: pointer.x, y: pointer.y, time: performance.now() };
@@ -114,7 +121,7 @@ export class Arrange {
       this.act();
     });
     // On a phone, a quick tap on a tile moves the cursor there (a drag is the stick).
-    scene.input.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+    input.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
       const down = this.downAt;
       this.downAt = null;
       if (!this.active || !pointer.wasTouch || !down) return;
@@ -129,10 +136,10 @@ export class Arrange {
   }
 
   /**
-   * Starts arranging where you are, carrying the furniture in bag slot `slot` if it goes here. In
-   * someone else's house there's nothing to arrange.
+   * Starts arranging where you are, carrying the furniture in bag slot `slot` if it goes here
+   * (and saying so if it doesn't, when `say`). In someone else's house there's nothing to arrange.
    */
-  start(slot: number | null = null) {
+  start(slot: number | null = null, say = true) {
     const kind = this.options.homes.placing();
     if (!kind) {
       this.hint("not-your-house");
@@ -144,7 +151,7 @@ export class Arrange {
     this.step = null;
     this.cursor = this.clamp(this.options.facingTile());
     this.lastSlot = this.options.selectedSlot();
-    if (slot !== null) this.carryFromBag(slot, true);
+    if (slot !== null) this.carryFromBag(slot, say);
     this.followCursor();
     this.scene.cameras.main.startFollow(this.focus, true, 0.25, 0.25);
     playSound(this.scene, "open");

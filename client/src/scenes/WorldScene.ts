@@ -249,12 +249,14 @@ export class WorldScene extends Phaser.Scene {
         if (JSON.stringify(this.registry.get("arrange")) !== JSON.stringify(view)) this.registry.set("arrange", view);
       },
       overHud: (pointer) => this.ui.input.hitTestPointer(pointer).length > 0,
+      hudInput: this.ui.input,
       started: () => this.tips.event("arranging"),
     });
     this.ui.events.on("action", () => (this.arrange.isActive ? this.arrange.act() : this.farming.act()));
     this.ui.events.on("arrange", () => {
       if (this.arrange.isActive) this.arrange.stop();
-      else if (!this.bedtime.asleep && this.panel === null) this.arrange.start();
+      // Holding furniture that goes here, you start off carrying it.
+      else if (!this.bedtime.asleep && this.panel === null) this.arrange.start(this.registry.get("selectedSlot") as number, false);
     });
     this.ui.events.on("turn", () => this.arrange.turn());
     this.ui.events.on("putAway", () => this.arrange.putAway());
