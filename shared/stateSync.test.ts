@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { newInventory, starterInventory } from "./inventory/inventory";
 import type { FarmTile } from "./farming/farming";
 import { BagSlot, Clock, CrateEntry, FarmPlot, ProgressState } from "./schema";
-import { readBag, readClock, readCrate, readFarm, readProgress, steppedMinute, writeBag, writeClock, writeCrate, writeFarm, writeProgress } from "./stateSync";
+import { readBag, readClock, readCrate, readFarm, readProgress, steppedMinute, writeBag, writeClock, writeCrate, writeFarm, writeProgress, writeYearStart } from "./stateSync";
 import { EMPTY_PROGRESS, type FarmerProgress } from "./progress/farmerProgress";
 import type { TileKey } from "./world/world";
 
@@ -137,5 +137,16 @@ describe("a farmer's progress", () => {
     target.kinds.push("unicorn");
     expect(readProgress(target, 4).badges).toEqual({});
     expect(readProgress(target, 4).kinds).toEqual([]);
+  });
+});
+
+describe("the season start (Milestone 8)", () => {
+  it("is copied onto the clock, only when it changes", () => {
+    const clock = new Clock();
+    expect(clock.yearStart).toBe(0);
+    expect(writeYearStart(clock, 0)).toBe(false);
+    expect(writeYearStart(clock, 24)).toBe(true);
+    expect(clock.yearStart).toBe(24);
+    expect(writeYearStart(clock, 24)).toBe(false);
   });
 });

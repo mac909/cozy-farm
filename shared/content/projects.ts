@@ -76,6 +76,8 @@ export interface ProjectDef {
   readonly opensAtMinute?: number;
   /** A house upgrade (Milestone 7): which cottage, and which upgrade (shared/content/houseUpgrades.ts). Missing: the village's. */
   readonly house?: { readonly houseId: string; readonly upgrade: string };
+  /** On the board's "Coming later" while an earlier project is up: a silhouette and a hint (Milestone 8). */
+  readonly teaser?: { readonly title: string; readonly hint: string };
 }
 
 const lighthouse: ProjectDef = {
@@ -136,10 +138,76 @@ const lighthouse: ProjectDef = {
 };
 
 /**
+ * Reopen the garden shop (Milestone 8): the boardwalk along the top of the beach first, then Mrs
+ * Penhallow's old shop above it. Its plan goes up the morning after the lighthouse is lit. When it
+ * opens, the seasons begin (shared/time/seasons.ts).
+ */
+const gardenShop: ProjectDef = {
+  id: "gardenShop",
+  name: "Reopen the garden shop",
+  shortName: "The garden shop",
+  boardLine: "Mrs Penhallow's garden shop sold seeds I'd never even heard of. Shall we open it up again?",
+  steps: [
+    {
+      id: "boardwalk",
+      name: "Mend the boardwalk",
+      blurb: "The old boardwalk ran along the top of the beach, from the market to the point. Driftwood for the planks, branches for the rails.",
+      needs: [
+        { kind: "item", itemId: "driftwood", count: 12 },
+        { kind: "item", itemId: "branch", count: 10 },
+        { kind: "coins", count: 800 },
+      ],
+      cheer: "That's everything for the boardwalk!",
+      tonight: "Marlow will lay the planks tonight.",
+      builtLine: "The boardwalk is mended, from the market to the point.",
+      note: "Listen to that. Proper boards under your feet again.",
+    },
+    {
+      id: "shop",
+      name: "Patch up the shop",
+      blurb: "Wood to patch the walls, and a few of your own vegetables: we'll save their seeds for the drawers.",
+      needs: [
+        { kind: "item", itemId: "driftwood", count: 8 },
+        { kind: "item", itemId: "radish", count: 5 },
+        { kind: "item", itemId: "carrot", count: 5 },
+        { kind: "coins", count: 1200 },
+      ],
+      cheer: "That's everything for the shop!",
+      tonight: "Marlow will patch it up tonight.",
+      builtLine: "The boards are off the garden shop's windows.",
+      note: "Seeds saved from your own crops. The best way to start a shop.",
+    },
+    {
+      id: "drawers",
+      name: "Fill the seed drawers",
+      blurb: "A few bugs for the garden out the back (Mrs Penhallow swore by them), and strawberries and samphire to swap for her old seeds up the coast.",
+      needs: [
+        { kind: "any", category: "bug", count: 4 },
+        { kind: "item", itemId: "strawberry", count: 5 },
+        { kind: "item", itemId: "samphire", count: 5 },
+        { kind: "coins", count: 1500 },
+      ],
+      cheer: "That's everything for the seed drawers!",
+      tonight: "Marlow will fill them tonight.",
+      builtLine: "The garden shop is open, and spring has come!",
+      note: "Bees and butterflies are a garden's best friends. Mrs Penhallow always said so.",
+    },
+  ],
+  opens: [
+    "Ten new seeds through the year, at the garden shop",
+    "Tool upgrades: a bigger can, a wider hoe, a good rod, a bug net and a shell basket",
+    "The seasons begin, with spring: fourteen days each",
+  ],
+  opening: { title: "The garden shop is open!", note: "Mrs Penhallow's shop, open again, and spring come with it. She'd have liked that." },
+  finishedWord: "Opened",
+  teaser: { title: "Something on the boardwalk", hint: "Mrs Penhallow's old shop…" },
+};
+
+/**
  * The village's projects, in the order they go up on the board: one at a time, the next the morning
  * after the last one opens. House upgrades are projects too (houseProject), but not listed here.
  */
-export const PROJECTS: Readonly<Record<string, ProjectDef>> = { lighthouse };
+export const PROJECTS: Readonly<Record<string, ProjectDef>> = { lighthouse, gardenShop };
 
 export const PROJECT_IDS: readonly string[] = Object.keys(PROJECTS);
 

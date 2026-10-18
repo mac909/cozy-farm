@@ -94,11 +94,14 @@ export class VillageBoard {
     return row;
   }
 
-  /** A project's picture in its little frame: the top of the lighthouse, where the lamp is; a porch as it is. */
+  /**
+   * A project's picture in its little frame: the top of the lighthouse, where the lamp is; the
+   * garden shop (Milestone 8), a little smaller; a porch as it is.
+   */
   private picture(projectId: string): HTMLElement {
-    const tall = !projectId.includes(":");
-    const pic = el("span", `board-pic${tall ? " tall" : ""}`);
-    pic.append(picture(this.options.projectPicture(projectId), tall ? "tall" : "square"));
+    const shape = projectId.includes(":") ? "square" : projectId === "gardenShop" ? "wide" : "tall";
+    const pic = el("span", `board-pic${shape === "tall" ? " tall" : ""}`);
+    pic.append(picture(this.options.projectPicture(projectId), shape));
     return pic;
   }
 
@@ -173,6 +176,16 @@ export class VillageBoard {
       words.append(el("b", "", row.name), el("small", "", row.waiting ?? row.step), bar, this.faces(row.faces, "helping"));
       project.append(pic, words, el("span", "board-chev", "›"));
       out.push(project);
+    }
+    if (words.later.length > 0) {
+      out.push(el("div", "panel-label", "Coming later"));
+      for (const later of words.later) {
+        const row = el("div", "board-project later");
+        const text = el("div", "grow");
+        text.append(el("b", "", later.title), el("small", "", later.hint));
+        row.append(this.picture(later.id), text);
+        out.push(row);
+      }
     }
     if (words.finished.length > 0) {
       out.push(el("div", "panel-label", "Finished"));

@@ -5,13 +5,14 @@ import type { BugId } from "../../../shared/content/bugs";
 import { CROPS } from "../../../shared/content/crops";
 import type { FishingSpot } from "../../../shared/content/fish";
 import { cropItemId, FISHING_ROD, ITEMS, type ItemId } from "../../../shared/content/items";
+import { toolKind } from "../../../shared/content/tools";
+import { toolOfKind, toolTiles } from "../../../shared/farming/tools";
+import type { SeasonDate } from "../../../shared/time/seasons";
 import { fishingSpot } from "../../../shared/fishing/spots";
 import type { ForageItem } from "../../../shared/foraging/forage";
 import { closedHintAt } from "../../../shared/world/gates";
 import type { WorldMap } from "../../../shared/world/map";
 import {
-  HOE,
-  WATERING_CAN,
   actionWord,
   chooseAction,
   hintFor,
@@ -37,6 +38,7 @@ import { CLIENT_NEAR_TILES, feetTile, isNeighbour, nearLighthouseDoor, placeNear
 import { tileKey, type TileKey } from "../../../shared/world/world";
 import { TILE_SIZE } from "../../../shared/constants";
 import {
+  BADGE_SHOP_KEY,
   BOARD_KEY,
   CAMP_KEY,
   HOUSE_SHEET_KEY,
@@ -87,6 +89,12 @@ interface Aim {
   spot: Spot | null;
   /** What kind of furniture can go down where you are. */
   placing: PlaceKind | null;
+  /** Which way you'd face acting there (towards the tile). */
+  facing: Facing;
+  /** With a wide hoe or a big can (Milestone 8): the tiles beside the target it works on too. */
+  sides: TilePos[];
+  /** The season outdoors, for planting (null before the seasons begin). */
+  season: SeasonDate | null;
 }
 
 /** What tapping the Action button does at each place, door and bed, with furniture in hand, by a bug and at the water. */
@@ -108,6 +116,8 @@ export interface ActionHandlers {
   talk(): void;
   /** Climbs the lit lighthouse for the view. */
   climb(): void;
+  /** The garden shop's card (Milestone 8). */
+  gardenShop(): void;
 }
 
 export interface FarmingOptions {
@@ -141,6 +151,10 @@ export interface FarmingOptions {
   wanted(itemId: ItemId): { project: string; need: string; count: number } | null;
   /** The bug close enough to catch from where you stand, if any. */
   bugNear(position: Point): { id: string; bugId: BugId } | null;
+  /** The season outdoors today (Milestone 8), or null before the seasons begin. */
+  season(): SeasonDate | null;
+  /** Everything lying within `radius` of a tile (the shell basket's sweep), for the puffs of sand. */
+  lyingAround(centre: TilePos, radius: number): TilePos[];
   /** What tapping the Action button does, beyond farming. */
   on: ActionHandlers;
   /** Whether the Action button or Space is being held down (hold to repeat). */
@@ -166,7 +180,7 @@ function repeats(action: Action): boolean {
  */
 export class Farming {
   readonly view: FarmView;
-  private readonly outlineHost: { show(tile: TilePos, faint: boolean): void; hide(): void };
+  private readonly outlineHost: { show(tile: TilePos, faint: boolean, sides?: readonly TilePos[]): void; hide(): void };
   /** The tile under the mouse, when it's one of the 8 around you (laptops). */
   private hover: TilePos | null = null;
   private pointer: { x: number; y: number } | null = null;
@@ -180,7 +194,7 @@ export class Farming {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    outline: { show(tile: TilePos, faint: boolean): void; hide(): void },
+    outline: { show(tile: TilePos, faint: boolean, sides?: readonly TilePos[]): void; hide(): void },
     private readonly options: FarmingOptions,
   ) {
     this.view = new FarmView(scene);
@@ -235,13 +249,15 @@ export class Farming {
       this.act();
       aim = this.aim();
     }
-    const { action, held, target, spot } = aim;
+    const { action, held, spot } = aim;
     const faded = action.kind === "none";
-    const holdingTool = held === HOE || held === WATERING_CAN || seedCrop(held) !== null;
+    const kind = toolKind(held);
+    const holdingTool = kind === "hoe" || kind === "can" || seedCrop(held) !== null;
     // The outline shows while you hold a tool or seeds, or face something ripe, a find or the water to fish, so walking around town stays clean.
     const outlined = holdingTool || action.kind === "harvest" || action.kind === "pickUp" || action.kind === "fish";
     const [col, row] = this.actedTile(aim);
-    if (!spot && !this.options.busy() && outlined) this.outlineHost.show({ col, row }, faded);
+    const sides = action.kind === "till" || action.kind === "water" || (faded && aim.sides.length > 0) ? aim.sides : [];
+    if (!spot && !this.options.busy() && outlined) this.outlineHost.show({ col, row }, faded, sides);
     else this.outlineHost.hide();
     this.options.showAction(this.viewFor(aim));
   }
@@ -262,7 +278,7 @@ export class Farming {
     const on = this.options.on;
     switch (action.kind) {
       case "none":
-        this.hint(hintFor(aim.tile, aim.farmland, aim.held, aim.placing) ?? { reason: "empty-hand" });
+        this.hint(hintFor(aim.tile, aim.farmland, aim.held, aim.placing, aim.season) ?? { reason: "empty-hand" });
         return;
       case "sleep":
         return on.sleep();
@@ -292,6 +308,8 @@ export class Farming {
         return on.talk();
       case "climb":
         return on.climb();
+      case "gardenShop":
+        return on.gardenShop();
       case "closed":
         this.hint({ reason: action.reason });
         return;
@@ -308,16 +326,21 @@ export class Farming {
     const room = this.options.room();
     if (!room) return;
     const message: FarmActionMessage = { col: target.col, row: target.row };
-    if (action.kind === "plant") message.slot = this.options.selectedSlot();
+    if (action.kind === "plant" || action.kind === "till" || action.kind === "water") message.slot = this.options.selectedSlot();
+    if (action.kind === "till" || action.kind === "water") message.facing = aim.facing;
     room.send(action.kind, message);
 
-    // Straight away, without waiting for the server: turn to the tile, swing, and the puff or splash.
-    const feet = feetTile(this.options.me.sprite);
-    this.options.face(facingFor(target.col - feet.col, target.row - feet.row, this.options.facing()));
+    // Straight away, without waiting for the server: turn to the tile, swing, and the puff or splash
+    // (on the tiles beside it too, with a wide hoe or a big can, where they'll change).
+    this.options.face(aim.facing);
     this.options.me.swing(this.options.facing());
-    playFarmEffect(this.scene, target.col, target.row, ACTION_EFFECT[action.kind]);
-    playSound(this.scene, CHANGE_SOUND[ACTION_EFFECT[action.kind]]);
-    this.recent.set(tileKey(target.col, target.row), performance.now());
+    const now = performance.now();
+    const effect = ACTION_EFFECT[action.kind];
+    for (const at of [target, ...this.changingSides(aim)]) {
+      playFarmEffect(this.scene, at.col, at.row, effect);
+      this.recent.set(tileKey(at.col, at.row), now);
+    }
+    playSound(this.scene, CHANGE_SOUND[effect]);
     this.options.acted?.(action.kind);
   }
 
@@ -336,7 +359,25 @@ export class Farming {
     playSound(this.scene, "pick");
     const burst = action.itemId === "branch" ? "twigs" : "sand";
     playBurst(this.scene, action.col * TILE_SIZE + TILE_SIZE / 2, action.row * TILE_SIZE + TILE_SIZE / 2 + 2, burst);
+    // The shell basket (Milestone 8): everything else lying right round you comes too.
+    const basket = bag ? toolOfKind(bag, "basket") : null;
+    if (basket) {
+      for (const at of this.options.lyingAround(feetTile(this.options.me.sprite), basket.def.radius ?? 1)) {
+        if (at.col === action.col && at.row === action.row) continue;
+        playBurst(this.scene, at.col * TILE_SIZE + TILE_SIZE / 2, at.row * TILE_SIZE + TILE_SIZE / 2 + 2, "sand");
+      }
+    }
     this.options.acted?.(ITEMS[action.itemId].category === "material" ? "pickUpMaterial" : "pickUp");
+  }
+
+  /** The tiles beside the target a wide hoe or a big can will change (the ones that can be dug or watered). */
+  private changingSides({ action, sides }: Aim): TilePos[] {
+    if (action.kind !== "till" && action.kind !== "water") return [];
+    const map = this.options.map();
+    return sides.filter(({ col, row }) => {
+      const tile = this.view.tileAt(col, row);
+      return action.kind === "till" ? tile.kind === "untilled" && (map.farmland[row]?.[col] ?? false) : tile.kind !== "untilled" && !tile.watered;
+    });
   }
 
   /** The tile an aim acts on: where the find lies when picking up, otherwise the tile in front. */
@@ -366,12 +407,19 @@ export class Farming {
     const position = this.options.me.sprite;
     const feet = feetTile(position);
     const target = this.hover ?? targetTile(feet, this.options.facing());
+    const facing = this.hover ? facingFor(target.col - feet.col, target.row - feet.row, this.options.facing()) : this.options.facing();
     const tile = this.view.tileAt(target.col, target.row);
     const map = this.options.map();
     const built = this.options.built();
     const farmland = map.farmland[target.row]?.[target.col] ?? false;
     const bag = this.options.bag();
     const held = bag?.[this.options.selectedSlot()]?.itemId ?? null;
+    const season = this.options.season();
+    // A wide hoe or a big can in hand: the tiles either side of the one in front, too.
+    const kind = toolKind(held);
+    const wide = bag && (kind === "hoe" || kind === "can") ? toolOfKind(bag, kind, this.options.selectedSlot()) : null;
+    const sides = wide ? toolTiles(wide.def, target, facing).slice(1) : [];
+    const sideTiles = sides.map(({ col, row }) => ({ tile: this.view.tileAt(col, row), farmland: map.farmland[row]?.[col] ?? false }));
     // Places win even with the mouse over a tile (they're never next to the farm field). Facing
     // Marlow you talk to him, even by the board; standing right by him otherwise, too.
     const place = placeNear(map, position, CLIENT_NEAR_TILES);
@@ -379,6 +427,8 @@ export class Farming {
     const facingKeeper = keeper !== null && keeper.col === target.col && keeper.row === target.row;
     let spot: Spot | null = facingKeeper ? { kind: "keeper" } : place ? { kind: "place", place } : this.options.spot(position);
     if (!spot && keeper && (isNeighbour(feet, keeper) || (feet.col === keeper.col && feet.row === keeper.row))) spot = { kind: "keeper" };
+    // The garden shop (Milestone 8): boarded up until it's reopened.
+    if (spot?.kind === "place" && spot.place === "gardenShop" && !built.has("gardenShop")) spot = { kind: "closed", reason: "shop-boarded" };
     // The lighthouse's door: Climb once it's lit, otherwise a hint.
     if (!spot && nearLighthouseDoor(map, position, CLIENT_NEAR_TILES)) {
       spot = built.has("lighthouse") ? { kind: "climb" } : { kind: "closed", reason: "lighthouse-dark" };
@@ -398,13 +448,13 @@ export class Farming {
     };
     const find = lying(target.col, target.row) ?? lying(feet.col, feet.row);
     const bug = this.options.bugNear(position);
-    const water = held === FISHING_ROD ? fishingSpot(map, feet, target) : null;
+    const water = kind === "rod" ? fishingSpot(map, feet, target) : null;
     const fishing = water ? { spot: water, col: target.col, row: target.row } : null;
     // At the board, holding something it wants: Give.
     const wanted = place === "board" && held ? this.options.wanted(held) : null;
     const give = wanted && held ? { ...wanted, itemId: held } : null;
-    const action = chooseAction(tile, farmland, held, spot, placing, { find, bug, fishing, give });
-    return { action, target, tile, farmland, held, spot, placing };
+    const action = chooseAction(tile, farmland, held, spot, placing, { find, bug, fishing, give, sides: sideTiles, season });
+    return { action, target, tile, farmland, held, spot, placing, facing, sides, season };
   }
 
   /** The tile under the mouse, if it's one of the 8 around you. */
@@ -437,6 +487,8 @@ export class Farming {
         return { icon: itemIcon(action.itemId), iconScale: 3, word, faded: false };
       case "board":
         return { icon: { key: BOARD_KEY, frame: 1 }, iconScale: 1, word, faded: false };
+      case "gardenShop":
+        return { icon: { key: BADGE_SHOP_KEY }, iconScale: 1.5, word, faded: false };
       case "give":
         return { icon: itemIcon(action.itemId), iconScale: 3, word, faded: false };
       case "talk":
@@ -448,7 +500,7 @@ export class Farming {
       case "catch":
         return { icon: itemIcon(action.bugId), iconScale: 3, word, faded: false };
       case "fish":
-        return { ...this.heldView(FISHING_ROD), word, faded: false };
+        return { ...this.heldView(held ?? FISHING_ROD), word, faded: false };
       case "harvest":
         return { icon: itemIcon(cropItemId(action.cropId)), iconScale: 3, word, faded: false };
       case "plant":

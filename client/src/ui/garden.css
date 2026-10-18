@@ -1,0 +1,56 @@
+/* The garden shop's card (client/src/ui/GardenShopPanel.ts, Milestone 8), on top of shop.css. */
+
+.garden-note {
+  margin: -4px 4px 8px;
+  color: #8a7556;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.garden-tabs .book-tab {
+  min-height: 38px;
+  justify-content: center;
+}
+
+/* Seeds for another season: faded, with the season instead of a price. */
+.garden-later .shop-line {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.garden-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e4d3ad;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* A tool upgrade: its picture, what it does and costs, and its button underneath. */
+.garden-tool {
+  padding-bottom: 8px;
+}
+
+.garden-tool .shop-line {
+  cursor: default;
+  align-items: flex-start;
+}
+
+.garden-tool .panel-icon {
+  margin-top: 2px;
+}
+
+.garden-cost {
+  margin-top: 2px;
+  color: #6b5a40 !important;
+  font-weight: 700;
+}
+
+.garden-tool .panel-button.garden-get {
+  width: calc(100% - 16px);
+  margin: 0 8px;
+}
+
+.garden-tool .panel-button.garden-get:disabled {
+  opacity: 0.6;
+}

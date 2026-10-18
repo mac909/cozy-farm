@@ -28,6 +28,7 @@ describe("the board's words", () => {
       { id: "lighthouse", name: "Light the lighthouse", step: "Step 1 of 3 · Clear the path to the point", progress: 0.5, waiting: null, faces: [pip, juno] },
     ]);
     expect(words.finished).toEqual([]);
+    expect(words.later.map((later) => later.id)).toEqual(["gardenShop"]);
   });
 
   it("says when everything's in and Marlow sees to it tonight", () => {
@@ -44,6 +45,25 @@ describe("the board's words", () => {
     expect(evening.now).toEqual([]);
     expect(evening.finished).toEqual([{ id: "lighthouse", name: "Light the lighthouse", when: "Lit on day 6" }]);
     expect(evening.line).toMatch(/next plan/);
+    // The garden shop (Milestone 8) is still to come: a silhouette until it goes up next morning.
+    expect(evening.later).toEqual([{ id: "gardenShop", title: "Something on the boardwalk", hint: "Mrs Penhallow's old shop…" }]);
+  });
+
+  it("puts the garden shop up the morning after the lighthouse is lit (Milestone 8), and nothing after it yet", () => {
+    const done = { gathered: 3, built: 3, given: {}, helpers: ["pip"], doneDay: 6 };
+    const words = boardWords(state(done, { day: 7, minute: 600 }));
+    expect(words.now.map((row) => [row.id, row.step])).toEqual([["gardenShop", "Step 1 of 3 · Mend the boardwalk"]]);
+    expect(words.line).toMatch(/Mrs Penhallow/);
+    expect(words.later).toEqual([]);
+    const shop = { gathered: 3, built: 3, given: {}, helpers: ["pip"], doneDay: 9 };
+    const after = boardWords({ ...state(done, { day: 10, minute: 600 }), village: { keeperDay: 2, projects: { lighthouse: done, gardenShop: shop } } });
+    expect(after.now).toEqual([]);
+    expect(after.finished.map((f) => f.when)).toEqual(["Lit on day 6", "Opened on day 9"]);
+    expect(after.line).toMatch(/next plan/);
+  });
+
+  it("shows nothing still to come before Marlow arrives", () => {
+    expect(boardWords({ ...state(null), village: { keeperDay: 0, projects: {} } }).later).toEqual([]);
   });
 });
 

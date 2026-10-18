@@ -7,6 +7,7 @@ import {
   addFarmer,
   farmTileAt,
   farmerOf,
+  giveFishingRod,
   isFarmerId,
   listFarmers,
   newWorld,
@@ -33,6 +34,7 @@ describe("newWorld", () => {
       book: { fish: {}, finds: {}, bugs: {} },
       village: { keeperDay: 0, projects: {} },
       forage: { day: 0, items: [] },
+      yearStart: 0,
     });
   });
 
@@ -107,5 +109,15 @@ describe("listFarmers", () => {
       { id: "b2", name: "Pip", character: "woman" },
       { id: "a1", name: "Juno", character: "boy" },
     ]);
+  });
+});
+
+describe("giveFishingRod", () => {
+  it("gives a rod to someone without one, but never a second to someone with the good rod (Milestone 8)", () => {
+    const world = addFarmer(newWorld(), "pip", { name: "Pip", character: "woman" });
+    const noRod = setFarmerBag(world, "pip", starterInventory().map((slot) => (slot?.itemId === "fishing_rod" ? null : slot)));
+    expect(giveFishingRod(noRod, "pip").farmers.pip.bag.filter((slot) => slot?.itemId === "fishing_rod")).toHaveLength(1);
+    const good = setFarmerBag(world, "pip", starterInventory().map((slot) => (slot?.itemId === "fishing_rod" ? { itemId: "good_rod", count: 1 } : slot)));
+    expect(giveFishingRod(good, "pip")).toBe(good);
   });
 });

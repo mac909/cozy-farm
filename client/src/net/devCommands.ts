@@ -17,9 +17,13 @@ export interface DevCommands {
   xp(skill: "farming" | "fishing" | "foraging", amount: number): void;
   /** Build whatever's been gathered now, instead of overnight. */
   build(): void;
+  /** Make today the first day of a season: dev.season("winter") (Milestone 8). The seasons begin if they haven't. */
+  season(season: "spring" | "summer" | "autumn" | "winter"): void;
+  /** Put things in your bag: dev.item("driftwood", 10), dev.item("melon_seeds", 5). */
+  item(itemId: string, count?: number): void;
   /**
    * Walk there in a blink (your own character only): dev.goTo("dock"), "dockEnd", "beach", "meadow",
-   * "tent", "board", "point", "pointEnd", or dev.goTo(28, 30) for a tile.
+   * "tent", "board", "point", "pointEnd", "gardenShop", "boardwalk", or dev.goTo(28, 30) for a tile.
    */
   goTo(place: DevPlace | number, row?: number): void;
 }
@@ -34,6 +38,8 @@ export const DEV_PLACES = {
   board: { col: 34, row: 16, facing: "up" },
   point: { col: 60, row: 31, facing: "up" },
   pointEnd: { col: 60, row: 32, facing: "down" },
+  gardenShop: { col: 42, row: 16, facing: "up" },
+  boardwalk: { col: 50, row: 17, facing: "right" },
 } as const;
 
 export type DevPlace = keyof typeof DEV_PLACES;
@@ -82,5 +88,7 @@ export function installDevCommands(
     give: (project) => send({ command: "fillStep", ...(typeof project === "string" ? { project } : {}) }),
     xp: (skill, amount) => send({ command: "xp", skill, value: amount }),
     build: () => send({ command: "build" }),
+    season: (season) => send({ command: "season", season }),
+    item: (itemId, count = 1) => send({ command: "item", item: itemId, value: count }),
   };
 }

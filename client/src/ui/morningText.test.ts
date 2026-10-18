@@ -38,7 +38,7 @@ describe("the morning card's words", () => {
 
   it("keeps a quiet night short", () => {
     const words = morningWords({ day: 2, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: [], foraged: [], built: [] });
-    expect(words).toEqual({ title: "Good morning! Day 2", growth: null, storm: null, village: [], beach: null, sales: [], earned: null });
+    expect(words).toEqual({ title: "Good morning! Day 2", growth: null, storm: null, season: null, village: [], beach: null, sales: [], earned: null });
   });
 
   it("says when something washed up on the beach", () => {
@@ -77,5 +77,22 @@ describe("the morning card in the village (Milestone 6)", () => {
     expect(words.village).toEqual([
       { built: { project: "house2:porch", step: 0 }, line: "Juno's cottage has a porch now.", note: "A porch! Somewhere to sit and watch the boats come in." },
     ]);
+  });
+});
+
+describe("the morning card and the seasons (Milestone 8)", () => {
+  const quiet = (day: number) => ({ day, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: [], foraged: [], built: [] });
+
+  it("says the season's day once the seasons begin, and the day before", () => {
+    expect(morningWords(quiet(26), false, undefined, 24).title).toBe("Good morning! Spring 3");
+    expect(morningWords(quiet(26)).title).toBe("Good morning! Day 26");
+  });
+
+  it("says when a season comes, with what it brings", () => {
+    const spring = morningWords({ ...quiet(24), built: [{ project: "gardenShop", step: 2 }] }, false, undefined, 24);
+    expect(spring.season?.title).toBe("Spring has come to the village!");
+    expect(spring.village[0].line).toMatch(/garden shop is open/);
+    expect(morningWords(quiet(38), false, undefined, 24).season?.title).toBe("Summer's here!");
+    expect(morningWords(quiet(39), false, undefined, 24).season).toBeNull();
   });
 });

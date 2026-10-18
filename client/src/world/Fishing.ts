@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { Room } from "colyseus.js";
 import { TILE_SIZE } from "../../../shared/constants";
-import { FISHING_ROD } from "../../../shared/content/items";
+import { FISHING_ROD, type ItemId } from "../../../shared/content/items";
 import { FISHING, isFinished, tick, type FishingEvent, type FishingState } from "../../../shared/fishing/fishing";
 import { bobberTile } from "../../../shared/fishing/spots";
 import type { CastMessage, CastStartedMessage, LandFishMessage, ReelInMessage } from "../../../shared/messages";
@@ -44,6 +44,8 @@ export interface FishingOptions {
   touch: boolean;
   /** A cast is over, with or without a fish (for the tips). */
   ended?(caught: boolean): void;
+  /** The rod in your hands and its bag slot (the good rod, Milestone 8), or null to use any. */
+  rod?(): { itemId: ItemId; slot: number } | null;
 }
 
 /** Where the rod's handle sits by the character, and where its tip is, for each way you face (pixels from the sprite's middle). */
@@ -113,7 +115,8 @@ export class Fishing {
     const bobber = bobberTile(this.options.map(), feet, this.water);
     const at = tileCenter(bobber.col, bobber.row);
     this.rest = { x: at.x, y: at.y + 2 };
-    room.send("cast", { col, row } satisfies CastMessage);
+    const rod = this.options.rod?.() ?? null;
+    room.send("cast", { col, row, ...(rod ? { slot: rod.slot } : {}) } satisfies CastMessage);
     this.options.me.swing(facing);
     playSound(this.scene, "tap");
     this.castOut();
@@ -308,7 +311,7 @@ export class Fishing {
 
   private showButtons() {
     const state = this.state;
-    const icon = itemIcon(FISHING_ROD);
+    const icon = itemIcon(this.options.rod?.()?.itemId ?? FISHING_ROD);
     this.options.showAction({ icon, iconScale: iconScale(icon, 48), word: fishingWord(state), faded: false });
     this.options.showHud(state ? fishingHud(state, this.options.touch) ?? (this.mode === "landed" ? null : CASTING_VIEW) : CASTING_VIEW);
   }

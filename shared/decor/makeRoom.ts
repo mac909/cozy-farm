@@ -27,6 +27,30 @@ export function makeRoom(world: World, before: WorldMap, after: WorldMap): World
   return moved ? { ...world, decorations: pieces } : world;
 }
 
+/**
+ * When the server starts (Milestone 8): any decoration standing where it can't stand on today's
+ * map, because the map itself changed with an update (the garden shop where the bushes were), moves
+ * to the nearest free spot, as makeRoom does for something built overnight. Only the map's walls,
+ * farmland and the paths kept clear can move one; pieces in each other's way are left alone.
+ */
+export function settleDecorations(world: World, map: WorldMap): World {
+  const open: WorldMap = { ...map, blocked: map.blocked.map((row) => row.map(() => false)), farmland: map.farmland.map((row) => row.map(() => false)) };
+  const dug = dugIn(world);
+  const anywhere = farmBoard(open, dug, undefined, new Set());
+  const now = farmBoard(map, dug);
+  let pieces: PlacedPiece[] = [...world.decorations];
+  let moved = false;
+  for (let i = 0; i < pieces.length; i++) {
+    const piece = pieces[i];
+    if (placeRefusal(now, pieces, piece, i) === null || placeRefusal(anywhere, pieces, piece, i) !== null) continue;
+    const spot = nearestFree(now, pieces, piece, i, map);
+    if (!spot) continue;
+    pieces = pieces.map((p, j) => (j === i ? spot : p));
+    moved = true;
+  }
+  return moved ? { ...world, decorations: pieces } : world;
+}
+
 /** The nearest spot to `piece` it fits on now, searching outwards ring by ring. */
 function nearestFree(board: ReturnType<typeof farmBoard>, pieces: readonly PlacedPiece[], piece: PlacedPiece, index: number, map: WorldMap): PlacedPiece | null {
   const reach = Math.max(map.width, map.height);

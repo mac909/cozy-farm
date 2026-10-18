@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { BEACH_ITEMS, BEACH_LEGEND } from "./beach";
 import { BUG_IDS } from "../../shared/content/bugs";
 import { FISH_IDS } from "../../shared/content/fish";
+import { MAX_STAGES } from "../../shared/content/crops";
 import { BUG_SHEET, bugFrames } from "./bugs";
 import { FISH_ART } from "./fish";
 import { FISHING_FRAMES, fishingFrames } from "./fishing";
@@ -27,6 +28,8 @@ import { SAND_GRASS, SAND_WATER, recolourBlock } from "./sand";
 import { soilTile } from "./soil";
 import { UI_ICONS } from "./ui";
 import { MATERIAL_ART, MATERIAL_LEGEND } from "./materials";
+import { GARDEN_SHOP_FRAMES, GARDEN_SHOP_SIZE, PACK_SHOP, gardenShop } from "./gardenShop";
+import { toolIcons } from "./tools";
 import { BOARD_FRAMES, BRAMBLE_TILES, LIGHTHOUSE_FRAMES, LIGHTHOUSE_SIZE, board, bramble, lighthouse } from "./village";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -45,8 +48,9 @@ function save(name: string, img: Img, info: Record<string, unknown>): void {
 }
 
 function renderCrops(): void {
-  const ITEM_COL = 5;
-  const PACKET_COL = 6;
+  // Room for MAX_STAGES growth stages, then the item and the packet.
+  const ITEM_COL = MAX_STAGES;
+  const PACKET_COL = MAX_STAGES + 1;
   const cols = PACKET_COL + 1;
   const rows: (Img | null)[][] = [];
   const crops: Record<string, unknown> = {};
@@ -68,7 +72,7 @@ function renderCrops(): void {
   save("crops", packRows(rows, T, T), {
     frameWidth: T,
     frameHeight: T,
-    layout: "One row per crop. Columns 0..n-1: growth stages, seed to ripe. Column 5: harvested item. Column 6: seed packet.",
+    layout: `One row per crop. Columns 0..n-1: growth stages, seed to ripe. Column ${ITEM_COL}: harvested item. Column ${PACKET_COL}: seed packet.`,
     crops,
   });
   save("golden-crops", packRows([rows.map((frames) => golden(frames[ITEM_COL]!))], T, T), {
@@ -271,6 +275,28 @@ function renderVillage(): void {
   });
 }
 
+function renderTools(): void {
+  const icons = toolIcons((file) => Img.read(path.join(PACK, file)));
+  const names = Object.keys(icons) as (keyof typeof icons)[];
+  save("tools", packRows([names.map((n) => icons[n])], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    frames: Object.fromEntries(names.map((n, i) => [n, i])),
+    note: "Tool upgrades from the garden shop (Milestone 8). Frame names are item ids.",
+  });
+}
+
+function renderGardenShop(): void {
+  const { file, x, y, w, h } = PACK_SHOP;
+  const shop = Img.read(path.join(PACK, file)).crop(x, y, w, h);
+  save("garden-shop", packRows([GARDEN_SHOP_FRAMES.map((f) => gardenShop(f, shop))], GARDEN_SHOP_SIZE.w, GARDEN_SHOP_SIZE.h), {
+    frameWidth: GARDEN_SHOP_SIZE.w,
+    frameHeight: GARDEN_SHOP_SIZE.h,
+    frames: Object.fromEntries(GARDEN_SHOP_FRAMES.map((f, i) => [f, i])),
+    note: "Four tiles wide (the shop and its potting bench) and three tall, standing on the bottom of the frame; the door is in the second column. Boarded up, patched, open, and its opening day with bunting.",
+  });
+}
+
 console.log(`Rendering sprites into ${path.relative(ROOT, OUT)}${path.sep}`);
 renderCrops();
 renderSoil();
@@ -289,5 +315,7 @@ renderBugs();
 renderFishing();
 renderMaterials();
 renderVillage();
+renderTools();
+renderGardenShop();
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log("  manifest.json");

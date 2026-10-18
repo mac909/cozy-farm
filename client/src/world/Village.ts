@@ -6,7 +6,8 @@ import { inEffect } from "../../../shared/world/gates";
 import { keeperAt } from "../../../shared/world/keeper";
 import type { GatedLayer, TilePos } from "../../../shared/world/map";
 import type { Today } from "../../../shared/world/today";
-import { BOARD_KEY, KEEPER_KEY, LIGHTHOUSE_FRAME, LIGHTHOUSE_KEY } from "../art/assets";
+import { BOARD_KEY, GARDEN_SHOP_FRAME, GARDEN_SHOP_KEY, KEEPER_KEY, LIGHTHOUSE_FRAME, LIGHTHOUSE_KEY } from "../art/assets";
+import type { Rect } from "../../../shared/world/map";
 import { Character } from "./Character";
 
 /** A gated tile layer on screen: drawn (art) or walls (collision), and the rule for when. */
@@ -29,15 +30,26 @@ export function lighthouseFrame(built: ReadonlySet<string>): number {
 }
 
 /**
+ * Which picture of the garden shop goes with what's built (Milestone 8): boarded up, patched (the
+ * boards off its windows), open, or open with bunting on its opening day.
+ */
+export function gardenShopFrame(built: ReadonlySet<string>, openingToday = false): number {
+  if (built.has("gardenShop")) return openingToday ? GARDEN_SHOP_FRAME.opening : GARDEN_SHOP_FRAME.open;
+  if (built.has("gardenShop/shop")) return GARDEN_SHOP_FRAME.patched;
+  return GARDEN_SHOP_FRAME.boarded;
+}
+
+/**
  * The village's new pieces on screen (Milestone 6): the Village Board (once Marlow is here, with a
- * note pinned on for each open project), the lighthouse on the point as it stands, Marlow where the
- * clock says he is, and the map's layers that come and go as things are built (the brambles,
- * their walls, the board's). Everything changes from what the server says is built, which only
- * changes overnight (or as the lamp is lit at dusk).
+ * note pinned on for each open project), the lighthouse on the point as it stands, the garden shop
+ * (Milestone 8), Marlow where the clock says he is, and the map's layers that come and go as things
+ * are built (the brambles, their walls, the board's, the boardwalk). Everything changes from what
+ * the server says is built, which only changes overnight (or as the lamp is lit at dusk).
  */
 export class VillageView {
   private readonly board: Phaser.GameObjects.Image;
   private readonly lighthouse: Phaser.GameObjects.Image | null;
+  private readonly gardenShop: Phaser.GameObjects.Image | null;
   readonly keeper: Character;
   private keeperTile: TilePos | null = null;
   private gated: GatedOnScreen[] = [];
@@ -45,9 +57,16 @@ export class VillageView {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    lighthouse: { x: number; y: number; width: number; height: number } | null,
+    lighthouse: Rect | null,
     zoom: number,
+    gardenShop: Rect | null = null,
   ) {
+    this.gardenShop = gardenShop
+      ? scene.add
+          .image(gardenShop.x, gardenShop.y + gardenShop.height, GARDEN_SHOP_KEY, GARDEN_SHOP_FRAME.boarded)
+          .setOrigin(0, 1)
+          .setDepth(gardenShop.y + gardenShop.height)
+      : null;
     this.board = scene.add.image(0, 0, BOARD_KEY, 0).setOrigin(0, 0).setVisible(false);
     this.lighthouse = lighthouse
       ? scene.add
@@ -82,23 +101,27 @@ export class VillageView {
     return this.board.visible ? this.board.getBounds() : null;
   }
 
-  /** Shows the village as of today (and the time, for Marlow). `openProjects`: notes pinned on the board. */
-  show(today: Today, minute: number, openProjects: number) {
+  /**
+   * Shows the village as of today (and the time, for Marlow). `openProjects`: notes pinned on the
+   * board. `openedToday`: a project that opened this morning (bunting, and Marlow beside it).
+   */
+  show(today: Today, minute: number, openProjects: number, openedToday: string | null = null) {
     const { map, built } = today;
-    const key = `${[...built].sort().join("|")}#${openProjects}`;
+    const key = `${[...built].sort().join("|")}#${openProjects}#${openedToday}`;
     if (key !== this.shownKey) {
       this.shownKey = key;
       if (map.board) {
         this.board.setPosition(map.board.x, map.board.y).setDepth(map.board.y + map.board.height).setFrame(Math.min(2, openProjects)).setVisible(true);
       } else this.board.setVisible(false);
       this.lighthouse?.setFrame(lighthouseFrame(built));
+      this.gardenShop?.setFrame(gardenShopFrame(built, openedToday === "gardenShop"));
       for (const { gate, layer, collider } of this.gated) {
         const on = inEffect(gate, built);
         if (collider) collider.active = on;
         else layer.setVisible(on);
       }
     }
-    const spot = keeperAt(map, minute, built);
+    const spot = keeperAt(map, minute, built, openedToday);
     this.keeperTile = spot;
     if (spot) {
       this.keeper.sprite.setPosition(spot.col * TILE_SIZE + TILE_SIZE / 2, spot.row * TILE_SIZE + TILE_SIZE / 2);

@@ -1,5 +1,5 @@
 import type { BadgeIcon } from "../../../shared/content/badges";
-import { BADGE_COTTAGE_KEY, BADGE_LIGHTHOUSE_KEY, BADGE_PORCH_KEY, EMOTES_KEY, emoteFrame, furnitureIconKey, MOON_KEY, UI_ICON, UI_ICONS_KEY } from "./assets";
+import { BADGE_COTTAGE_KEY, BADGE_LIGHTHOUSE_KEY, BADGE_PORCH_KEY, BADGE_SHOP_KEY, EMOTES_KEY, emoteFrame, furnitureIconKey, MOON_KEY, UI_ICON, UI_ICONS_KEY } from "./assets";
 import { itemIcon, type Icon } from "./itemIcons";
 
 /**
@@ -23,5 +23,7 @@ export function badgeIcon(icon: BadgeIcon): Icon {
       return { key: furnitureIconKey("red_bed"), size: 32 };
     case "view":
       return { key: MOON_KEY };
+    case "shop":
+      return { key: BADGE_SHOP_KEY, size: 32 };
   }
 }

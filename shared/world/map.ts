@@ -27,7 +27,10 @@ export interface WorldMap {
    * sand, sea, or a mix along the edges. "other" where the Ground tile isn't part of the terrain set.
    */
   terrain: Terrain[][];
-  /** Tiles with something drawn on the Decor or Details layers (a palm, a tuft, a plank), indexed [row][col]. */
+  /**
+   * Tiles with something drawn on the Decor or Details layers (a palm, a tuft, a plank), or on a gated
+   * art layer that's in effect (the boardwalk), indexed [row][col]. Nothing washes up on them.
+   */
   cluttered: boolean[][];
   /** The deep water off the end of the dock, where the big fish are: `deepWater` rectangles in Tiled. */
   deepWater: Rect[];
@@ -38,18 +41,28 @@ export interface WorldMap {
   board: Rect | null;
   /** The lighthouse on the point (Milestone 6), drawn whatever state it's in. Its door is the middle of its bottom row. */
   lighthouse: Rect | null;
+  /**
+   * Mrs Penhallow's garden shop above the boardwalk (Milestone 8): drawn boarded up, patched or open
+   * as the village has it, its door in its bottom row. Its Action wakes up once it's reopened.
+   */
+  gardenShop: Rect | null;
   /** The water round the point, where the night fish bite: `pointWater` rectangles, `needs: lighthouse`. */
   pointWater: Rect[];
   /** Round the meadow's trees, where branches fall each morning: `woods` rectangles. */
   woods: Rect[];
   /** Where Marlow stands at each time of day: `keeper…` points (see shared/world/keeper.ts). */
   keeper: Readonly<Partial<Record<KeeperSpotId, KeeperPoint>>>;
+  /** Where he stands all day the day a project opens, by project id: `keeperOpening` points with a `project` (Milestone 8). */
+  keeperOpenings: Readonly<Record<string, KeeperPoint>>;
   /** What changes as the village is built: layers and objects shown from or until something is (shared/world/gates.ts). */
   gates: MapGates;
 }
 
-/** The times of day Marlow has a spot for: by the board, fishing in the evening, his boat at night, and the point once it's lit. */
-export type KeeperSpotId = "day" | "evening" | "night" | "eveningLit";
+/**
+ * The times of day Marlow has a spot for: by the board, fishing in the evening, his boat at night,
+ * the point once it's lit, and the day a project opens, by the new place (Milestone 8).
+ */
+export type KeeperSpotId = "day" | "evening" | "night" | "eveningLit" | "opening";
 
 /** Where Marlow stands, and which way he faces. */
 export interface KeeperPoint extends TilePos {
@@ -89,6 +102,8 @@ export interface MapGates {
   /** The plain Collision and Farmland layers, before any gated layer is added. */
   baseBlocked: boolean[][];
   baseFarmland: boolean[][];
+  /** What's drawn on Decor and Details, before any gated art (the boardwalk's planks, Milestone 8) is added. */
+  baseCluttered: boolean[][];
 }
 
 /**

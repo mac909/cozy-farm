@@ -4,14 +4,15 @@ import { type Rect, tileAt, type TilePos, type WorldMap } from "./map";
 
 /**
  * Where things are in the village: which tile is under your feet and in front of you, what you can
- * reach, and which place (tent, crate, seed stand, store, the Village Board) you're standing next to.
+ * reach, and which place (tent, crate, seed stand, store, the Village Board, the garden shop) you're
+ * standing next to.
  */
 
 /** The places that take over the Action button when you're next to them. */
-export type PlaceId = "tent" | "crate" | "seedStand" | "store" | "board";
+export type PlaceId = "tent" | "crate" | "seedStand" | "store" | "board" | "gardenShop";
 
 /** Every place, in the order the Action button checks them. */
-export const PLACES: readonly PlaceId[] = ["tent", "crate", "seedStand", "store", "board"];
+export const PLACES: readonly PlaceId[] = ["tent", "crate", "seedStand", "store", "board", "gardenShop"];
 
 /** The Action button switches to a place this close to it, in tiles. */
 export const CLIENT_NEAR_TILES = 1.5;
@@ -71,10 +72,11 @@ export function nearPlace(point: Point, rect: Rect, tiles: number): boolean {
 }
 
 /**
- * The part of a place you walk up to. For the tent and the store that's their bottom row, where the
- * door is, so farming the field's bottom row on the other side of the fence doesn't turn the button
- * into Sleep, and walking past the store's roof doesn't open it. The crate, the stand and the
- * board count all over. Null for a place that isn't there (yet): the board before Marlow arrives.
+ * The part of a place you walk up to. For the tent, the store and the garden shop that's their
+ * bottom row, where the door is, so farming the field's bottom row on the other side of the fence
+ * doesn't turn the button into Sleep, and walking past a roof doesn't open it. The crate, the stand
+ * and the board count all over. Null for a place that isn't there (yet): the board before Marlow
+ * arrives. (The garden shop stands boarded up until it's reopened; the Action button says so.)
  */
 export function placeArea(map: WorldMap, place: PlaceId): Rect | null {
   switch (place) {
@@ -84,6 +86,11 @@ export function placeArea(map: WorldMap, place: PlaceId): Rect | null {
     }
     case "store": {
       const { x, y, width, height } = map.store;
+      return { x, y: y + height - TILE_SIZE, width, height: TILE_SIZE };
+    }
+    case "gardenShop": {
+      if (!map.gardenShop) return null;
+      const { x, y, width, height } = map.gardenShop;
       return { x, y: y + height - TILE_SIZE, width, height: TILE_SIZE };
     }
     case "crate":

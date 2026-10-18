@@ -25,4 +25,10 @@ describe("itemInfo", () => {
   it("says tools can't be sold", () => {
     expect(itemInfo({ itemId: "hoe", count: 1 })).toEqual({ title: "Hoe", detail: "A tool: it never wears out, and can't be sold" });
   });
+
+  it("says what an upgraded tool does, and when a seasonal seed goes in (Milestone 8)", () => {
+    expect(itemInfo({ itemId: "big_watering_can", count: 1 }).detail).toMatch(/three tiles at once/);
+    expect(itemInfo({ itemId: "peas_seeds", count: 3 }).detail).toBe(`Plant in dug soil in spring · sells back for ${ITEMS.peas_seeds.sellPrice} each`);
+    expect(itemInfo({ itemId: "wheat_seeds", count: 3 }).detail).toBe(`Plant in dug soil · sells back for ${ITEMS.wheat_seeds.sellPrice} each`);
+  });
 });

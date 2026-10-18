@@ -43,6 +43,8 @@ export type SavedFarmTile = { col: number; row: number } & Exclude<FarmTile, { k
  * Version 4: plus the village (Marlow and the projects) and the driftwood and branches lying about (Milestone 6).
  * Version 5: plus each farmer's progress (skills, the counts badges go by, badges and gifts), house
  * upgrades among the projects ("house1:porch"), and regrown crops marked on the farm (Milestone 7).
+ * Version 6: plus the day spring first came (`yearStart`, Milestone 8). The garden shop is a project
+ * like the lighthouse, and its seeds and tool upgrades are new items, so nothing else changes shape.
  *
  * To change this shape once it has reached the real farm: add a migration below that turns the
  * previous version into the new one, then update this type, `validate` and the converters.
@@ -71,6 +73,8 @@ export interface WorldSave {
   village: { keeperDay: number; projects: Record<string, SavedProject> };
   /** Driftwood and branches lying about, and the day the morning last brought some (0: never). Since version 4. */
   forage: { day: number; items: { itemId: ForageId; col: number; row: number }[] };
+  /** The day spring first came, when the garden shop opened (0: not yet). Since version 6. */
+  yearStart: number;
 }
 
 /** A project's progress in a save (see shared/village/village.ts). */
@@ -136,6 +140,10 @@ const migrations: Migration[] = [
         )
       : save.farmers,
   }),
+  // 5 → 6 (Milestone 8): no seasons yet: they begin the morning the garden shop opens, and the
+  // garden shop is a new project, so nobody's world has it started. Old tools stay as they are
+  // (an upgraded tool is a new item), and everything else comes through untouched.
+  (save) => ({ ...save, yearStart: 0 }),
 ];
 
 function isJsonObject(value: unknown): value is SaveJson {
@@ -216,6 +224,7 @@ export const WORLD_SAVE: SaveFormat<WorldSave> = {
       book: savedBook(save.book, "book"),
       village: savedVillage(save.village, "village", farmers),
       forage: savedForage(save.forage, "forage"),
+      yearStart: whole(save.yearStart, "yearStart", 0),
     };
   },
 };
@@ -263,6 +272,7 @@ export function worldToSave(world: World): WorldSave {
       ),
     },
     forage: { day: world.forage.day, items: world.forage.items.map(({ itemId, col, row }) => ({ itemId, col, row })) },
+    yearStart: world.yearStart,
   };
 }
 
@@ -307,6 +317,7 @@ export function worldFromSave(save: WorldSave): World {
     book: save.book,
     village: save.village,
     forage: save.forage,
+    yearStart: save.yearStart,
   };
 }
 

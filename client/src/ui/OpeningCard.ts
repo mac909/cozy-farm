@@ -6,6 +6,8 @@ import { button, el, openPanel, picture } from "./panel";
 export interface OpeningPictures {
   /** The project as it is now (the lit lighthouse). */
   hero: string;
+  /** The hero's shape: tall (the lighthouse) or wide (the garden shop, Milestone 8). Tall if missing. */
+  heroShape?: "tall" | "wide";
   /** A small picture for each "New" line, in the order of the project's `opens`. */
   lines: readonly (string | null)[];
 }
@@ -20,7 +22,7 @@ export function showOpeningCard(project: ProjectDef, pictures: OpeningPictures):
     let see = false;
     const panel = openPanel({ cardClass: "opening", position: "bottom", closeOnBackdrop: true, onClose: () => resolve(see) });
     const { card } = panel;
-    const hero = el("div", "opening-hero");
+    const hero = el("div", `opening-hero${pictures.heroShape === "wide" ? " wide" : ""}`);
     hero.append(picture(pictures.hero));
     const note = el("p", "note-letter", `“${keeperWords(project.opening.note)}” `);
     note.style.textAlign = "center";

@@ -12,12 +12,14 @@ export interface MorningVillage {
   keeperArrived: boolean;
   /** A picture of something built (the lighthouse as it is now, a porch). */
   picture(built: BuiltStep): string;
-  /** Whether that picture is tall (the lighthouse) rather than square (a porch). */
-  tall?(built: BuiltStep): boolean;
+  /** That picture's shape: tall (the lighthouse), wide (the garden shop, Milestone 8) or square (a porch). */
+  shape?(built: BuiltStep): "tall" | "wide" | "square";
   /** Whose a cottage is, by name, for a house upgrade's line ("Pip's cottage has a porch now"). */
   owner?(houseId: string): string;
   /** Look: the card closes and the camera glides there and back. */
   look(built: BuiltStep): void;
+  /** The day spring first came (Milestone 8): the season's day in the title, and its first morning. */
+  yearStart?: number;
 }
 
 /**
@@ -32,20 +34,25 @@ export function showMorningCard(
   village?: MorningVillage,
 ): Promise<void> {
   return new Promise((resolve) => {
-    const words = morningWords(report, village?.keeperArrived ?? false, village?.owner);
+    const words = morningWords(report, village?.keeperArrived ?? false, village?.owner, village?.yearStart ?? 0);
     const panel = openPanel({ cardClass: "morning", closeKeys: [" ", "Enter"], closeOnBackdrop: true, onClose: resolve });
     const { card } = panel;
     card.append(el("h2", "panel-title center", words.title));
     if (words.growth) card.append(el("p", "panel-text center", words.growth));
     if (words.storm) card.append(el("p", "panel-text center", words.storm));
+    if (words.season) {
+      const season = el("div", "morning-season");
+      season.append(el("b", "", words.season.title), el("small", "", words.season.news));
+      card.append(season);
+    }
     if (words.village.length > 0 && village) {
       card.append(el("div", "panel-label", "In the village"));
       for (const { built, line, note } of words.village) {
         const row = el("div", "morning-village");
         const pic = picture(village.picture(built));
-        const tall = village.tall?.(built) ?? true;
-        pic.style.width = tall ? "24px" : "32px";
-        pic.style.height = tall ? "48px" : "32px";
+        const [width, height] = { tall: [24, 48], wide: [48, 36], square: [32, 32] }[village.shape?.(built) ?? "tall"];
+        pic.style.width = `${width}px`;
+        pic.style.height = `${height}px`;
         const text = el("div", "grow");
         text.append(el("b", "", line), el("small", "", `“${note}”`));
         const look = button("Look", "board-give", () => {

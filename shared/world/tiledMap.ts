@@ -1,5 +1,5 @@
 import { TILE_SIZE } from "../constants";
-import { KEEPER_POINTS, mapFor, NOTHING_BUILT, objectFields } from "./gates";
+import { KEEPER_OPENING, KEEPER_POINTS, mapFor, NOTHING_BUILT, objectFields } from "./gates";
 import { type GatedLayer, type HousePlan, type MapGates, type MapObject, type Rect, type Terrain, tileAt, type WorldMap } from "./map";
 
 /**
@@ -169,7 +169,7 @@ export function parseTiledMap(input: unknown): WorldMap {
       hint: stringProperty(l, HINT_PROPERTY),
     }));
   const objects: MapObject[] = (objectLayer.objects ?? [])
-    .filter((o) => GATED_OBJECTS.includes(o.name) || Object.hasOwn(KEEPER_POINTS, o.name))
+    .filter((o) => GATED_OBJECTS.includes(o.name) || Object.hasOwn(KEEPER_POINTS, o.name) || o.name === KEEPER_OPENING)
     .map((o) => ({
       name: o.name,
       rect: { x: o.x, y: o.y, width: o.width ?? 0, height: o.height ?? 0 },
@@ -179,7 +179,11 @@ export function parseTiledMap(input: unknown): WorldMap {
         (o.properties ?? []).filter((p) => p.name !== NEEDS_PROPERTY && typeof p.value === "string").map((p) => [p.name, p.value as string]),
       ),
     }));
-  const gates: MapGates = { layers, objects, baseBlocked: painted(COLLISION_LAYER), baseFarmland: painted(FARMLAND_LAYER) };
+  const baseCluttered = grid(
+    empty.map((_, i) => (clutter.some((layer) => layer[i] !== 0) ? 1 : 0)),
+    (any) => any !== 0,
+  );
+  const gates: MapGates = { layers, objects, baseBlocked: painted(COLLISION_LAYER), baseFarmland: painted(FARMLAND_LAYER), baseCluttered };
 
   const base: WorldMap = {
     width,
@@ -193,10 +197,7 @@ export function parseTiledMap(input: unknown): WorldMap {
     store: area("store"),
     houses,
     terrain: grid(hasLayer(GROUND_LAYER) ? tiles(GROUND_LAYER) : empty, terrainOf),
-    cluttered: grid(
-      empty.map((_, i) => (clutter.some((layer) => layer[i] !== 0) ? 1 : 0)),
-      (any) => any !== 0,
-    ),
+    cluttered: baseCluttered,
     ...objectFields(objects, NOTHING_BUILT),
     gates,
   };
@@ -205,7 +206,7 @@ export function parseTiledMap(input: unknown): WorldMap {
 }
 
 /** Objects that can come and go (or there can be several of), read into the map's gates. */
-const GATED_OBJECTS = ["board", "lighthouse", "pointWater", "woods", "deepWater"];
+const GATED_OBJECTS = ["board", "lighthouse", "gardenShop", "pointWater", "woods", "deepWater"];
 
 /**
  * Reads the ground's terrain from the tileset painted with the terrain brush: the first terrain

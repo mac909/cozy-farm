@@ -91,18 +91,21 @@ export function water(tile: FarmTile): FarmResult<"not-tilled" | "already-watere
 
 /**
  * Pick a ripe crop. Most crops leave empty tilled soil behind; regrowing crops
- * stay and drop back one stage. The soil keeps its watered flag either way.
+ * stay and drop back one stage, unless it's their `lastPick` (out of their season,
+ * Milestone 8): then they make way too. The soil keeps its watered flag either way.
  */
 export function harvest(
   tile: FarmTile,
+  { lastPick = false }: { lastPick?: boolean } = {},
 ): FarmResult<"no-crop" | "not-ripe", { harvested: Harvested }> {
   if (tile.kind !== "planted") return fail("no-crop");
   const crop = CROPS[tile.cropId];
   if (tile.stage < ripeStage(crop)) return fail("not-ripe");
   const harvested = { cropId: tile.cropId, amount: crop.harvestAmount };
-  const after: FarmTile = crop.regrows
-    ? { ...tile, stage: ripeStage(crop) - 1, daysInStage: 0, regrown: true }
-    : { kind: "tilled", watered: tile.watered };
+  const after: FarmTile =
+    crop.regrows && !lastPick
+      ? { ...tile, stage: ripeStage(crop) - 1, daysInStage: 0, regrown: true }
+      : { kind: "tilled", watered: tile.watered };
   return { ok: true, tile: after, harvested };
 }
 

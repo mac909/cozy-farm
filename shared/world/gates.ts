@@ -22,29 +22,38 @@ export function inEffect(gate: { from?: string | null; until?: string | null; ne
 export function objectFields(
   objects: readonly MapObject[],
   built: ReadonlySet<string>,
-): Pick<WorldMap, "board" | "lighthouse" | "pointWater" | "woods" | "deepWater" | "keeper"> {
+): Pick<WorldMap, "board" | "lighthouse" | "gardenShop" | "pointWater" | "woods" | "deepWater" | "keeper" | "keeperOpenings"> {
   const here = objects.filter((o) => inEffect(o, built));
   const rects = (name: string) => here.filter((o) => o.name === name && !o.point).map((o) => ({ ...o.rect }));
-  const keeper: Partial<Record<KeeperSpotId, KeeperPoint>> = {};
-  for (const [name, spot] of Object.entries(KEEPER_POINTS) as [string, KeeperSpotId][]) {
-    const point = here.find((o) => o.name === name);
-    if (!point) continue;
+  const pointOf = (point: MapObject): KeeperPoint => {
     const facing = point.props.facing;
-    keeper[spot] = {
+    return {
       col: Math.floor(point.rect.x / TILE_SIZE),
       row: Math.floor(point.rect.y / TILE_SIZE),
       facing: facing === "up" || facing === "down" || facing === "left" || facing === "right" ? facing : "down",
     };
+  };
+  const keeper: Partial<Record<KeeperSpotId, KeeperPoint>> = {};
+  for (const [name, spot] of Object.entries(KEEPER_POINTS) as [string, KeeperSpotId][]) {
+    const point = here.find((o) => o.name === name);
+    if (point) keeper[spot] = pointOf(point);
   }
+  const keeperOpenings: Record<string, KeeperPoint> = {};
+  for (const point of here) if (point.name === KEEPER_OPENING && point.props.project) keeperOpenings[point.props.project] = pointOf(point);
   return {
     board: rects("board")[0] ?? null,
     lighthouse: rects("lighthouse")[0] ?? null,
+    gardenShop: rects("gardenShop")[0] ?? null,
     pointWater: rects("pointWater"),
     woods: rects("woods"),
     deepWater: rects("deepWater"),
     keeper,
+    keeperOpenings,
   };
 }
+
+/** Marlow's point by a new place, for the day it opens: one per project, its `project` property says which. */
+export const KEEPER_OPENING = "keeperOpening";
 
 /** Marlow's points in Tiled, and the time of day each is for. */
 export const KEEPER_POINTS: Readonly<Record<string, KeeperSpotId>> = {
@@ -61,13 +70,14 @@ function combined(base: boolean[][], layers: readonly GatedLayer[], kind: GatedL
   return base.map((row, r) => row.map((cell, c) => cell || shown.some((layer) => layer.tiles[r][c])));
 }
 
-/** The map as of today: walls, farmland and places with `built` done. */
+/** The map as of today: walls, farmland, what's drawn and places with `built` done. */
 export function mapFor(map: WorldMap, built: ReadonlySet<string>): WorldMap {
   const { gates } = map;
   return {
     ...map,
     blocked: combined(gates.baseBlocked, gates.layers, "collision", built),
     farmland: combined(gates.baseFarmland, gates.layers, "farmland", built),
+    cluttered: combined(gates.baseCluttered, gates.layers, "art", built),
     ...objectFields(gates.objects, built),
   };
 }

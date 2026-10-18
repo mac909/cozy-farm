@@ -1,5 +1,6 @@
 /**
- * Growth stages, harvested item and seed packet for each starter crop.
+ * Growth stages, harvested item and seed packet for each crop: the starter crops here, and the
+ * garden shop's (Milestone 8) in gardenCrops.ts.
  *
  * Every frame is 16×16, drawn as fill colours only: the render script adds the black
  * outline around each shape afterwards (an explicit "k" draws an inner outline).
@@ -8,6 +9,7 @@
  * Stage counts must match `stages` in shared/content/crops.ts (seed through ripe).
  */
 import { C } from "./palette";
+import { GARDEN_CROP_ART } from "./gardenCrops";
 
 export const CROP_LEGEND: Readonly<Record<string, string>> = {
   k: C.outline,
@@ -35,6 +37,13 @@ export const CROP_LEGEND: Readonly<Record<string, string>> = {
   A: C.petalShade,
   c: C.tan,
   s: C.sand,
+  // Milestone 8's crops
+  D: C.leafDeep,
+  m: C.mauve,
+  q: C.seaDeep,
+  n: C.stemDark,
+  x: C.plumDark,
+  i: C.ice,
 };
 
 const EMPTY = "................";
@@ -66,7 +75,7 @@ export interface CropArt {
   packet: readonly string[];
 }
 
-export const CROP_ART = {
+const STARTER_CROP_ART = {
   radish: {
     seed: ["#d3865f", "#965340"],
     stages: [
@@ -521,6 +530,9 @@ export const CROP_ART = {
     ],
   },
 } satisfies Record<string, CropArt>;
+
+/** Every crop's art, in shared/content/crops.ts order (a row each in crops.png). */
+export const CROP_ART = { ...STARTER_CROP_ART, ...GARDEN_CROP_ART };
 
 export type CropArtId = keyof typeof CROP_ART;
 

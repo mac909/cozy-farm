@@ -6,7 +6,8 @@ import { DAY_START_MINUTE } from "../time/clock";
 import { BEACHCOMBING } from "../beachcombing/beachcombing";
 import { shoreOf } from "../beachcombing/tide";
 import { NO_GROUNDS } from "../foraging/forage";
-import { endNight, startOfServer } from "./night";
+import { endNight, startOfServer, startSeasons } from "./night";
+import { seasonOn } from "../time/seasons";
 import { FORAGE } from "../content/forage";
 import { VILLAGE_MAP } from "./villageMap";
 import { farmTileAt, newWorld, setFarmTile, type World } from "./world";
@@ -137,6 +138,22 @@ describe("the village overnight (Milestone 6)", () => {
     expect(world.village.projects.lighthouse).toMatchObject({ gathered: 1, built: 1 });
     expect(report.built).toEqual([{ project: "lighthouse", step: 0 }]);
     expect(world.lastMorning?.built).toEqual(report.built);
+  });
+
+  it("brings the first spring the morning the garden shop opens (Milestone 8), and only then", () => {
+    const lit = { gathered: 3, built: 3, given: {}, helpers: ["pip"], doneDay: 8 };
+    const drawers = { gathered: 3, built: 2, given: {}, helpers: ["pip"], doneDay: null };
+    const before: World = { ...newWorld(), clock: { day: 12, minute: 1300 }, village: { keeperDay: 2, projects: { lighthouse: lit, gardenShop: drawers } } };
+    const { world, report } = endNight(before);
+    expect(report.built).toEqual([{ project: "gardenShop", step: 2 }]);
+    expect(world.yearStart).toBe(13);
+    expect(seasonOn(world.clock.day, world.yearStart)).toEqual({ season: "spring", day: 1, year: 1 });
+    // And never again: the next night keeps the year going.
+    expect(endNight(world).world.yearStart).toBe(13);
+    // Nothing opened: no seasons.
+    const quiet = endNight({ ...before, village: { keeperDay: 2, projects: { lighthouse: lit } } });
+    expect(quiet.world.yearStart).toBe(0);
+    expect(startSeasons(quiet.world)).toBe(quiet.world);
   });
 
   it("brings Marlow when the server starts on a world past its first day, but not on day 1", () => {

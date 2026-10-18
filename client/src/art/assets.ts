@@ -92,6 +92,14 @@ const PORCH_ON_SHEET: Readonly<Record<keyof typeof PORCH_FRAME, { x: number; y: 
 export const BADGE_LIGHTHOUSE_KEY = "badge-lighthouse";
 export const BADGE_COTTAGE_KEY = "badge-cottage";
 export const BADGE_PORCH_KEY = "badge-porch";
+/** The garden shop, open, at 32 × 32 (Milestone 8): its badge and its cards. */
+export const BADGE_SHOP_KEY = "badge-shop";
+/** Our garden shop (Milestone 8), 64 × 48: boarded up, patched, open, and its opening day with bunting. */
+export const GARDEN_SHOP_KEY = "garden-shop";
+export const GARDEN_SHOP_FRAME = { boarded: 0, patched: 1, open: 2, opening: 3 } as const;
+/** Our tool upgrades (Milestone 8), 16 × 16, frames by item id (tools/sprites/tools.ts). */
+export const TOOLS_KEY = "tools";
+export const TOOL_FRAME = { big_watering_can: 0, wide_hoe: 1, good_rod: 2, bug_net: 3, shell_basket: 4 } as const;
 /** Each character's face (the pack's facesets, 38 × 38), for the board's helpers. */
 export const faceKey = (id: CharacterId) => `face-${id}`;
 /** Furniture icons for the hotbar, the bag and the store: 32×32, made at boot from each piece's picture. */
@@ -145,6 +153,8 @@ export function loadArt(scene: Phaser.Scene): void {
   load.spritesheet(LIGHTHOUSE_KEY, `${CUSTOM}lighthouse.png`, { frameWidth: 48, frameHeight: 96 });
   load.spritesheet(BOARD_KEY, `${CUSTOM}village-board.png`, { frameWidth: 32, frameHeight: 32 });
   load.image(PORCH_KEY, `${CUSTOM}porch.png`);
+  load.spritesheet(GARDEN_SHOP_KEY, `${CUSTOM}garden-shop.png`, { frameWidth: 64, frameHeight: 48 });
+  load.spritesheet(TOOLS_KEY, `${CUSTOM}tools.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(EMOTES_KEY, `${CUSTOM}emotes.png`, { frameWidth: 14, frameHeight: 13 });
   load.spritesheet(UI_ICONS_KEY, `${CUSTOM}ui-icons.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(SHIPPING_CRATE_KEY, `${CUSTOM}shipping-crate.png`, { frameWidth: 32, frameHeight: 32 });
@@ -232,6 +242,8 @@ function badgePictures(scene: Phaser.Scene) {
   draw(BADGE_LIGHTHOUSE_KEY, (ctx) => ctx.drawImage(source(LIGHTHOUSE_KEY), 3 * 48 + 8, 0, 32, 32, 0, 0, 32, 32));
   const cottage = COTTAGES.orange;
   draw(BADGE_COTTAGE_KEY, (ctx) => ctx.drawImage(source(HOUSE_SHEET_KEY), cottage.x, cottage.y, cottage.width, cottage.height, 0, 6, 32, 24));
+  // The open garden shop, shop and bench, at half size.
+  draw(BADGE_SHOP_KEY, (ctx) => ctx.drawImage(source(GARDEN_SHOP_KEY), GARDEN_SHOP_FRAME.open * 64, 0, 64, 48, 0, 6, 32, 24));
   draw(BADGE_PORCH_KEY, (ctx) => {
     const sheet = source(PORCH_KEY);
     const { bench } = PORCH_ON_SHEET;

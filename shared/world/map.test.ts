@@ -435,3 +435,55 @@ describe("porches (Milestone 7)", () => {
     expect(before.size - walk.size).toBe(map.houses.length * 3);
   });
 });
+
+describe("the garden shop and the boardwalk (Milestone 8)", () => {
+  const map = VILLAGE_MAP;
+  const shop = map.gardenShop!;
+  const tilesOf = ({ x, y, width, height }: Rect) => {
+    const first = tileAt(x, y);
+    const last = tileAt(x + width - 1, y + height - 1);
+    return { first, last };
+  };
+
+  it("stands where the clump of bushes was: its bottom row walled as theirs was, so nothing walkable is lost", () => {
+    expect(shop).toEqual({ x: 41 * 16, y: 13 * 16, width: 64, height: 48 });
+    const { first, last } = tilesOf(shop);
+    for (let row = first.row; row <= last.row; row++)
+      for (let col = first.col; col <= last.col; col++) {
+        expect(map.blocked[row][col], `${col},${row}`).toBe(row === last.row);
+        expect(map.farmland[row][col]).toBe(false);
+      }
+  });
+
+  it("can be walked up to from the spawn point, with nothing built, its door's doorstep too", () => {
+    const walk = reachable(map, map.spawn);
+    const door = { col: tileAt(shop.x, shop.y).col + 1, row: tilesOf(shop).last.row + 1 };
+    expect(walk.has(`${door.col},${door.row}`)).toBe(true);
+  });
+
+  it("lays the boardwalk along the top of the beach once its step is built, under everyone, walls unchanged", () => {
+    const layer = map.gates.layers.find((l) => l.name === "Boardwalk")!;
+    expect(layer).toBeDefined();
+    expect(layer.kind).toBe("art");
+    expect(layer.from).toBe("gardenShop/boardwalk");
+    const painted: string[] = [];
+    layer.tiles.forEach((row, r) => row.forEach((on, c) => on && painted.push(`${c},${r}`)));
+    expect(painted.length).toBeGreaterThan(40);
+    const before = mapFor(map, new Set(["keeper", "lighthouse/path", "lighthouse"]));
+    const after = mapFor(map, new Set(["keeper", "lighthouse/path", "lighthouse", "gardenShop/boardwalk"]));
+    for (const tile of painted) {
+      const [c, r] = tile.split(",").map(Number);
+      expect(after.blocked[r][c], tile).toBe(false);
+      expect(after.cluttered[r][c], tile).toBe(true);
+    }
+    expect(reachable(after, after.spawn).size).toBe(reachable(before, before.spawn).size);
+  });
+
+  it("has a spot for Marlow by the shop on its opening day", () => {
+    const open = mapFor(map, new Set(["keeper", "lighthouse", "gardenShop"]));
+    const spot = open.keeperOpenings.gardenShop;
+    expect(spot).toBeDefined();
+    expect(isWalkable(open, spot.col, spot.row)).toBe(true);
+    expect(mapFor(map, new Set(["keeper"])).keeperOpenings.gardenShop).toBeUndefined();
+  });
+});

@@ -7,7 +7,8 @@ import { EMPTY_CRATE, type Crate, type CrateSale } from "../economy/shop";
 import { STARTING_COINS } from "../economy/wallet";
 import { UNTILLED, type FarmTile } from "../farming/farming";
 import { FISHING_ROD } from "../content/items";
-import { addItems, countOf, starterInventory, type Inventory } from "../inventory/inventory";
+import { addItems, starterInventory, type Inventory } from "../inventory/inventory";
+import { toolKind } from "../content/tools";
 import type { Look } from "../player";
 import { newClock, type GameClock } from "../time/clock";
 import type { ForageId } from "../content/forage";
@@ -46,6 +47,11 @@ export interface World {
   readonly village: Village;
   /** Driftwood and branches lying about, and the day the morning last brought some (Milestone 6). */
   readonly forage: ForageState;
+  /**
+   * The day spring first came (Milestone 8): the morning the garden shop opened. 0 until then.
+   * Which season it is follows from this and the day (shared/time/seasons.ts).
+   */
+  readonly yearStart: number;
 }
 
 /** The beach: finds lying on the sand, in the order they washed up, and the day of the last tide (0: never). */
@@ -108,7 +114,7 @@ export interface MorningReport {
 /**
  * Day 1, 6 am, the starting coins, an empty farm and crate, nobody yet, every cottage empty, an
  * empty beach (the first tide comes when the room starts), an empty book, no Marlow yet (he comes
- * on the morning of day 2) and nothing lying about. `worldSeed` is any whole number; the server
+ * on the morning of day 2), nothing lying about, and no seasons yet (they begin with the garden shop). `worldSeed` is any whole number; the server
  * picks a random one for a new world.
  */
 export function newWorld(worldSeed = 0): World {
@@ -126,6 +132,7 @@ export function newWorld(worldSeed = 0): World {
     book: EMPTY_BOOK,
     village: EMPTY_VILLAGE,
     forage: { day: 0, items: [] },
+    yearStart: 0,
   };
 }
 
@@ -184,11 +191,12 @@ export function setFarmerLook(world: World, id: FarmerId, look: Look): World {
 
 /**
  * Gives a farmer a fishing rod if they haven't one and there's room (farmers from before Milestone
- * 5 whose bags were full when the save was upgraded). Everyone else is left as they are.
+ * 5 whose bags were full when the save was upgraded). Everyone else is left as they are: a good
+ * rod (Milestone 8) counts as a rod.
  */
 export function giveFishingRod(world: World, id: FarmerId): World {
   const farmer = farmerOf(world, id);
-  if (!farmer || countOf(farmer.bag, FISHING_ROD) > 0) return world;
+  if (!farmer || farmer.bag.some((slot) => toolKind(slot?.itemId) === "rod")) return world;
   const added = addItems(farmer.bag, FISHING_ROD, 1);
   return added.ok ? setFarmerBag(world, id, added.inventory) : world;
 }

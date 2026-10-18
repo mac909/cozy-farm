@@ -65,6 +65,13 @@ export function readClock(source: Clock): GameClock {
   return { day: source.day, minute: source.minute };
 }
 
+/** Copies in the day spring first came (Milestone 8). Returns whether it changed. */
+export function writeYearStart(target: Clock, yearStart: number): boolean {
+  if (target.yearStart === yearStart) return false;
+  target.yearStart = yearStart;
+  return true;
+}
+
 /** Copies a bag in, slot by slot, writing only the slots that changed. */
 export function writeBag(target: ArraySchema<BagSlot>, bag: Inventory): void {
   while (target.length > bag.length) target.pop();

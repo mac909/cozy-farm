@@ -1,6 +1,6 @@
 import type Phaser from "phaser";
 import { BUG_IDS } from "../../../shared/content/bugs";
-import { CROPS, type CropId } from "../../../shared/content/crops";
+import { CROP_IDS } from "../../../shared/content/crops";
 import { FISH_IDS } from "../../../shared/content/fish";
 import { ITEMS, type ItemId } from "../../../shared/content/items";
 import {
@@ -18,6 +18,8 @@ import {
   MATERIAL_FRAME,
   MATERIALS_KEY,
   WATERING_CAN_KEY,
+  TOOL_FRAME,
+  TOOLS_KEY,
 } from "./assets";
 import { cropItemFrame, seedPacketFrame } from "./cropFrames";
 
@@ -66,10 +68,11 @@ export function itemIcon(itemId: ItemId): Icon {
     case "seed":
       return { key: CROPS_KEY, frame: seedPacketFrame(item.cropId) };
     case "crop":
-      if (item.golden) return { key: GOLDEN_CROPS_KEY, frame: (Object.keys(CROPS) as CropId[]).indexOf(item.cropId) };
+      if (item.golden) return { key: GOLDEN_CROPS_KEY, frame: CROP_IDS.indexOf(item.cropId) };
       return { key: CROPS_KEY, frame: cropItemFrame(item.cropId) };
     case "tool":
       if (itemId === "fishing_rod") return { key: FISHING_KEY, frame: FISHING_FRAME.rod };
+      if (Object.hasOwn(TOOL_FRAME, itemId)) return { key: TOOLS_KEY, frame: TOOL_FRAME[itemId as keyof typeof TOOL_FRAME] };
       return { key: itemId === "watering_can" ? WATERING_CAN_KEY : HOE_KEY };
     case "beach":
       return { key: BEACH_ITEMS_KEY, frame: BEACH_FRAMES[itemId] ?? 0 };

@@ -1,5 +1,5 @@
 import { BUGS, BUG_IDS, type BugId } from "./bugs";
-import { CROPS, type CropId } from "./crops";
+import { CROP_IDS, CROPS, type CropId } from "./crops";
 import { FISH, FISH_IDS, type FishId } from "./fish";
 import { FURNITURE, FURNITURE_IDS, FURNITURE_SELL_FRACTION, isGift, type FurnitureId } from "./furniture";
 import { PERK } from "./skills";
@@ -127,8 +127,6 @@ export function bugItemId(bugId: BugId): BugId {
   return bugId;
 }
 
-const CROP_IDS = Object.keys(CROPS) as CropId[];
-
 const seedItems = Object.fromEntries(
   CROP_IDS.map((cropId): [SeedItemId, SeedItemDef] => {
     const crop = CROPS[cropId];
@@ -136,7 +134,7 @@ const seedItems = Object.fromEntries(
       seedItemId(cropId),
       {
         id: seedItemId(cropId),
-        name: `${crop.name} Seeds`,
+        name: crop.seedName ?? `${crop.name} Seeds`,
         category: "seed",
         cropId,
         maxStack: STACK,
@@ -193,6 +191,13 @@ const toolData = {
     buyPrice: 100,
   },
   fishing_rod: { id: "fishing_rod", name: "Fishing Rod", category: "tool", maxStack: 1, buyPrice: 100 },
+  // Upgrades from the garden shop (Milestone 8): each takes the old one's place in your bag, or a slot of its own.
+  // What each does is in shared/content/tools.ts, and what it costs in shared/content/gardenShop.ts.
+  big_watering_can: { id: "big_watering_can", name: "Big Watering Can", category: "tool", maxStack: 1 },
+  wide_hoe: { id: "wide_hoe", name: "Wide Hoe", category: "tool", maxStack: 1 },
+  good_rod: { id: "good_rod", name: "Good Rod", category: "tool", maxStack: 1 },
+  bug_net: { id: "bug_net", name: "Bug Net", category: "tool", maxStack: 1 },
+  shell_basket: { id: "shell_basket", name: "Shell Basket", category: "tool", maxStack: 1 },
 } satisfies Record<string, ToolItemDef>;
 
 /** Washed up on the sand. Found, never bought. */

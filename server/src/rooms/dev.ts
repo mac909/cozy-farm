@@ -5,7 +5,13 @@ import { DAY_END_MINUTE, DAY_START_MINUTE } from "../../../shared/time/clock";
 import { buildOvernight, fillStep } from "../../../shared/village/projects";
 import { isSkillId } from "../../../shared/content/skills";
 import { grantXp } from "../../../shared/progress/progress";
-import { tell } from "./progress";
+import { checkEveryone, tell } from "./progress";
+import { isSeasonId } from "../../../shared/content/seasons";
+import { yearStartFor } from "../../../shared/time/seasons";
+import { startSeasons } from "../../../shared/world/night";
+import { isItemId } from "../../../shared/content/items";
+import { addItems } from "../../../shared/inventory/inventory";
+import { farmerOf, setFarmerBag } from "../../../shared/world/world";
 import type { FarmRoom } from "./FarmRoom";
 import { announceVillage } from "./village";
 
@@ -15,7 +21,8 @@ export const DEV_COMMANDS_ON = process.env.NODE_ENV !== "production";
 /**
  * Shortcuts for testing, so checks don't have to wait for crops to grow: start the night now, set
  * the clock, add coins, fill the board's step (or a porch's), build what's gathered now, add
- * experience to your skills. The real farm (NODE_ENV=production) ignores them.
+ * experience to your skills, skip to a season, put things in your bag. The real farm (NODE_ENV=production)
+ * ignores them.
  */
 export function registerDevCommands(room: FarmRoom, startNight: () => void) {
   if (!DEV_COMMANDS_ON) return;
@@ -64,7 +71,26 @@ export function registerDevCommands(room: FarmRoom, startNight: () => void) {
         const before = room.world;
         const { world, built } = buildOvernight(before);
         console.log(`[dev] ${client.sessionId}: build now (${built.length} step${built.length === 1 ? "" : "s"})`);
-        room.change(room.roomForBuilt(before, world));
+        // Opening the garden shop brings the seasons, as overnight; the village's badges follow.
+        room.change(room.roomForBuilt(before, startSeasons(world)));
+        checkEveryone(room);
+        break;
+      }
+      case "item": {
+        const farmerId = room.farmerIdOf(client);
+        const farmer = farmerId ? farmerOf(room.world, farmerId) : undefined;
+        if (!farmerId || !farmer || !isItemId(message.item) || !Number.isSafeInteger(value) || (value as number) < 1) return;
+        const added = addItems(farmer.bag, message.item, value as number);
+        console.log(`[dev] ${client.sessionId}: ${value} ${message.item}${added.ok ? "" : " (no room)"}`);
+        if (added.ok) room.change(setFarmerBag(room.world, farmerId, added.inventory));
+        else room.hint(client, { reason: "bag-full" });
+        break;
+      }
+      case "season": {
+        const season = message.season;
+        if (!isSeasonId(season)) return;
+        console.log(`[dev] ${client.sessionId}: today is the first day of ${season}`);
+        room.change({ ...room.world, yearStart: yearStartFor(room.world.clock.day, season) });
         break;
       }
     }

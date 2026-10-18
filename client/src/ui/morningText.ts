@@ -2,6 +2,8 @@ import { ITEMS } from "../../../shared/content/items";
 import { keeperWords } from "../../../shared/content/keeper";
 import { projectDef } from "../../../shared/content/projects";
 import { ownerWords } from "../../../shared/content/houseUpgrades";
+import { SEASONS } from "../../../shared/content/seasons";
+import { seasonLabel, seasonOn } from "../../../shared/time/seasons";
 import type { BuiltStep } from "../../../shared/village/village";
 import type { MorningReport } from "../../../shared/world/world";
 
@@ -12,6 +14,8 @@ export interface MorningWords {
   growth: string | null;
   /** The morning Marlow arrives: the boat at the dock and last night's storm. Null otherwise. */
   storm: string | null;
+  /** The first morning of a season (Milestone 8): "Summer's here!" and what that brings. Null otherwise. */
+  season: { title: string; news: string } | null;
   /** What was built overnight: the line and Marlow's note for each. */
   village: { built: BuiltStep; line: string; note: string }[];
   /** "Something washed up on the beach!", or null if nothing did. */
@@ -38,17 +42,26 @@ export function growthLine(grew: number, ready: number): string | null {
 
 /**
  * The morning card's words. `keeperArrived`: Marlow came this morning (his first). `owner`: whose a
- * cottage is, for a house upgrade's line (Milestone 7).
+ * cottage is, for a house upgrade's line (Milestone 7). `yearStart`: the day spring first came
+ * (Milestone 8, 0 before the seasons begin): the title says the season's day, and a season's first
+ * morning says so.
  */
-export function morningWords(report: MorningReport, keeperArrived = false, owner: (houseId: string) => string = () => "Someone"): MorningWords {
+export function morningWords(
+  report: MorningReport,
+  keeperArrived = false,
+  owner: (houseId: string) => string = () => "Someone",
+  yearStart = 0,
+): MorningWords {
+  const date = seasonOn(report.day, yearStart);
   const sales = report.sale.lines.map((line) => ({
     text: `${ITEMS[line.itemId]?.name ?? line.itemId} ${line.count} × ${line.priceEach}`,
     total: String(line.total),
   }));
   return {
-    title: `Good morning! Day ${report.day}`,
+    title: date ? `Good morning! ${seasonLabel(date)}` : `Good morning! Day ${report.day}`,
     growth: growthLine(report.grew, report.ready),
     storm: keeperArrived ? STORM_LINE : null,
+    season: date?.day === 1 ? { title: keeperWords(SEASONS[date.season].arrives), news: SEASONS[date.season].news } : null,
     village: (report.built ?? []).flatMap((built) => {
       const project = projectDef(built.project);
       const step = project?.steps[built.step];

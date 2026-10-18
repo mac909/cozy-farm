@@ -8,7 +8,8 @@ import type { ItemId } from "./items";
  *
  * Saves hold badge ids, so renaming one needs a save migration. Badges for places that aren't
  * built yet (the first shop, the bridge, the orchard, the whole village) come with their
- * milestones (docs/plans/progression.md, section 2.11).
+ * milestones (docs/plans/progression.md, section 2.11): Open for Business came with the garden shop
+ * (Milestone 8).
  */
 
 /** Groups on the You card, in order. */
@@ -18,7 +19,7 @@ export type BadgeGroup = "fishing" | "farming" | "foraging" | "village" | "givin
  * A badge's picture inside its medal: an item's icon, or one of the game's own pictures (the lit
  * lighthouse, a cottage, a porch, a heart, the book, a bed).
  */
-export type BadgeIcon = { readonly item: ItemId } | { readonly picture: "lighthouse" | "cottage" | "porch" | "heart" | "book" | "bed" | "view" };
+export type BadgeIcon = { readonly item: ItemId } | { readonly picture: "lighthouse" | "cottage" | "porch" | "heart" | "book" | "bed" | "view" | "shop" };
 
 export interface BadgeDef {
   readonly id: string;
@@ -51,6 +52,7 @@ const badgeData = {
   kindling: { id: "kindling", name: "Kindling", group: "foraging", hint: "50 driftwood or branches", icon: { item: "branch" } },
   // ---------- The village (everyone) ----------
   lamplighter: { id: "lamplighter", name: "Lamplighter", group: "village", hint: "The lighthouse lit", shared: true, icon: { picture: "lighthouse" } },
+  open_for_business: { id: "open_for_business", name: "Open for Business", group: "village", hint: "The first shop on the boardwalk open", shared: true, icon: { picture: "shop" } },
   // ---------- Giving ----------
   helping_hand: { id: "helping_hand", name: "Helping Hand", group: "giving", hint: "25 things given to the board", icon: { item: "driftwood" } },
   pillar: { id: "pillar", name: "Pillar of the Village", group: "giving", hint: "250 things given to the board", icon: { item: "sea_glass" } },

@@ -20,7 +20,9 @@ export type TipId =
   | "forage"
   | "point"
   | "you"
-  | "porch";
+  | "porch"
+  | "gardenShop"
+  | "tools";
 
 export const TIPS: Readonly<Record<TipId, string>> = {
   dig: "Pick the hoe in your hotbar, walk into the farm field and tap the big round button to dig.",
@@ -42,6 +44,9 @@ export const TIPS: Readonly<Record<TipId, string>> = {
   point: "The lighthouse is lit! Fish bite at the point after dark, and at its door you can Climb up for the view.",
   you: "Farming, fishing and foraging each get better as you do them, with a little something at every level. Tap your face at the top right to see your skills and badges.",
   porch: "Marlow can build each cottage a porch now. Tap Board, then Your home, to see what it needs. Either of you can give to either house.",
+  gardenShop:
+    "The garden shop is open above the boardwalk! Its seeds change with the seasons, fourteen days each. Plant them in their season: anything already in the ground always finishes.",
+  tools: "Tool upgrades are on the garden shop's Tools tab: a big can or a wide hoe works three tiles at a time. Each of you buys your own.",
 };
 
 /** What just happened in the game that might call for a tip. */
@@ -63,7 +68,9 @@ export type TipEvent =
   | "pickedUpMaterial"
   | "lit"
   | "progressed"
-  | "porches";
+  | "porches"
+  | "gardenShopOpen"
+  | "gardenShopVisit";
 
 const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   started: "dig",
@@ -84,6 +91,8 @@ const TIP_FOR: Readonly<Record<TipEvent, TipId>> = {
   lit: "point",
   progressed: "you",
   porches: "porch",
+  gardenShopOpen: "gardenShop",
+  gardenShopVisit: "tools",
 };
 
 /** A tip that makes another out of date: moving in answers "go and move in". */

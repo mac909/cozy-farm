@@ -24,6 +24,7 @@ function gatedMap(): TiledMapJson {
       layer("Collision brambles", [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0], [prop("shownUntil", "path"), prop("hint", "brambles")]),
       layer("Brambles", [0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0], [prop("shownUntil", "path")]),
       layer("Scaffolding", [0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0], [prop("shownFrom", "stairs"), prop("shownUntil", "lamp")]),
+      layer("Boardwalk", [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0], [prop("shownFrom", "boardwalk")]),
       {
         name: "Objects",
         type: "objectgroup",
@@ -37,6 +38,8 @@ function gatedMap(): TiledMapJson {
           { name: "pointWater", x: 0, y: 0, width: 16, height: 16, properties: [prop("needs", "lighthouse")] },
           { name: "keeperDay", x: 40, y: 8, point: true, properties: [prop("facing", "left")] },
           { name: "keeperEvening", x: 8, y: 40, point: true },
+          { name: "gardenShop", x: 32, y: 0, width: 32, height: 16 },
+          { name: "keeperOpening", x: 56, y: 24, point: true, properties: [prop("facing", "up"), prop("project", "gardenShop"), prop("needs", "gardenShop")] },
         ],
       },
     ],
@@ -73,6 +76,18 @@ describe("the map as of today", () => {
     expect(inEffect(scaffolding, new Set(["stairs", "lamp"]))).toBe(false);
   });
 
+  it("counts art that's shown as something drawn there (Milestone 8: nothing washes up on the boardwalk)", () => {
+    expect(map.cluttered[2][0]).toBe(false);
+    expect(mapFor(map, new Set(["boardwalk"])).cluttered[2][0]).toBe(true);
+    // The brambles are drawn until the path is cleared.
+    expect(map.cluttered[0][3]).toBe(true);
+    expect(mapFor(map, new Set(["path"])).cluttered[0][3]).toBe(false);
+  });
+
+  it("has the garden shop standing whatever's built (it's boarded up until it opens)", () => {
+    expect(map.gardenShop).toEqual({ x: 32, y: 0, width: 32, height: 16 });
+  });
+
   it("looks at what changes when something's built", () => {
     expect(lookAt(map, "path", null)).toEqual({ x: 56, y: 8 });
     expect(lookAt(map, "stairs", null)).toEqual({ x: 48, y: 24 });
@@ -93,6 +108,16 @@ describe("where Marlow is", () => {
     expect(keeperAt(map, 19 * 60, here)).toEqual({ col: 0, row: 2, facing: "down", spot: "evening" });
     // No point drawn for his night spot on this map: nowhere.
     expect(keeperAt(map, 23 * 60, here)).toBeNull();
+  });
+
+  it("spends the day by a new place the day it opens (Milestone 8), back to his evening as usual", () => {
+    const open = new Set(["keeper", "gardenShop"]);
+    const today = mapFor(map, open);
+    expect(keeperAt(today, 600, open, "gardenShop")).toEqual({ col: 3, row: 1, facing: "up", spot: "opening" });
+    expect(keeperAt(today, 19 * 60, open, "gardenShop")?.spot).toBe("evening");
+    // Another day, or a place with no spot for him: by the board.
+    expect(keeperAt(today, 600, open)?.spot).toBe("day");
+    expect(keeperAt(today, 600, open, "bridge")?.spot).toBe("day");
   });
 
   it("moves to the point once the lighthouse is lit, and up into the lamp room at night", () => {

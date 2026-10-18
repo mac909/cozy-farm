@@ -63,6 +63,15 @@ describe("badges", () => {
     expect(badgesDue(world, JUNO)).not.toContain("porch_sitter");
   });
 
+  it("give Open for Business to everyone once the garden shop opens (Milestone 8)", () => {
+    const shop = { gathered: 3, built: 3, given: {}, helpers: [PIP], doneDay: 9 };
+    const open: World = { ...twoFarmers(), village: { ...LIT, projects: { ...LIT.projects, gardenShop: shop } } };
+    const { awarded } = awardEveryone(open);
+    expect(awarded[PIP]).toContain("open_for_business");
+    expect(awarded[JUNO]).toContain("open_for_business");
+    expect(badgesDue({ ...twoFarmers(), village: LIT }, PIP)).not.toContain("open_for_business");
+  });
+
   it("aren't given for the lighthouse before the lamp is lit at dusk", () => {
     const world: World = { ...twoFarmers(), clock: { day: 8, minute: 17 * 60 }, village: LIT };
     expect(badgesDue(world, PIP)).toEqual([]);

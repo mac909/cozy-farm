@@ -3,7 +3,12 @@ import { getStateCallbacks, type Room } from "colyseus.js";
 import { POSITION_SEND_MS, TILE_SIZE, WALK_SPEED } from "../../../shared/constants";
 import { DEFAULT_CHARACTER } from "../../../shared/content/characters";
 import type { EmoteId } from "../../../shared/content/emotes";
-import { FISHING_ROD, ITEMS, type ItemId } from "../../../shared/content/items";
+import { ITEMS, type ItemId } from "../../../shared/content/items";
+import { toolKind } from "../../../shared/content/tools";
+import { toolOfKind } from "../../../shared/farming/tools";
+import { lyingAround } from "../../../shared/collection/collect";
+import { seasonOn, type SeasonDate } from "../../../shared/time/seasons";
+import { GardenShopPanel } from "../ui/GardenShopPanel";
 import { isHint } from "../../../shared/farming/actions";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type {
@@ -26,6 +31,7 @@ import type {
   ShipMessage,
   SplitStackMessage,
   UnshipMessage,
+  UpgradeToolMessage,
   VillageEventMessage,
   WakeUpMessage,
   YouMessage,
@@ -34,7 +40,7 @@ import { smallTalkFor } from "../../../shared/content/keeper";
 import { PROJECTS, PROJECT_IDS, houseProjectOf, projectDef, stepName } from "../../../shared/content/projects";
 import { ownerWords } from "../../../shared/content/houseUpgrades";
 import { builtThings } from "../../../shared/village/built";
-import { everythingOpen, openUpgrades, wantedFor } from "../../../shared/village/projects";
+import { everythingOpen, openUpgrades, openedToday, wantedFor } from "../../../shared/village/projects";
 import { EMPTY_VILLAGE, type BuiltStep, type Village } from "../../../shared/village/village";
 import { lookAt, NOTHING_BUILT } from "../../../shared/world/gates";
 import { villageRect } from "../../../shared/world/houses";
@@ -54,7 +60,7 @@ import { showOpeningCard } from "../ui/OpeningCard";
 import { eveningTint } from "../ui/evening";
 import { markNoteRead, markOpeningShown, notesRead, openingShown } from "../ui/villageStorage";
 import { ForageView } from "../world/Forage";
-import { lighthouseFrame, VillageView, type GatedOnScreen } from "../world/Village";
+import { gardenShopFrame, lighthouseFrame, VillageView, type GatedOnScreen } from "../world/Village";
 import { clampMove, type Facing, facingFor, isFacing, turnsOnly, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
@@ -74,6 +80,9 @@ import {
   faceKey,
   KEEPER_FACE_KEY,
   BADGE_PORCH_KEY,
+  BADGE_SHOP_KEY,
+  GARDEN_SHOP_FRAME,
+  GARDEN_SHOP_KEY,
   LIGHTHOUSE_FRAME,
   LIGHTHOUSE_KEY,
   RIPPLE_ANIM,
@@ -201,6 +210,10 @@ export class WorldScene extends Phaser.Scene {
   private village: Village = EMPTY_VILLAGE;
   private helpers: Record<string, HelperView[]> = {};
   private clock: GameClock = { day: 1, minute: 360 };
+  /** The day spring first came (Milestone 8), as the server last said: 0 before the seasons begin. */
+  private yearStart = 0;
+  /** What's lying about, as the server last said (the shell basket's sweep). */
+  private lying: { beach: ReturnType<typeof readBeach>; forage: ReturnType<typeof readForage> } = { beach: [], forage: [] };
   /** The map as of today, with what's built. */
   private today: Today = todayFor(VILLAGE_MAP, NOTHING_BUILT);
   private villageView!: VillageView;
@@ -232,6 +245,7 @@ export class WorldScene extends Phaser.Scene {
     this.registry.set("look", this.look);
     // Set before the HUD starts listening, so later changes reach it (a first set isn't a change).
     this.registry.set("youNew", false);
+    this.registry.set("yearStart", 0);
 
     const spawn = tileCenter(VILLAGE_MAP.spawn.col, VILLAGE_MAP.spawn.row);
     this.player = this.physics.add.sprite(spawn.x, spawn.y, characterKey(this.look.character), 0);
@@ -250,7 +264,7 @@ export class WorldScene extends Phaser.Scene {
     camera.startFollow(this.player, true);
     this.fitZoom();
     this.me = new Character(this, this.player, this.look, this.zoom);
-    this.villageView = new VillageView(this, VILLAGE_MAP.lighthouse, this.zoom);
+    this.villageView = new VillageView(this, VILLAGE_MAP.lighthouse, this.zoom, VILLAGE_MAP.gardenShop);
     this.villageView.setGated(onScreen);
     this.villageView.show(this.today, this.clock.minute, 0);
     this.porches = new PorchesView(this);
@@ -334,9 +348,10 @@ export class WorldScene extends Phaser.Scene {
       village: (report) => ({
         keeperArrived: report.day === this.village.keeperDay,
         picture: (built) => this.builtPicture(built),
-        tall: (built) => houseProjectOf(built.project) === null,
+        shape: (built) => (houseProjectOf(built.project) ? "square" : built.project === "gardenShop" ? "wide" : "tall"),
         owner: (houseId) => ownerOf(this.boardState(), houseId),
         look: (built) => this.lookAtBuilt(built),
+        yearStart: this.yearStart,
       }),
     });
     this.ui.events.on("escape", () => {
@@ -363,7 +378,10 @@ export class WorldScene extends Phaser.Scene {
       built: () => this.today.built,
       keeperTile: () => (this.homes.currentArea === VILLAGE ? this.villageView.keeperAt : null),
       wanted: (itemId) => this.wanted(itemId),
-      bugNear: (position) => this.meadow.bugNear(position, hasPerk(this.progress, "lightStep") ? PERK.lightStepTiles : 0),
+      // Light step (Foraging 3) and the bug net (Milestone 8) each reach a step further.
+      bugNear: (position) => this.meadow.bugNear(position, (hasPerk(this.progress, "lightStep") ? PERK.lightStepTiles : 0) + this.netReach()),
+      season: () => this.season(),
+      lyingAround: (centre, radius) => lyingAround({ beach: { day: 0, finds: this.lying.beach }, forage: { day: 0, items: this.lying.forage } }, centre, radius),
       on: {
         catchBug: (id, bugId) => this.catchBug(id, bugId),
         fish: (_spot, col, row) => this.fishing.start(col, row),
@@ -378,6 +396,7 @@ export class WorldScene extends Phaser.Scene {
         give: (project, need, slot) => this.give(project, need, slot),
         talk: () => this.talk(),
         climb: () => this.startView(),
+        gardenShop: () => this.openGardenShop(),
       },
       holding: () => this.ui.actionHeld(),
       acted: (kind) => {
@@ -424,10 +443,16 @@ export class WorldScene extends Phaser.Scene {
       ended: (caught) => {
         if (caught) this.tips.event("caughtFish");
       },
+      // The rod in your hands (the good rod, Milestone 8), so the server knows which you cast with.
+      rod: () => {
+        const slot = this.registry.get("selectedSlot") as number;
+        const held = (this.registry.get("bag") as Inventory | null)?.[slot];
+        return held && toolKind(held.itemId) === "rod" ? { itemId: held.itemId, slot } : null;
+      },
     });
     this.otherLines = new OtherLines(this);
     this.ui.events.on("selectSlot", (_slot: number, item: { itemId?: string } | null) => {
-      if (item?.itemId === FISHING_ROD) this.tips.event("rod");
+      if (toolKind(item?.itemId) === "rod") this.tips.event("rod");
       // Putting the rod away reels in.
       else if (this.fishing.isActive) this.fishing.stop();
       // Something the board wants: the name flash says so.
@@ -701,6 +726,10 @@ export class WorldScene extends Phaser.Scene {
   private readState(state: FarmState) {
     const clock = readClock(state.clock);
     const shown = this.registry.get("clock") as GameClock | null;
+    if (this.yearStart !== state.clock.yearStart) {
+      this.yearStart = state.clock.yearStart;
+      this.registry.set("yearStart", this.yearStart);
+    }
     if (!shown || shown.day !== clock.day || shown.minute !== clock.minute) {
       this.registry.set("clock", clock);
       this.bedtime.clock(clock);
@@ -735,7 +764,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.farming.readFarm(state);
     this.homes.readState(state);
-    this.beach.update(readBeach(state.beach));
+    const beach = readBeach(state.beach);
+    this.beach.update(beach);
+    this.lying = { beach, forage: readForage(state.forage) };
     const book = readBook(state.book);
     if (JSON.stringify(book) !== JSON.stringify(this.book)) {
       this.book = book;
@@ -837,7 +868,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.today = todayFor(VILLAGE_MAP, builtThings(this.villageNow()));
     // A note pinned on the board for each thing taking gifts: the village's project, and the porches.
-    this.villageView.show(this.today, clock.minute, everythingOpen(this.boardWorld()).length);
+    this.villageView.show(this.today, clock.minute, everythingOpen(this.boardWorld()).length, openedToday(this.villageNow()));
     this.porches.show(this.today.built, eveningTint(clock.minute) > 0);
     this.forage.update(readForage(state.forage));
     if (openUpgrades(this.boardWorld()).length > 0) this.tips.event("porches");
@@ -879,18 +910,29 @@ export class WorldScene extends Phaser.Scene {
     return `${name} needs ${wanted.left} more`;
   }
 
-  /** A project's picture as it stands: the lighthouse dark, scaffolded, mended or lit; a porch. */
+  /** A project's picture as it stands: the lighthouse dark, scaffolded, mended or lit; the garden shop; a porch. */
   private projectPicture(projectId = "lighthouse"): string {
     if (houseProjectOf(projectId)) return iconUrl(this.textures, { key: BADGE_PORCH_KEY });
+    if (projectId === "gardenShop") return iconUrl(this.textures, { key: GARDEN_SHOP_KEY, frame: gardenShopFrame(this.today.built) });
     return iconUrl(this.textures, { key: LIGHTHOUSE_KEY, frame: lighthouseFrame(this.today.built) });
   }
 
-  /** The picture of something built overnight: the lighthouse as that step left it, or the porch. */
+  /** The picture of something built overnight: the lighthouse or the garden shop as that step left it, or the porch. */
   private builtPicture(built: BuiltStep): string {
     if (houseProjectOf(built.project)) return iconUrl(this.textures, { key: BADGE_PORCH_KEY });
     const project = PROJECTS[built.project];
     const names = new Set(project ? project.steps.slice(0, built.step + 1).map((_, i) => stepName(project, i)) : []);
+    if (built.project === "gardenShop") {
+      // The boardwalk's step shows the shop still boarded up behind it; the last, the shop open.
+      if (project && built.step >= project.steps.length - 1) names.add("gardenShop");
+      return iconUrl(this.textures, { key: GARDEN_SHOP_KEY, frame: gardenShopFrame(names) });
+    }
     return iconUrl(this.textures, { key: LIGHTHOUSE_KEY, frame: lighthouseFrame(names) });
+  }
+
+  /** The place a project is at, to glide the camera to (the lighthouse, the garden shop). */
+  private placeOf(projectId: string) {
+    return projectId === "gardenShop" ? VILLAGE_MAP.gardenShop : VILLAGE_MAP.lighthouse;
   }
 
   /** The morning card's Look: the camera glides to what was built, and back. */
@@ -904,7 +946,7 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     const project = PROJECTS[built.project];
-    const at = project ? lookAt(VILLAGE_MAP, stepName(project, built.step), VILLAGE_MAP.lighthouse) : null;
+    const at = project ? lookAt(VILLAGE_MAP, stepName(project, built.step), this.placeOf(built.project)) : null;
     if (at) this.glideTo(at);
   }
 
@@ -1046,15 +1088,25 @@ export class WorldScene extends Phaser.Scene {
     this.noteOpen = true;
     this.releaseKeys();
     playSound(this, "morning");
-    const lit = iconUrl(this.textures, { key: LIGHTHOUSE_KEY, frame: LIGHTHOUSE_FRAME.lit });
-    const porch = iconUrl(this.textures, { key: BADGE_PORCH_KEY });
-    void showOpeningCard(project, { hero: lit, lines: [lit, iconUrl(this.textures, itemIcon("lanternfish")), lit, porch] }).then((see) => {
+    void showOpeningCard(project, this.openingPictures(projectId)).then((see) => {
       this.noteOpen = false;
       this.releaseKeys();
-      this.tips.event("lit");
-      const lighthouse = VILLAGE_MAP.lighthouse;
-      if (see && lighthouse) this.glideTo({ x: lighthouse.x + lighthouse.width / 2, y: lighthouse.y + lighthouse.height / 2 });
+      this.tips.event(projectId === "gardenShop" ? "gardenShopOpen" : "lit");
+      const place = this.placeOf(projectId);
+      if (see && place) this.glideTo({ x: place.x + place.width / 2, y: place.y + place.height / 2 });
     });
+  }
+
+  /** The pictures on a project's opening card: the place itself, and one for each thing it opens. */
+  private openingPictures(projectId: string) {
+    const icon = (itemId: ItemId) => iconUrl(this.textures, itemIcon(itemId));
+    if (projectId === "gardenShop") {
+      const shop = iconUrl(this.textures, { key: GARDEN_SHOP_KEY, frame: GARDEN_SHOP_FRAME.opening });
+      return { hero: shop, heroShape: "wide" as const, lines: [icon("peas_seeds"), icon("big_watering_can"), icon("cauliflower")] };
+    }
+    const lit = iconUrl(this.textures, { key: LIGHTHOUSE_KEY, frame: LIGHTHOUSE_FRAME.lit });
+    const porch = iconUrl(this.textures, { key: BADGE_PORCH_KEY });
+    return { hero: lit, lines: [lit, icon("lanternfish"), lit, porch] };
   }
 
   /** Something happened at the board: a gift floats up from it; a step's last thing in is cheered on every screen. */
@@ -1331,6 +1383,40 @@ export class WorldScene extends Phaser.Scene {
     return crate;
   }
 
+  /** The season outdoors today (Milestone 8), or null before the seasons begin. */
+  private season(): SeasonDate | null {
+    return seasonOn(this.clock.day, this.yearStart);
+  }
+
+  /** How much further the bug net in your bag reaches (Milestone 8), in tiles. */
+  private netReach(): number {
+    const bag = this.registry.get("bag") as Inventory | null;
+    return (bag && toolOfKind(bag, "net")?.def.reachTiles) || 0;
+  }
+
+  /** Next to the open garden shop (Milestone 8): its card, with this season's seeds and the tool upgrades. */
+  private openGardenShop() {
+    const shop = this.openPanel(
+      (onClose) =>
+        new GardenShopPanel({
+          icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+          coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
+          buy: (itemId, count) => {
+            playSound(this, "coin");
+            this.room?.send("buy", { itemId, count, at: "gardenShop" } satisfies BuyMessage);
+          },
+          upgrade: (tool) => {
+            playSound(this, "coin");
+            this.room?.send("upgradeTool", { tool } satisfies UpgradeToolMessage);
+          },
+          onClose,
+        }),
+    );
+    this.refreshPanel();
+    if (shop) this.tips.event("gardenShopVisit");
+    return shop;
+  }
+
   /** Next to the seed stand or the general store: opens its card. */
   private openShop(catalog: ShopCatalog, at: "seedStand" | "store") {
     const shop = this.openPanel(
@@ -1357,6 +1443,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.panel instanceof BagPanel || this.panel instanceof ShopPanel) this.panel.update(bag, coins);
     if (this.panel instanceof CratePanel) this.panel.update(bag, this.crate);
     if (this.panel instanceof BoardPanel) this.panel.update(this.boardState(), bag, coins);
+    if (this.panel instanceof GardenShopPanel) this.panel.update(bag, coins, this.season());
   }
 
   private emote(emote: EmoteId) {

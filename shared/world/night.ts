@@ -5,6 +5,7 @@ import { forageMorning, NO_GROUNDS, type ForageGrounds } from "../foraging/forag
 import { nextDay } from "../time/clock";
 import { builtThings } from "../village/built";
 import { buildOvernight, keeperArrives, keeperHere } from "../village/projects";
+import { GARDEN_SHOP_OPENS } from "../content/gardenShop";
 import type { MorningReport, TileKey, World } from "./world";
 
 /** Where the morning brings things: the beach's sand for finds, and the grounds for driftwood and branches. */
@@ -23,10 +24,19 @@ export type PlacesFor = (built: ReadonlySet<string>) => MorningPlaces;
 export const KEEPER_ARRIVES_DAY = 2;
 
 /**
+ * The seasons begin (Milestone 8): on the morning the garden shop opens, spring comes, and the
+ * world remembers that day. Already begun, or the shop not open yet: the world as it is.
+ */
+export function startSeasons(world: World): World {
+  if (world.yearStart > 0 || !builtThings(world).has(GARDEN_SHOP_OPENS)) return world;
+  return { ...world, yearStart: world.clock.day };
+}
+
+/**
  * The night, all at once: every watered crop grows a day, the soil dries out, the shipping crate
- * sells, the clock moves to 6 am the next day, the village's gathered steps are built, Marlow
- * arrives (in a new world, on day 2) with a storm, the tide brings a few finds, and (once he's here)
- * driftwood and branches turn up. Returns the morning's world and what to tell everyone about it
+ * sells, the clock moves to 6 am the next day, the village's gathered steps are built (the garden
+ * shop opening brings the first spring), Marlow arrives (in a new world, on day 2) with a storm,
+ * the tide brings a few finds, and (once he's here) driftwood and branches turn up. Returns the morning's world and what to tell everyone about it
  * (also kept in the world as lastMorning, for whoever wasn't there).
  */
 export function endNight(world: World, placesFor: PlacesFor = () => NO_PLACES): { world: World; report: MorningReport } {
@@ -43,7 +53,7 @@ export function endNight(world: World, placesFor: PlacesFor = () => NO_PLACES): 
   const clock = nextDay(world.clock);
   const { world: builtWorld, built } = buildOvernight({ ...world, clock, coins, crate, farm });
   const storm = builtWorld.village.keeperDay === 0 && clock.day >= KEEPER_ARRIVES_DAY;
-  const morning = storm ? keeperArrives(builtWorld) : builtWorld;
+  const morning = startSeasons(storm ? keeperArrives(builtWorld) : builtWorld);
   const places = placesFor(builtThings(morning));
   const tide = tideIn(morning, places.shore);
   const forage = keeperHere(tide.world) ? forageMorning(tide.world, places.grounds, storm) : { world: tide.world, added: [] };
@@ -68,7 +78,7 @@ export function endNight(world: World, placesFor: PlacesFor = () => NO_PLACES): 
  */
 export function startOfServer(world: World, placesFor: PlacesFor = () => NO_PLACES): World {
   const storm = world.village.keeperDay === 0 && world.clock.day >= KEEPER_ARRIVES_DAY;
-  const arrived = storm ? keeperArrives(world) : world;
+  const arrived = startSeasons(storm ? keeperArrives(world) : world);
   const places = placesFor(builtThings(arrived));
   const tide = tideIn(arrived, places.shore).world;
   return keeperHere(tide) ? forageMorning(tide, places.grounds, storm).world : tide;

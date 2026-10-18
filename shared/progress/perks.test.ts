@@ -144,6 +144,14 @@ describe("fishing perks", () => {
     expect(plain.ok && "perks" in plain.state).toBe(false);
   });
 
+  it("the good rod (Milestone 8): 30% sooner bites and a fifth of a second to hook, on top of the perks", () => {
+    expect(fishingPerks(EMPTY_PROGRESS, "good_rod")).toEqual({ rareWeight: 1, line: { hookMs: 200, biteFactor: 0.7 } });
+    expect(fishingPerks(EMPTY_PROGRESS, "fishing_rod")).toEqual({ rareWeight: 1, line: {} });
+    const both = fishingPerks(pipAt("fishing", 3).farmers[PIP].progress, "good_rod");
+    expect(both.line.hookMs).toBe(PERK.steadyHandsMs + 200);
+    expect(both.line.biteFactor).toBeCloseTo(PERK.quickBites * 0.7);
+  });
+
   it("Quick bites: the same cast bites sooner", () => {
     const slow = cast("dock", 600, 11);
     const quick = cast("dock", 600, 11, { rareWeight: 1, line: { biteFactor: PERK.quickBites } });

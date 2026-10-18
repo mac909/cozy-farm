@@ -32,10 +32,12 @@ export interface ClockCardView {
   status: NetStatus;
   /** Who else is asleep, as words ("Pip is asleep"), or null. */
   sleepers: string | null;
+  /** The season's day ("Spring 3", Milestone 8), shown in the day's place once the seasons begin; null before. */
+  season?: string | null;
 }
 
 /**
- * The card in the top left: sun or moon, the day and the time in 10-minute steps, a chip when
+ * The card in the top left: sun or moon, the day (the season's day, once the seasons begin) and the time in 10-minute steps, a chip when
  * someone else is asleep, and the connection status underneath when it isn't connected.
  */
 export class ClockCard extends Phaser.GameObjects.Container {
@@ -90,7 +92,7 @@ export class ClockCard extends Phaser.GameObjects.Container {
     const key = JSON.stringify(view);
     if (key === this.shown) return;
     this.shown = key;
-    const { clock, coins, status, sleepers } = view;
+    const { clock, coins, status, sleepers, season } = view;
 
     const hasClock = clock !== null;
     const hasCoins = hasClock && coins !== null;
@@ -100,7 +102,7 @@ export class ClockCard extends Phaser.GameObjects.Container {
     const late = hasClock && minute >= LATE_MINUTE;
     this.bg.setVisible(hasClock);
     this.icon.setVisible(hasClock).setTexture(minute >= EVENING_MINUTE ? MOON_KEY : SUN_KEY);
-    this.time.setVisible(hasClock).setText(hasClock ? `Day ${clock.day} · ${formatTime(minute)}` : "");
+    this.time.setVisible(hasClock).setText(hasClock ? `${season ?? `Day ${clock.day}`} · ${formatTime(minute)}` : "");
     this.note.setVisible(late).setText(late ? "It's getting late" : "");
     const hasChip = hasClock && sleepers !== null;
     this.chipBg.setVisible(hasChip);

@@ -103,6 +103,20 @@ export function everythingOpen(world: Pick<World, "village" | "clock"> & { house
   return [...openProjects(world), ...(world.houses ? openUpgrades({ ...world, houses: world.houses }, first) : [])];
 }
 
+/**
+ * The village's project that opened this morning, if any (Milestone 8): Marlow spends the day by
+ * it, under the bunting. Not one that opens later in the day (the lighthouse, lit at dusk).
+ */
+export function openedToday(world: Pick<World, "village" | "clock">): string | null {
+  for (const id of PROJECT_IDS) {
+    const project = PROJECTS[id];
+    if (project.opensAtMinute !== undefined) continue;
+    const progress = progressOf(world.village, id);
+    if (isFinished(project, progress) && progress.doneDay === world.clock.day) return id;
+  }
+  return null;
+}
+
 /** Projects with every step built, in order. */
 export function finishedProjects(village: Village): ProjectDef[] {
   return PROJECT_IDS.map((id) => PROJECTS[id]).filter((project) => isFinished(project, progressOf(village, project.id)));

@@ -57,6 +57,8 @@ export interface BoardWords {
   now: ProjectRow[];
   /** Finished projects: "Light the lighthouse", "Lit on day 16". */
   finished: { id: string; name: string; when: string }[];
+  /** The projects still to come after the one up now, as silhouettes with a hint (Milestone 8). */
+  later: { id: string; title: string; hint: string }[];
   /** How many notes he's written. */
   notes: number;
 }
@@ -93,7 +95,15 @@ export function boardWords({ village, helpers, clock }: BoardState): BoardWords 
       return { id: project.id, name: project.name, when: day ? `${project.finishedWord} on day ${day}` : project.finishedWord };
     });
   const line = open[0]?.boardLine ?? (opening.length > 0 ? opening[0].steps.at(-1)!.note : NEXT_PLAN_LINE);
-  return { line: keeperWords(line), now, finished, notes: keeperNotes(village, clock).length };
+  // Still to come, once Marlow is here: every project after the furthest one up, opening or
+  // finished (the next one goes up the morning after the last one opens), that has a teaser.
+  const reached = PROJECT_IDS.filter((id) => open.some((p) => p.id === id) || isFinished(PROJECTS[id], progressOf(village, id)));
+  const from = !built.has("keeper") ? PROJECT_IDS.length : reached.length > 0 ? Math.max(...reached.map((id) => PROJECT_IDS.indexOf(id))) + 1 : 0;
+  const later = PROJECT_IDS.slice(from).flatMap((id) => {
+    const teaser = PROJECTS[id].teaser;
+    return teaser && progressOf(village, id).gathered === 0 ? [{ id, title: teaser.title, hint: keeperWords(teaser.hint) }] : [];
+  });
+  return { line: keeperWords(line), now, finished, later, notes: keeperNotes(village, clock).length };
 }
 
 /** A need's name: "Driftwood", "Branches", "Any fish", "Coins". */

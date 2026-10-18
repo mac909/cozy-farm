@@ -96,9 +96,9 @@ describe("the world save", () => {
     expect(loaded).toEqual(world);
   });
 
-  it("is version 5 and lists dug tiles in reading order", () => {
+  it("is version 6 and lists dug tiles in reading order", () => {
     const save = worldToSave(busyWorld());
-    expect(save.version).toBe(5);
+    expect(save.version).toBe(6);
     expect(save.farm.map(({ col, row }) => `${col},${row}`)).toEqual(["12,4", "13,4", "4,6", "5,6"]);
     expect(save.farmers["farmer-1"].bag).toHaveLength(INVENTORY_SLOTS);
   });
@@ -116,7 +116,8 @@ describe("the world save", () => {
     ["an unknown item in the crate", { crate: [{ itemId: "gold_bar", count: 1 }] }, /crate\[0\].itemId/],
     ["an empty crate line", { crate: [{ itemId: "radish", count: 0 }] }, /crate\[0\].count/],
     ["an item twice in the crate", { crate: [{ itemId: "radish", count: 1 }, { itemId: "radish", count: 2 }] }, /twice/],
-    ["an unknown crop", { farm: [{ col: 1, row: 1, kind: "planted", watered: false, cropId: "kale", stage: 0, daysInStage: 0 }] }, /cropId/],
+    ["an unknown crop", { farm: [{ col: 1, row: 1, kind: "planted", watered: false, cropId: "cactus", stage: 0, daysInStage: 0 }] }, /cropId/],
+    ["a year that starts before day 0", { yearStart: -3 }, /yearStart/],
     ["a tile kind that isn't", { farm: [{ col: 1, row: 1, kind: "untilled", watered: false }] }, /kind/],
     ["a tile off the edge", { farm: [{ col: -1, row: 1, kind: "tilled", watered: false }] }, /farm\[0\].col/],
     ["the same tile twice", { farm: [{ col: 1, row: 1, kind: "tilled", watered: false }, { col: 1, row: 1, kind: "tilled", watered: true }] }, /twice/],

@@ -1,7 +1,7 @@
 import { BADGE_COUNTS, BADGE_IDS, type BadgeId } from "../content/badges";
 import { BEACH_FIND_IDS } from "../content/beachFinds";
 import { BUG_IDS } from "../content/bugs";
-import { CROPS, type CropId } from "../content/crops";
+import { CROP_IDS } from "../content/crops";
 import { houseProjectId } from "../content/projects";
 import { completion, isComplete } from "../collection/collection";
 import type { ItemId } from "../content/items";
@@ -17,8 +17,6 @@ import { levelOf, statOf, type FarmerProgress, type StatId } from "./farmerProgr
  * gets credit for play before it), but anything that follows from the world comes on first
  * joining. Earned badges are kept with the day, and never taken away.
  */
-
-const CROP_IDS = Object.keys(CROPS) as CropId[];
 
 /** Everything a badge's rule looks at. */
 interface Context {
@@ -46,6 +44,7 @@ const RULES: Readonly<Record<BadgeId, (c: Context) => boolean>> = {
   beachcomber: count("finds", BADGE_COUNTS.beachcomber),
   kindling: count("materials", BADGE_COUNTS.kindling),
   lamplighter: (c) => c.built.has("lighthouse"),
+  open_for_business: (c) => c.built.has("gardenShop"),
   helping_hand: count("given", BADGE_COUNTS.helping_hand),
   pillar: count("given", BADGE_COUNTS.pillar),
   moved_in: (c) => c.home !== null,

@@ -275,6 +275,60 @@ describe("version 5 (Milestone 7: skills, badges and porches)", () => {
   });
 });
 
+describe("every save from before Milestone 8", () => {
+  for (const name of ["world-v1.json", "world-v2.json", "world-v3.json", "world-v4.json", "world-v5.json"]) {
+    it(`${name} comes through with no seasons yet, and every bag, tool, crop, project and badge as it was`, () => {
+      const loaded = worldFromSave(upgradeSave(readFixture(name), WORLD_SAVE, name).save);
+      expect(loaded.yearStart).toBe(0);
+      // The garden shop is new: nobody's world has it started.
+      expect(loaded.village.projects.gardenShop).toBeUndefined();
+      if (name !== "world-v5.json") return;
+      const raw = JSON.parse(readFixture(name));
+      expect(loaded.clock).toEqual(raw.clock);
+      expect(loaded.coins).toBe(raw.coins);
+      expect(loaded.village).toEqual(raw.village);
+      expect(loaded.decorations).toEqual(raw.decorations);
+      for (const id of Object.keys(raw.farmers)) {
+        // Old tools stay as they are: an upgrade is a new item, bought at the garden shop.
+        expect(loaded.farmers[id].bag).toEqual(raw.farmers[id].bag);
+        expect(loaded.farmers[id].progress).toEqual(raw.farmers[id].progress);
+      }
+      expect(Object.keys(loaded.farm)).toHaveLength(raw.farm.length);
+    });
+  }
+});
+
+describe("version 6 (Milestone 8: the garden shop and the seasons)", () => {
+  const world = () => worldFromSave(upgradeSave(readFixture("world-v6.json"), WORLD_SAVE, "world-v6.json").save);
+
+  it("keeps the day spring first came and the garden shop open", () => {
+    const loaded = world();
+    expect(loaded.yearStart).toBe(24);
+    expect(loaded.village.projects.gardenShop).toEqual({ gathered: 3, built: 3, given: {}, helpers: [PIP, JUNO], doneDay: 24 });
+    expect(loaded.farmers[PIP].progress.badges.open_for_business).toBe(24);
+  });
+
+  it("keeps the new crops in the field, the bags and the crate, golden ones too", () => {
+    const loaded = world();
+    expect(loaded.farm["15,8"]).toEqual({ kind: "planted", watered: true, cropId: "peas", stage: 1, daysInStage: 1, regrown: true });
+    expect(loaded.farm["15,9"]).toMatchObject({ cropId: "melon", stage: 5 });
+    expect(loaded.farmers[PIP].bag[14]).toEqual({ itemId: "peas_seeds", count: 6 });
+    expect(loaded.farmers[PIP].bag[16]).toEqual({ itemId: "golden_cauliflower", count: 1 });
+    expect(loaded.crate).toContainEqual({ itemId: "melon", count: 1 });
+  });
+
+  it("keeps everyone's upgraded tools where they were", () => {
+    const loaded = world();
+    expect(loaded.farmers[PIP].bag.slice(0, 2)).toEqual([
+      { itemId: "wide_hoe", count: 1 },
+      { itemId: "big_watering_can", count: 1 },
+    ]);
+    expect(loaded.farmers[JUNO].bag[3]).toEqual({ itemId: "good_rod", count: 1 });
+    expect(loaded.farmers[JUNO].bag[5]).toEqual({ itemId: "bug_net", count: 1 });
+    expect(loaded.farmers[JUNO].bag[6]).toEqual({ itemId: "shell_basket", count: 1 });
+  });
+});
+
 describe("old saves in the save database", () => {
   const dirs: string[] = [];
   afterEach(() => {

@@ -1,6 +1,7 @@
 import { FISH, FISH_IDS, POINT_NIGHT_FROM, bitesAt, isFishingSpot, type FishId, type FishingSpot } from "../content/fish";
 import { RARITY_WEIGHTS, type Rarity } from "../content/rarity";
 import { PERK } from "../content/skills";
+import { toolDef } from "../content/tools";
 import { hasPerk, type FarmerProgress } from "../progress/farmerProgress";
 import {
   pickWeighted,
@@ -95,11 +96,18 @@ export interface LinePerks {
   readonly tugEase?: number;
 }
 
-/** What a farmer's fishing perks do to a cast: rare fish more often (Lucky line), and the line's own perks. */
-export function fishingPerks(progress: FarmerProgress | undefined): { rareWeight: number; line: LinePerks } {
+/**
+ * What a farmer's fishing perks do to a cast: rare fish more often (Lucky line), and the line's own
+ * perks. `rod`: the rod they cast with (Milestone 8): the good rod's sooner bites and longer hook
+ * add to Quick bites and Steady hands.
+ */
+export function fishingPerks(progress: FarmerProgress | undefined, rod?: string | null): { rareWeight: number; line: LinePerks } {
   const line: { -readonly [K in keyof LinePerks]: LinePerks[K] } = {};
-  if (hasPerk(progress, "steadyHands")) line.hookMs = PERK.steadyHandsMs;
-  if (hasPerk(progress, "quickBites")) line.biteFactor = PERK.quickBites;
+  const tool = toolDef(rod);
+  const hookMs = (hasPerk(progress, "steadyHands") ? PERK.steadyHandsMs : 0) + (tool?.hookMs ?? 0);
+  const biteFactor = (hasPerk(progress, "quickBites") ? PERK.quickBites : 1) * (tool?.biteFactor ?? 1);
+  if (hookMs > 0) line.hookMs = hookMs;
+  if (biteFactor !== 1) line.biteFactor = biteFactor;
   if (hasPerk(progress, "bigOnes")) line.bigger = PERK.bigOnes;
   if (hasPerk(progress, "gentleReel")) line.tugEase = PERK.gentleReel;
   return { rareWeight: hasPerk(progress, "luckyLine") ? PERK.luckyLine : 1, line };

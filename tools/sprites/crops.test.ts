@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { CROPS, type CropId } from "../../shared/content/crops";
+import { CROPS, MAX_STAGES, type CropId } from "../../shared/content/crops";
 import { CROP_ART } from "./crops";
 
-/** In crops.png, column 5 holds the harvested item, so a crop can have at most 5 growth stages. */
-const MAX_STAGES = 5;
-
 describe("crop art", () => {
-  it("has art for exactly the crops in the crop list", () => {
-    expect(Object.keys(CROP_ART).sort()).toEqual(Object.keys(CROPS).sort());
+  it("has art for exactly the crops in the crop list, in the same order (a row each in crops.png)", () => {
+    expect(Object.keys(CROP_ART)).toEqual(Object.keys(CROPS));
+  });
+
+  it.each(Object.keys(CROPS) as CropId[])("draws %s's frames 16 × 16", (id) => {
+    const art = CROP_ART[id];
+    for (const grid of [...art.stages, art.item]) {
+      expect(grid).toHaveLength(16);
+      for (const row of grid) expect(row).toHaveLength(16);
+    }
+    expect(art.packet).toHaveLength(8);
+    for (const row of art.packet) expect(row).toHaveLength(8);
   });
 
   it.each(Object.keys(CROPS) as CropId[])("draws every growth stage of %s", (id) => {

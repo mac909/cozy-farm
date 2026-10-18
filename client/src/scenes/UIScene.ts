@@ -3,6 +3,7 @@ import { EMOTES, type EmoteId } from "../../../shared/content/emotes";
 import type { Inventory, Slot } from "../../../shared/inventory/inventory";
 import type { Look } from "../../../shared/player";
 import type { GameClock } from "../../../shared/time/clock";
+import { seasonLabel, seasonOn } from "../../../shared/time/seasons";
 import { BAG_KEY, characterKey, EMOTES_KEY, emoteFrame, UI_ICON, UI_ICONS_KEY } from "../art/assets";
 import { loadMuted, saveMuted } from "../audio/music";
 import type { NetStatus } from "../net/connection";
@@ -157,6 +158,7 @@ export class UIScene extends Phaser.Scene {
     this.onRegistry("clock", () => this.showClock());
     this.onRegistry("sleepers", () => this.showClock());
     this.onRegistry("coins", () => this.showClock());
+    this.onRegistry("yearStart", () => this.showClock());
     this.onRegistry("inBed", () => this.showBedMode());
 
     this.hotbar = new Hotbar(this, (slot, item) => this.onSelectSlot(slot, item));
@@ -515,11 +517,13 @@ export class UIScene extends Phaser.Scene {
 
   private showClock() {
     const clock = (this.registry.get("clock") as GameClock | undefined) ?? null;
+    const date = clock ? seasonOn(clock.day, (this.registry.get("yearStart") as number | undefined) ?? 0) : null;
     this.clockCard.show({
       clock,
       coins: (this.registry.get("coins") as number | null | undefined) ?? null,
       status: this.registry.get("netStatus") as NetStatus,
       sleepers: (this.registry.get("sleepers") as string | null | undefined) ?? null,
+      season: date ? seasonLabel(date) : null,
     });
     this.showTint();
   }

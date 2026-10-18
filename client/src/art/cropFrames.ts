@@ -1,14 +1,14 @@
-import { CROPS, type CropId } from "../../../shared/content/crops";
+import { CROP_IDS, MAX_STAGES, type CropId } from "../../../shared/content/crops";
 
 /**
  * Frames in our crops.png: one row per crop, in CROPS order, with this many columns: the growth
- * stages from 0, the harvested item in ITEM_COLUMN and the seed packet in PACKET_COLUMN
- * (see tools/sprites/render.ts and manifest.json).
+ * stages from 0 (room for MAX_STAGES), the harvested item in ITEM_COLUMN and the seed packet in
+ * PACKET_COLUMN (see tools/sprites/render.ts and manifest.json).
  */
-const CROP_SHEET_COLUMNS = 7;
-const ITEM_COLUMN = 5;
-const PACKET_COLUMN = 6;
-const CROP_ROWS = Object.keys(CROPS) as CropId[];
+const ITEM_COLUMN = MAX_STAGES;
+const PACKET_COLUMN = MAX_STAGES + 1;
+const CROP_SHEET_COLUMNS = PACKET_COLUMN + 1;
+const CROP_ROWS = CROP_IDS;
 
 const cropRow = (cropId: CropId) => CROP_ROWS.indexOf(cropId) * CROP_SHEET_COLUMNS;
 

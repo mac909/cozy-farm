@@ -24,12 +24,17 @@ function bagOf(...stacks: [string, number][]): Inventory {
   return bag;
 }
 
-/** Day 20, Marlow here, two farmers in their cottages, 5,000 coins; the lighthouse lit (or not). */
-function village(lit = true, pip: Inventory = newInventory(), juno: Inventory = newInventory()): World {
+/**
+ * Day 20, Marlow here, two farmers in their cottages, 5,000 coins; the lighthouse lit (or not). With
+ * the lighthouse lit, the garden shop (Milestone 8) is open too, so the village has nothing up and
+ * the porches have the board to themselves; `shopOpen` false leaves the garden shop up on the board.
+ */
+function village(lit = true, pip: Inventory = newInventory(), juno: Inventory = newInventory(), shopOpen = true): World {
   let world = addFarmer(newWorld(5), PIP, { name: "Pip", character: "woman" });
   world = addFarmer(world, JUNO, { name: "Juno", character: "boy" });
   world = setFarmerBag(setFarmerBag(world, PIP, pip), JUNO, juno);
-  const lighthouse: Record<string, ProjectProgress> = lit ? { lighthouse: { gathered: 3, built: 3, given: {}, helpers: [PIP], doneDay: 18 } } : {};
+  const done = (doneDay: number): ProjectProgress => ({ gathered: 3, built: 3, given: {}, helpers: [PIP], doneDay });
+  const lighthouse: Record<string, ProjectProgress> = lit ? { lighthouse: done(16), ...(shopOpen ? { gardenShop: done(18) } : {}) } : {};
   return {
     ...world,
     clock: { day: 20, minute: 600 },
@@ -95,6 +100,9 @@ describe("the Your home tab", () => {
     // The village's own project stays one at a time, and comes first.
     expect(openProjects(world)).toEqual([]);
     expect(everythingOpen(world, PIP).map((p) => p.id)).toEqual(["house1:porch", "house2:porch"]);
+    const shopUp = village(true, newInventory(), newInventory(), false);
+    expect(openProjects(shopUp).map((p) => p.id)).toEqual(["gardenShop"]);
+    expect(everythingOpen(shopUp, PIP).map((p) => p.id)).toEqual(["gardenShop", "house1:porch", "house2:porch"]);
   });
 
   it("takes gifts from anyone, to either house", () => {
@@ -151,6 +159,8 @@ describe("the Your home tab", () => {
   it("can be filled by the dev command, the village's first, else your own porch", () => {
     const result = fillStep(village(), JUNO);
     expect(result.ok && result.events).toEqual([{ type: "gathered", project: "house2:porch", step: 0 }]);
+    const village8 = fillStep(village(true, newInventory(), newInventory(), false), JUNO);
+    expect(village8.ok && village8.events).toEqual([{ type: "gathered", project: "gardenShop", step: 0 }]);
     const named = fillStep(village(), JUNO, "house1:porch");
     expect(named.ok && named.events).toEqual([{ type: "gathered", project: "house1:porch", step: 0 }]);
   });

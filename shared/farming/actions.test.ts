@@ -141,7 +141,7 @@ describe("isHint", () => {
   });
 
   it("copes with a growing hint about a crop it doesn't know", () => {
-    expect(hintText({ reason: "growing", cropId: "kale" as never, days: 2 })).toBe("It: about 2 more watered days.");
+    expect(hintText({ reason: "growing", cropId: "cactus" as never, days: 2 })).toBe("It: about 2 more watered days.");
   });
 });
 
@@ -338,5 +338,120 @@ describe("applyFarmAction", () => {
       ok: false,
       hint: { reason: "gone" },
     });
+  });
+});
+
+describe("tools and seasons (Milestone 8)", () => {
+  const FARMER = "pip";
+  // A 5 × 3 field, all farmland.
+  const field = { farmland: [0, 1, 2].map(() => [true, true, true, true, true]) };
+  const SPRING = { season: "spring", day: 3, year: 1 } as const;
+  const SUMMER = { season: "summer", day: 3, year: 1 } as const;
+
+  function world(bag: Inventory, tiles: [number, number, FarmTile][] = [], season: "spring" | "summer" | null = null): World {
+    let w = setFarmerBag(addFarmer(newWorld(), FARMER, { name: "Pip", character: "woman" }), FARMER, bag);
+    for (const [col, row, tile] of tiles) w = setFarmTile(w, col, row, tile);
+    // Day 10; spring began on day 8 (or summer on day 8, a season later).
+    return season === null ? { ...w, clock: { day: 10, minute: 600 } } : { ...w, clock: { day: 10, minute: 600 }, yearStart: season === "spring" ? 8 : 8 - 14 + 56 };
+  }
+  const bagWith = (...stacks: [ItemId, number][]): Inventory => {
+    const bag = [...newInventory()];
+    stacks.forEach(([itemId, count], i) => (bag[i] = { itemId, count }));
+    return bag;
+  };
+  const done = (result: FarmActionResult) => {
+    if (!result.ok) throw new Error(`expected success, got "${result.hint.reason}"`);
+    return result;
+  };
+
+  it("digs three across with the wide hoe, across the way you face", () => {
+    const w = world(bagWith(["wide_hoe", 1]));
+    const result = done(applyFarmAction(w, field, { farmerId: FARMER, action: "till", col: 2, row: 1, slot: 0, facing: "up" }));
+    expect(result.tiles).toEqual([
+      { col: 2, row: 1 },
+      { col: 1, row: 1 },
+      { col: 3, row: 1 },
+    ]);
+    for (const col of [1, 2, 3]) expect(farmTileAt(result.world, col, 1)).toEqual(DRY);
+    expect(farmTileAt(result.world, 2, 0)).toEqual(UNTILLED);
+    // Without knowing which way you face, just the one.
+    expect(done(applyFarmAction(w, field, { farmerId: FARMER, action: "till", col: 2, row: 1 })).tiles).toHaveLength(1);
+  });
+
+  it("waters three across with the big can, skipping what can't be watered, and only digs farmland", () => {
+    const w = world(bagWith(["big_watering_can", 1]), [
+      [1, 2, DRY],
+      [2, 2, WET],
+      [3, 2, YOUNG_RADISH],
+    ]);
+    const result = done(applyFarmAction(w, field, { farmerId: FARMER, action: "water", col: 2, row: 2, slot: 0, facing: "down" }));
+    expect(result.tiles).toEqual([
+      { col: 1, row: 2 },
+      { col: 3, row: 2 },
+    ]);
+    expect(farmTileAt(result.world, 3, 2)).toMatchObject({ cropId: "radish", watered: true });
+    // Nothing at all to water: the tile asked for says why.
+    const dry = world(bagWith(["big_watering_can", 1]), [[2, 2, WET]]);
+    expect(applyFarmAction(dry, field, { farmerId: FARMER, action: "water", col: 2, row: 2, slot: 0, facing: "down" })).toEqual({
+      ok: false,
+      hint: { reason: "already-watered" },
+    });
+    const halfField = { farmland: [[false, true, false]] };
+    const hoed = done(applyFarmAction(world(bagWith(["wide_hoe", 1])), halfField, { farmerId: FARMER, action: "till", col: 1, row: 0, facing: "down" }));
+    expect(hoed.tiles).toEqual([{ col: 1, row: 0 }]);
+  });
+
+  it("still digs and waters with the old tools, one tile at a time", () => {
+    const w = world(starterInventory());
+    expect(done(applyFarmAction(w, field, { farmerId: FARMER, action: "till", col: 2, row: 1, slot: 0, facing: "up" })).tiles).toHaveLength(1);
+  });
+
+  it("plants a seasonal seed only in its season, and anything before the seasons begin", () => {
+    const bag = bagWith(["peas_seeds", 3], ["tomato_seeds", 3]);
+    const plant = (w: World, slot: number) => applyFarmAction(w, field, { farmerId: FARMER, action: "plant", col: 0, row: 0, slot });
+    expect(plant(world(bag, [[0, 0, DRY]], "spring"), 0).ok).toBe(true);
+    expect(plant(world(bag, [[0, 0, DRY]], "spring"), 1)).toEqual({ ok: false, hint: { reason: "out-of-season", cropId: "tomato" } });
+    expect(plant(world(bag, [[0, 0, DRY]], "summer"), 1).ok).toBe(true);
+    expect(plant(world(bag, [[0, 0, DRY]], null), 1).ok).toBe(true);
+    // Wheat grows all year.
+    expect(plant(world(bagWith(["wheat_seeds", 1]), [[0, 0, DRY]], "summer"), 0).ok).toBe(true);
+  });
+
+  it("lets a crop in the ground finish whatever the season, and a regrowing one makes way after its last pick", () => {
+    const ripePeas = crop("peas", ripeStage(CROPS.peas));
+    const pick = (season: "spring" | "summer") =>
+      done(applyFarmAction(world(newInventory(), [[0, 0, ripePeas]], season), field, { farmerId: FARMER, action: "harvest", col: 0, row: 0 }));
+    expect(pick("spring").tile).toMatchObject({ kind: "planted", cropId: "peas", regrown: true });
+    const late = pick("summer");
+    expect(late.tile).toEqual(DRY);
+    expect(countOf(late.world.farmers[FARMER].bag, "peas")).toBe(1);
+  });
+
+  it("shows Plant only in season, with a hint that says when", () => {
+    expect(chooseAction(DRY, true, seedItemId("peas"), null, null, { season: SPRING })).toEqual({ kind: "plant", cropId: "peas" });
+    expect(chooseAction(DRY, true, seedItemId("peas"), null, null, { season: SUMMER })).toEqual({ kind: "none" });
+    const hint = hintFor(DRY, true, seedItemId("peas"), null, SUMMER);
+    expect(hint).toEqual({ reason: "out-of-season", cropId: "peas" });
+    expect(hintText(hint!)).toBe("Peas: plant in spring. Keep the seeds till then.");
+    expect(isHint(hint)).toBe(true);
+  });
+
+  it("shows Dig or Water with a wide tool when only a tile beside the one in front wants it", () => {
+    const side = (tile: FarmTile, farmland = true) => ({ tile, farmland });
+    expect(chooseAction(DRY, true, "wide_hoe", null, null, { sides: [side(UNTILLED), side(DRY)] })).toEqual({ kind: "till" });
+    expect(chooseAction(DRY, true, "wide_hoe", null, null, { sides: [side(UNTILLED, false)] })).toEqual({ kind: "none" });
+    expect(chooseAction(WET, true, "big_watering_can", null, null, { sides: [side(DRY)] })).toEqual({ kind: "water" });
+    expect(chooseAction(WET, true, "big_watering_can", null, null, { sides: [side(WET)] })).toEqual({ kind: "none" });
+    expect(chooseAction(UNTILLED, true, "wide_hoe", null)).toEqual({ kind: "till" });
+    expect(chooseAction(DRY, true, "big_watering_can", null)).toEqual({ kind: "water" });
+  });
+
+  it("fishes with the good rod, and opens the garden shop", () => {
+    const fishing = { spot: "dock", col: 3, row: 3 } as const;
+    expect(chooseAction(UNTILLED, false, "good_rod", null, null, { fishing })).toEqual({ kind: "fish", ...fishing });
+    expect(chooseAction(UNTILLED, false, null, { kind: "place", place: "gardenShop" })).toEqual({ kind: "gardenShop" });
+    expect(actionWord({ kind: "gardenShop" })).toBe("Garden shop");
+    expect(chooseAction(UNTILLED, false, null, { kind: "closed", reason: "shop-boarded" })).toEqual({ kind: "closed", reason: "shop-boarded" });
+    expect(hintText({ reason: "shop-boarded" })).toMatch(/Boarded up/);
   });
 });

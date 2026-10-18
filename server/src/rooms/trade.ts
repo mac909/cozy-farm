@@ -10,10 +10,11 @@ const NOT_NEAR: Partial<Record<PlaceId, HintReason>> = {
   seedStand: "not-near-stand",
   store: "not-near-store",
   board: "not-near-board",
+  gardenShop: "not-near-garden-shop",
 };
 
 /**
- * Runs a trade for a player standing next to a place (the crate, the seed stand, the store or the board): checks they're
+ * Runs a trade for a player standing next to a place (the crate, the seed stand, the store, the board or the garden shop): checks they're
  * there and awake, then applies the shared rule, and tells them why if it didn't (all) work.
  */
 export function tradeAt(room: FarmRoom, client: Client, place: PlaceId, trade: (farmerId: string) => TradeResult): boolean {

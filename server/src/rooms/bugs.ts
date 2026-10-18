@@ -11,6 +11,7 @@ import { applyCollected } from "./collection";
 import { credit } from "./progress";
 import { PERK } from "../../../shared/content/skills";
 import { hasPerk } from "../../../shared/progress/farmerProgress";
+import { toolOfKind } from "../../../shared/farming/tools";
 import type { FarmRoom } from "./FarmRoom";
 
 /**
@@ -61,8 +62,10 @@ export class Meadow {
     const bug = this.bugs.find((b) => b.id === message.id && !this.caught.has(b.id));
     if (!bug) return this.room.hint(client, { reason: "flew-off" });
     const spot = tileCenter(bug.col, bug.row);
-    // Light step (Foraging level 3): from a step further away.
-    const reach = MEADOW.serverCatchTiles + (hasPerk(this.room.world.farmers[player.farmerId]?.progress, "lightStep") ? PERK.lightStepTiles : 0);
+    // Light step (Foraging level 3) and the bug net (Milestone 8): each from a step further away.
+    const farmer = this.room.world.farmers[player.farmerId];
+    const net = toolOfKind(farmer?.bag ?? [], "net")?.def.reachTiles ?? 0;
+    const reach = MEADOW.serverCatchTiles + (hasPerk(farmer?.progress, "lightStep") ? PERK.lightStepTiles : 0) + net;
     const far = Math.hypot(spot.x - player.x, spot.y - (player.y + FEET_OFFSET)) > reach * TILE_SIZE;
     if (far) return this.room.hint(client, { reason: "too-far" });
     if (applyCollected(this.room, client, collectBug(this.room.world, player.farmerId, bug.bugId))) {

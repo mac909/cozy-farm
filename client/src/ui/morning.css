@@ -80,3 +80,21 @@
   height: 32px;
   image-rendering: pixelated;
 }
+
+/* The first morning of a season (Milestone 8): its news, in a soft green band. */
+.morning-season {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 6px 0 4px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #e3ecc4;
+  color: #3d5a2a;
+  text-align: center;
+}
+
+.morning-season small {
+  color: #5d6b45;
+  font-size: 13px;
+}

@@ -2,14 +2,19 @@ import type { BugId } from "../content/bugs";
 import { CROPS, isCropId, type CropId } from "../content/crops";
 import type { FishingSpot } from "../content/fish";
 import { goesIn, type FurnitureId, type PlaceKind } from "../content/furniture";
-import { FISHING_ROD, ITEMS, cropItemId, furnitureOf, goldenItemId, isItemId, seedItemId, type ItemId } from "../content/items";
+import { ITEMS, cropItemId, furnitureOf, goldenItemId, isItemId, seedItemId, type ItemId } from "../content/items";
+import { SEASONS } from "../content/seasons";
 import { PERK } from "../content/skills";
-import { addItems, countOf, isSlotIndex, removeFromSlot, roomFor, type Inventory, type ItemStack } from "../inventory/inventory";
+import { toolKind } from "../content/tools";
+import { addItems, isSlotIndex, removeFromSlot, roomFor, type Inventory, type ItemStack } from "../inventory/inventory";
+import type { Facing } from "../movement";
+import { inSeason, seasonOn, type SeasonDate } from "../time/seasons";
 import { hasPerk } from "../progress/farmerProgress";
 import type { RandomSource } from "../random/random";
 import type { PlaceId } from "../world/places";
 import { farmTileAt, farmerOf, setFarmTile, setFarmerBag, type FarmerId, type World } from "../world/world";
 import { harvest, isRipe, plant, ripeStage, till, water, type FarmTile, type PlantedTile } from "./farming";
+import { toolOfKind, toolTiles } from "./tools";
 
 /**
  * The Action button: what it does for the tile in front of you and what you're holding, and the
@@ -38,12 +43,16 @@ export type Spot =
  * Things to collect near you, found by the caller: the beach find, driftwood or branch on the tile
  * in front (or under your feet), a bug fluttering close by, and where a line would go in if you're
  * facing water. `give`: at the board, what the item you're holding would give to (and how many).
+ * `sides` (Milestone 8): the other tiles a wide hoe or can you're holding would work on, beside the
+ * one in front. `season`: the season outdoors (null before the seasons begin), for planting.
  */
 export interface Nearby {
   find?: { itemId: ItemId; col: number; row: number } | null;
   bug?: { id: string; bugId: BugId } | null;
   fishing?: { spot: FishingSpot; col: number; row: number } | null;
   give?: { project: string; need: string; itemId: ItemId; count: number } | null;
+  sides?: readonly { readonly tile: FarmTile; readonly farmland: boolean }[];
+  season?: SeasonDate | null;
 }
 
 /** What the Action button does. */
@@ -53,6 +62,7 @@ export type Action =
   | { kind: "seeds" }
   | { kind: "shop" }
   | { kind: "board" }
+  | { kind: "gardenShop" }
   | { kind: "give"; project: string; need: string; itemId: ItemId; count: number }
   | { kind: "talk" }
   | { kind: "climb" }
@@ -78,12 +88,18 @@ const PLACE_ACTION: Record<PlaceId, Action> = {
   seedStand: { kind: "seeds" },
   store: { kind: "shop" },
   board: { kind: "board" },
+  gardenShop: { kind: "gardenShop" },
 };
 
-/** The item that digs. */
+/** The hoe everyone starts with (any hoe digs: the wide hoe too, shared/content/tools.ts). */
 export const HOE: ItemId = "hoe";
-/** The item that waters. It never runs dry. */
+/** The watering can everyone starts with. It never runs dry. */
 export const WATERING_CAN: ItemId = "watering_can";
+
+/** Whether this ground can be dug: farm-field grass. */
+const canTill = (tile: FarmTile, farmland: boolean) => tile.kind === "untilled" && farmland;
+/** Whether this ground wants water: dug soil, with or without a crop, not watered yet. */
+const canWater = (tile: FarmTile) => tile.kind !== "untilled" && !tile.watered;
 
 /** The crop a seed item plants, or null if it isn't seeds. */
 export function seedCrop(itemId: ItemId | null): CropId | null {
@@ -99,11 +115,11 @@ export function seedCrop(itemId: ItemId | null): CropId | null {
  * a beach find, driftwood or a branch in front (or underfoot) → pick it up, whatever you're holding;
  * a bug fluttering close by → catch it, whatever you're holding;
  * holding furniture where it can go (`placing`: your own house, or the farm) → put it down;
- * the fishing rod, facing water you can fish → cast;
+ * a fishing rod, facing water you can fish → cast;
  * a ripe crop in front → pick it, whatever you're holding;
- * the hoe on farmland grass → dig;
- * seeds on bare dug soil → plant;
- * the watering can on soil that isn't watered yet → water;
+ * a hoe on farmland grass (a wide one: or beside it) → dig;
+ * seeds on bare dug soil, in their season → plant;
+ * a watering can on soil that isn't watered yet (a big one: or beside it) → water;
  * facing something closed (the brambles, the dark lighthouse) → its hint;
  * otherwise nothing.
  *
@@ -130,12 +146,14 @@ function collectOrFarm(tile: FarmTile, isFarmland: boolean, held: ItemId | null,
   if (nearby.bug) return { kind: "catch", ...nearby.bug };
   const furniture = furnitureOf(held);
   if (furniture && placing && goesIn(furniture, placing)) return { kind: "place", itemId: furniture };
-  if (held === FISHING_ROD && nearby.fishing) return { kind: "fish", ...nearby.fishing };
+  const kind = toolKind(held);
+  if (kind === "rod" && nearby.fishing) return { kind: "fish", ...nearby.fishing };
   if (tile.kind === "planted" && isRipe(tile)) return { kind: "harvest", cropId: tile.cropId };
-  if (held === HOE && tile.kind === "untilled" && isFarmland) return { kind: "till" };
+  const sides = nearby.sides ?? [];
+  if (kind === "hoe" && (canTill(tile, isFarmland) || sides.some((side) => canTill(side.tile, side.farmland)))) return { kind: "till" };
   const seed = seedCrop(held);
-  if (seed && tile.kind === "tilled") return { kind: "plant", cropId: seed };
-  if (held === WATERING_CAN && tile.kind !== "untilled" && !tile.watered) return { kind: "water" };
+  if (seed && tile.kind === "tilled" && inSeason(seed, nearby.season ?? null)) return { kind: "plant", cropId: seed };
+  if (kind === "can" && (canWater(tile) || sides.some((side) => canWater(side.tile)))) return { kind: "water" };
   return { kind: "none" };
 }
 
@@ -167,6 +185,7 @@ const ACTION_WORD: Record<Exclude<Action["kind"], "enter" | "give">, string | nu
   seeds: "Seeds",
   shop: "Shop",
   board: "Board",
+  gardenShop: "Garden shop",
   talk: "Talk",
   climb: "Climb",
   closed: null,
@@ -237,18 +256,23 @@ export type HintReason =
   | "no-coins"
   | "nothing-to-give"
   | "brambles"
-  | "lighthouse-dark";
+  | "lighthouse-dark"
+  | "out-of-season"
+  | "shop-boarded"
+  | "not-near-garden-shop"
+  | "has-tool"
+  | "not-enough-things";
 
 /** A hint, with the details some of them need. */
 export interface Hint {
   reason: HintReason;
-  /** For "growing": which crop, how many more watered days, and whether it's had water today. */
+  /** For "growing": which crop, how many more watered days, and whether it's had water today. For "out-of-season": which crop. */
   cropId?: CropId;
   days?: number;
   watered?: boolean;
 }
 
-const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
+const HINT_TEXT: Record<Exclude<HintReason, "growing" | "out-of-season">, string> = {
   "not-farmland": "You can only dig in the farm field.",
   "farm-field-only": "That works in the farm field.",
   "already-dug": "Already dug. Plant some seeds!",
@@ -295,16 +319,25 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "nothing-to-give": "Nothing in your bag the board needs just now.",
   brambles: "Brambles, right across the old path. Marlow has a plan for them on the board.",
   "lighthouse-dark": "The lighthouse is dark. Marlow has a plan for it on the board.",
+  "shop-boarded": "Boarded up. Marlow has a plan for it on the board.",
+  "not-near-garden-shop": "Walk up to the garden shop first.",
+  "has-tool": "You have that one already.",
+  "not-enough-things": "You need a few more things from your bag for that.",
 };
 
 /** True for a hint the client can show; use it on hints that arrive from the server. */
 export function isHint(value: unknown): value is Hint {
   const reason = (value as { reason?: unknown } | null)?.reason;
-  return typeof reason === "string" && (reason === "growing" || Object.hasOwn(HINT_TEXT, reason));
+  return typeof reason === "string" && (reason === "growing" || reason === "out-of-season" || Object.hasOwn(HINT_TEXT, reason));
 }
 
 /** The words in the speech bubble for a hint. */
 export function hintText(hint: Hint): string {
+  if (hint.reason === "out-of-season") {
+    const crop = isCropId(hint.cropId) ? CROPS[hint.cropId] : null;
+    const seasons = (crop?.seasons ?? []).map((id) => SEASONS[id].name.toLowerCase()).join(" or ");
+    return crop && seasons ? `${crop.name}: plant in ${seasons}. Keep the seeds till then.` : "Not in this season. Keep the seeds till then.";
+  }
   if (hint.reason !== "growing") return HINT_TEXT[hint.reason];
   const name = isCropId(hint.cropId) ? CROPS[hint.cropId].name : "It";
   const days = Number.isFinite(hint.days) ? Math.max(1, Math.round(hint.days as number)) : 1;
@@ -321,11 +354,18 @@ export function daysLeft(tile: PlantedTile): number {
 /**
  * Why the Action button does nothing here: the hint it shows when tapped while faded. Null when
  * it does do something (see chooseAction). Places are left out: when you're next to one, the
- * button is never faded. `placing` is as for chooseAction.
+ * button is never faded. `placing` is as for chooseAction; `season` is the season outdoors.
  */
-export function hintFor(tile: FarmTile, isFarmland: boolean, held: ItemId | null, placing: PlaceKind | null = null): Hint | null {
-  if (chooseAction(tile, isFarmland, held, null, placing).kind !== "none") return null;
-  if (held === FISHING_ROD && tile.kind !== "planted") return { reason: "no-water" };
+export function hintFor(
+  tile: FarmTile,
+  isFarmland: boolean,
+  held: ItemId | null,
+  placing: PlaceKind | null = null,
+  season: SeasonDate | null = null,
+): Hint | null {
+  if (chooseAction(tile, isFarmland, held, null, placing, { season }).kind !== "none") return null;
+  const kind = toolKind(held);
+  if (kind === "rod" && tile.kind !== "planted") return { reason: "no-water" };
   const furniture = furnitureOf(held);
   if (furniture && !(tile.kind === "planted")) {
     if (!placing) return { reason: "not-your-house" };
@@ -334,18 +374,19 @@ export function hintFor(tile: FarmTile, isFarmland: boolean, held: ItemId | null
   const seed = seedCrop(held);
   if (tile.kind === "planted") {
     if (seed) return { reason: "has-crop" };
-    if (held === WATERING_CAN && tile.watered) return { reason: "already-watered" };
+    if (kind === "can" && tile.watered) return { reason: "already-watered" };
     return { reason: "growing", cropId: tile.cropId, days: daysLeft(tile), watered: tile.watered };
   }
   if (held === null) return { reason: "empty-hand" };
   if (tile.kind === "tilled") {
-    if (held === HOE) return { reason: "already-dug" };
-    if (held === WATERING_CAN) return { reason: "already-watered" };
+    if (seed) return { reason: "out-of-season", cropId: seed };
+    if (kind === "hoe") return { reason: "already-dug" };
+    if (kind === "can") return { reason: "already-watered" };
     return { reason: "not-a-tool" };
   }
   // Untilled ground.
-  if (held === HOE) return { reason: "not-farmland" };
-  if (seed || held === WATERING_CAN) return { reason: isFarmland ? "dig-first" : "farm-field-only" };
+  if (kind === "hoe") return { reason: "not-farmland" };
+  if (seed || kind === "can") return { reason: isFarmland ? "dig-first" : "farm-field-only" };
   return { reason: "not-a-tool" };
 }
 
@@ -377,8 +418,10 @@ export interface FarmRequest {
   action: FarmActionKind;
   col: number;
   row: number;
-  /** For "plant": the bag slot holding the seeds. */
+  /** For "plant": the bag slot holding the seeds. For "till" and "water" (Milestone 8): the slot with the tool in hand, if it's one. */
   slot?: number;
+  /** Which way the farmer faces: a wide hoe or can works across it, either side of the tile. Missing: just the tile. */
+  facing?: Facing;
 }
 
 export type FarmActionResult =
@@ -391,62 +434,111 @@ export type FarmActionResult =
       regrown?: boolean;
       /** A pick's little extras from the farmer's perks (one more, a seed back). */
       bonus?: ItemStack[];
+      /** Every tile that changed: the one asked for, and (a wide hoe or can) the ones beside it. */
+      tiles: readonly { col: number; row: number }[];
     }
   | { ok: false; hint: Hint };
 
 const refuse = (reason: HintReason): FarmActionResult => ({ ok: false, hint: { reason } });
 
+/** A tile in range of a map's rows and columns (farmland says how big the map is). */
+function onMap(map: { farmland: readonly (readonly boolean[])[] }, col: number, row: number): boolean {
+  return row >= 0 && col >= 0 && row < map.farmland.length && col < (map.farmland[row]?.length ?? 0);
+}
+
+/**
+ * Digging or watering with whichever hoe or can the farmer has (the one in `slot` if it's one): the
+ * tile asked for, and with a wide hoe or a big can (Milestone 8) the tiles either side of it across
+ * `facing`, where they can be. The tile asked for decides: if nothing at all can be done, its own
+ * reason is the hint.
+ */
+function useTool(
+  world: World,
+  map: { farmland: readonly (readonly boolean[])[] },
+  { farmerId, action, col, row, slot, facing }: FarmRequest,
+  bag: Inventory,
+): FarmActionResult {
+  const digging = action === "till";
+  const tool = toolOfKind(bag, digging ? "hoe" : "can", slot);
+  if (!tool) return refuse(digging ? "no-hoe" : "no-can");
+  const tiles = facing ? toolTiles(tool.def, { col, row }, facing) : [{ col, row }];
+  let next = world;
+  let firstRefusal: HintReason | null = null;
+  let firstTile: FarmTile | null = null;
+  const changed: { col: number; row: number }[] = [];
+  for (const at of tiles) {
+    if (!onMap(map, at.col, at.row)) continue;
+    const tile = farmTileAt(next, at.col, at.row);
+    let reason: HintReason | null = null;
+    let after: FarmTile | null = null;
+    if (digging) {
+      if (tile.kind === "untilled" && !map.farmland[at.row]?.[at.col]) reason = "not-farmland";
+      else {
+        const result = till(tile);
+        if (result.ok) after = result.tile;
+        else reason = result.reason === "already-tilled" ? "already-dug" : "has-crop";
+      }
+    } else {
+      const result = water(tile);
+      if (result.ok) after = result.tile;
+      else reason = result.reason === "already-watered" ? "already-watered" : "dig-first";
+    }
+    if (after) {
+      next = setFarmTile(next, at.col, at.row, after);
+      changed.push(at);
+      firstTile ??= after;
+    } else if (at.col === col && at.row === row) firstRefusal = reason;
+  }
+  if (changed.length === 0 || !firstTile) return refuse(firstRefusal ?? (digging ? "not-farmland" : "dig-first"));
+  return { ok: true, world: next, tile: farmTileAt(next, col, row), tiles: changed };
+}
+
 /**
  * Carries out a farm action for one farmer, joining the farming rules and the bag rules: digging
- * needs a hoe and farmland, planting takes one seed from the given slot, watering needs the can,
- * picking needs room in the bag. All or nothing: a refusal leaves the world as it was and says why.
+ * needs a hoe and farmland, planting takes one seed from the given slot (in its season, Milestone
+ * 8), watering needs a can, picking needs room in the bag. All or nothing: a refusal leaves the
+ * world as it was and says why. A wide hoe or a big can works on the tiles either side too.
  *
  * The farmer's farming perks (Milestone 7) come in here: planting waters the tile too, or gives it
  * a day's start; and with `random`, a pick may be golden, give one more, or give a seed back, each
- * only if the bag has room for it (a pick never fails for an extra).
+ * only if the bag has room for it (a pick never fails for an extra). A crop that grows back, picked
+ * out of its season, gives its last pick and makes way (Milestone 8): it never just dies.
  */
 export function applyFarmAction(
   world: World,
   map: { farmland: readonly (readonly boolean[])[] },
-  { farmerId, action, col, row, slot }: FarmRequest,
+  request: FarmRequest,
   random?: RandomSource,
 ): FarmActionResult {
+  const { farmerId, action, col, row, slot } = request;
   const farmer = farmerOf(world, farmerId);
   if (!farmer) return refuse("gone");
   const tile = farmTileAt(world, col, row);
   const bag = farmer.bag;
+  const season = seasonOn(world.clock.day, world.yearStart);
 
   switch (action) {
-    case "till": {
-      if (countOf(bag, HOE) === 0) return refuse("no-hoe");
-      if (tile.kind === "untilled" && !map.farmland[row]?.[col]) return refuse("not-farmland");
-      const result = till(tile);
-      if (!result.ok) return refuse(result.reason === "already-tilled" ? "already-dug" : "has-crop");
-      return { ok: true, world: setFarmTile(world, col, row, result.tile), tile: result.tile };
-    }
+    case "till":
+    case "water":
+      return useTool(world, map, request, bag);
     case "plant": {
       if (!isSlotIndex(bag, slot)) return refuse("no-seeds");
       const cropId = seedCrop(bag[slot]?.itemId ?? null);
       if (!cropId) return refuse("no-seeds");
+      if (tile.kind === "tilled" && !inSeason(cropId, season)) return { ok: false, hint: { reason: "out-of-season", cropId } };
       const result = plant(tile, cropId, { water: hasPerk(farmer.progress, "plantAndWater"), headStart: hasPerk(farmer.progress, "earlyRiser") });
       if (!result.ok) return refuse(result.reason === "has-crop" ? "has-crop" : "dig-first");
       const taken = removeFromSlot(bag, slot, 1);
       if (!taken.ok) return refuse("no-seeds");
       const next = setFarmerBag(setFarmTile(world, col, row, result.tile), farmerId, taken.inventory);
-      return { ok: true, world: next, tile: result.tile };
-    }
-    case "water": {
-      if (countOf(bag, WATERING_CAN) === 0) return refuse("no-can");
-      const result = water(tile);
-      if (!result.ok) return refuse(result.reason === "already-watered" ? "already-watered" : "dig-first");
-      return { ok: true, world: setFarmTile(world, col, row, result.tile), tile: result.tile };
+      return { ok: true, world: next, tile: result.tile, tiles: [{ col, row }] };
     }
     case "harvest": {
       if (tile.kind !== "planted") return refuse("gone");
       if (!isRipe(tile)) return { ok: false, hint: { reason: "growing", cropId: tile.cropId, days: daysLeft(tile), watered: tile.watered } };
       const amount = CROPS[tile.cropId].harvestAmount;
       if (roomFor(bag, cropItemId(tile.cropId)) < amount) return refuse("bag-full");
-      const result = harvest(tile);
+      const result = harvest(tile, { lastPick: !inSeason(tile.cropId, season) });
       if (!result.ok) return refuse("gone");
       const extras = pickExtras(farmer.progress, tile.cropId, random);
       // A golden one instead, if there's room for it.
@@ -463,7 +555,15 @@ export function applyFarmAction(
         bonus.push(extra);
       }
       const next = setFarmerBag(setFarmTile(world, col, row, result.tile), farmerId, after);
-      return { ok: true, world: next, tile: result.tile, harvested: { itemId, count: amount }, regrown: tile.regrown === true, ...(bonus.length ? { bonus } : {}) };
+      return {
+        ok: true,
+        world: next,
+        tile: result.tile,
+        tiles: [{ col, row }],
+        harvested: { itemId, count: amount },
+        regrown: tile.regrown === true,
+        ...(bonus.length ? { bonus } : {}),
+      };
     }
   }
 }

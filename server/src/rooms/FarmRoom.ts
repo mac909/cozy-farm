@@ -30,8 +30,9 @@ import {
   writePieces,
   writeProgress,
   writeVillage,
+  writeYearStart,
 } from "../../../shared/stateSync";
-import { makeRoom } from "../../../shared/decor/makeRoom";
+import { makeRoom, settleDecorations } from "../../../shared/decor/makeRoom";
 import { builtKey, builtThings } from "../../../shared/village/built";
 import { startOfServer, type PlacesFor } from "../../../shared/world/night";
 import { canStandAt } from "../../../shared/world/places";
@@ -91,9 +92,11 @@ export class FarmRoom extends Room<FarmState> {
   onCreate() {
     this.setState(new FarmState());
     // Marlow arrives with a storm (the first start after Milestone 6, on a world past its first day),
-    // and the beach and the ground get today's tide and driftwood if they haven't yet.
+    // and the beach and the ground get today's tide and driftwood if they haven't yet. A decoration
+    // somewhere an update has since built on (the garden shop, Milestone 8) moves to a free spot.
     const before = this.world;
-    const started = this.roomForBuilt(before, startOfServer(before, this.placesFor));
+    const arrived = this.roomForBuilt(before, startOfServer(before, this.placesFor));
+    const started = settleDecorations(arrived, todayFor(VILLAGE_MAP, builtThings(arrived)).map);
     if (started !== before) liveWorld().set(started);
     this.syncWorld();
     this.onMessage("move", (client, message: MoveMessage) => this.movePlayer(client, message));
@@ -240,6 +243,7 @@ export class FarmRoom extends Room<FarmState> {
   syncWorld() {
     const world = this.world;
     writeClock(this.state.clock, world.clock);
+    writeYearStart(this.state.clock, world.yearStart);
     if (this.state.coins !== world.coins) this.state.coins = world.coins;
     writeFarm(this.state.farm, world.farm);
     writeCrate(this.state.crate, world.crate);

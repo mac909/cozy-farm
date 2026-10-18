@@ -1,11 +1,12 @@
 import type { Client } from "colyseus";
 import { collectFish } from "../../../shared/collection/collect";
 import type { FishId } from "../../../shared/content/fish";
-import { FISHING_ROD } from "../../../shared/content/items";
 import { cast, FISHING, fishingPerks } from "../../../shared/fishing/fishing";
 import { PERK } from "../../../shared/content/skills";
 import { bobberTile, fishingSpot } from "../../../shared/fishing/spots";
-import { countOf, roomFor } from "../../../shared/inventory/inventory";
+import { roomFor } from "../../../shared/inventory/inventory";
+import { toolOfKind } from "../../../shared/farming/tools";
+import { TOOLS } from "../../../shared/content/tools";
 import type { CastMessage, CastStartedMessage, LandFishMessage, ReelInMessage } from "../../../shared/messages";
 import { farmerOf } from "../../../shared/world/world";
 import { feetTile, inReach } from "../../../shared/world/places";
@@ -15,9 +16,10 @@ import { credit, serverRandom } from "./progress";
 
 /**
  * A fish can't be hooked sooner than this after its cast: the line flying out and the shortest
- * wait for a bite (with Quick bites), less a little for lag. Nor landed, or have got away.
+ * wait for a bite (with Quick bites and the good rod), less a little for lag. Nor landed, or have
+ * got away.
  */
-const MIN_LAND_MS = FISHING.castMs + FISHING.biteDelayMs.min * PERK.quickBites - 200;
+const MIN_LAND_MS = FISHING.castMs + FISHING.biteDelayMs.min * PERK.quickBites * TOOLS.good_rod.biteFactor - 200;
 
 /** A cast nobody has landed or reeled in after this long is forgotten. */
 const CAST_FORGOTTEN_MS = 10 * 60 * 1000;
@@ -50,7 +52,8 @@ export function registerFishing(room: FarmRoom) {
     if (!player || room.isBusy(client) || !Number.isInteger(col) || !Number.isInteger(row)) return;
     const farmer = farmerOf(room.world, player.farmerId);
     if (!farmer) return;
-    if (countOf(farmer.bag, FISHING_ROD) === 0) return room.hint(client, { reason: "no-rod" });
+    const rod = toolOfKind(farmer.bag, "rod", message?.slot);
+    if (!rod) return room.hint(client, { reason: "no-rod" });
     const feet = feetTile(player);
     const water = { col, row };
     if (!inReach(feet, water)) return room.hint(client, { reason: "too-far" });
@@ -58,7 +61,7 @@ export function registerFishing(room: FarmRoom) {
     const spot = fishingSpot(map, feet, water);
     if (!spot) return room.hint(client, { reason: "no-water" });
     // The caster's fishing perks go with the line, so their device plays it out the same way.
-    const line = cast(spot, room.world.clock.minute, Math.floor(Math.random() * 2 ** 32), fishingPerks(farmer.progress));
+    const line = cast(spot, room.world.clock.minute, Math.floor(Math.random() * 2 ** 32), fishingPerks(farmer.progress, rod.itemId));
     if (!line.ok) return room.hint(client, { reason: "nothing-biting" });
     if (roomFor(farmer.bag, line.state.fishId) < 1) return room.hint(client, { reason: "bag-full" });
 

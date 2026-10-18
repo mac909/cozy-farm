@@ -1,13 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { CROPS, isCropId } from "./crops";
+import { CROP_IDS, CROPS, MAX_STAGES, isCropId } from "./crops";
+import { SEASON_IDS } from "./seasons";
 
 describe("crop data", () => {
   const crops = Object.entries(CROPS);
+  const starters = crops.filter(([, crop]) => crop.sold === "seedStand");
+  const garden = crops.filter(([, crop]) => crop.sold === "gardenShop");
 
-  it("has 4–6 starter crops, at least one of which regrows", () => {
-    expect(crops.length).toBeGreaterThanOrEqual(4);
-    expect(crops.length).toBeLessThanOrEqual(6);
-    expect(crops.some(([, crop]) => crop.regrows)).toBe(true);
+  it("has 4–6 starter crops, at least one of which regrows, all growing all year", () => {
+    expect(starters.length).toBeGreaterThanOrEqual(4);
+    expect(starters.length).toBeLessThanOrEqual(6);
+    expect(starters.some(([, crop]) => crop.regrows)).toBe(true);
+    for (const [id, crop] of starters) expect(crop.seasons, id).toBeUndefined();
+  });
+
+  it("has ten from the garden shop (Milestone 8): two for each season, and two all year", () => {
+    expect(garden).toHaveLength(10);
+    for (const season of SEASON_IDS) expect(garden.filter(([, crop]) => crop.seasons?.includes(season)), season).toHaveLength(2);
+    expect(garden.filter(([, crop]) => !crop.seasons).map(([id]) => id)).toEqual(["wheat", "cotton"]);
+    // The starters first, so the seed stand and the sprite sheet keep their order.
+    expect(CROP_IDS.slice(0, starters.length)).toEqual(starters.map(([id]) => id));
+  });
+
+  it("ripens and sells as the plan says (docs/plans/progression.md, section 2.3)", () => {
+    const plan = {
+      peas: [4, 2, 40, 30],
+      cauliflower: [8, 0, 90, 230],
+      tomato: [6, 3, 60, 50],
+      melon: [10, 0, 150, 400],
+      beetroot: [4, 0, 30, 70],
+      cranberries: [6, 2, 120, 40],
+      kale: [4, 0, 35, 75],
+      leek: [5, 0, 45, 95],
+      wheat: [4, 0, 15, 30],
+      cotton: [6, 0, 40, 75],
+    } as const;
+    for (const [id, [days, regrowEvery, seed, sells]] of Object.entries(plan)) {
+      const crop = CROPS[id as keyof typeof plan];
+      expect((crop.stages - 1) * crop.daysPerStage, id).toBe(days);
+      expect(crop.regrows ? crop.daysPerStage : 0, id).toBe(regrowEvery);
+      expect([crop.seedPrice, crop.sellPrice], id).toEqual([seed, sells]);
+      expect(crop.stages, id).toBeLessThanOrEqual(MAX_STAGES);
+    }
   });
 
   for (const [key, crop] of crops) {

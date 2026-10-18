@@ -52,6 +52,18 @@ function collect(
   return { ok: true, world: next, itemId, count, events };
 }
 
+/**
+ * Everything lying within `radius` tiles of `centre` (diagonals count as one), beach finds and
+ * driftwood or branches alike, nearest first: what the shell basket sweeps up (Milestone 8).
+ */
+export function lyingAround(world: Pick<World, "beach" | "forage">, centre: { col: number; row: number }, radius: number): { col: number; row: number }[] {
+  const near = ({ col, row }: { col: number; row: number }) => Math.max(Math.abs(col - centre.col), Math.abs(row - centre.row));
+  return [...world.beach.finds, ...world.forage.items]
+    .map(({ col, row }) => ({ col, row }))
+    .filter((tile) => near(tile) <= radius)
+    .sort((a, b) => near(a) - near(b) || a.row - b.row || a.col - b.col);
+}
+
 /** Picks up the find lying on (col, row). The caller has checked it's within reach. */
 export function collectFind(world: World, farmerId: FarmerId, col: number, row: number): CollectResult {
   const taken = pickUp(world.beach.finds, col, row);

@@ -59,9 +59,10 @@ export interface EmoteEvent {
  * What a dev command does: start the night now, set the clock (value: game minutes after midnight),
  * add coins (value: how many), fill a project's step as if everything was given (project: which,
  * or the open one), build what's been gathered now instead of overnight, or add experience to one
- * of your skills (skill, value: how much).
+ * of your skills (skill, value: how much), make today the first day of a season (season: which;
+ * the seasons begin if they haven't, Milestone 8), or put things in your bag (item, value: how many).
  */
-export type DevCommand = "nextDay" | "setTime" | "addCoins" | "fillStep" | "build" | "xp";
+export type DevCommand = "nextDay" | "setTime" | "addCoins" | "fillStep" | "build" | "xp" | "season" | "item";
 
 /** Client → server ("dev"): a shortcut for testing. Also on window.dev in the browser console. */
 export interface DevMessage {
@@ -69,6 +70,8 @@ export interface DevMessage {
   value?: number;
   project?: string;
   skill?: string;
+  season?: string;
+  item?: string;
 }
 
 // ---------- Who's playing ----------
@@ -96,12 +99,15 @@ export type ReplacedMessage = Record<string, never>;
 /**
  * Client → server ("till", "plant", "water" or "harvest"): do this to the farm tile at col, row.
  * Messages name the action, so a late "harvest" (the other player picked it first) just fails
- * rather than turning into something else. "plant" says which bag slot holds the seeds.
+ * rather than turning into something else. "plant" says which bag slot holds the seeds; "till" and
+ * "water" which holds the tool (Milestone 8), and which way you face, so a wide hoe or a big can
+ * works on the tiles either side too.
  */
 export interface FarmActionMessage {
   col: number;
   row: number;
   slot?: number;
+  facing?: Facing;
 }
 
 /** Server → client ("hint"): an action failed for a reason the client couldn't see coming. */
@@ -165,7 +171,18 @@ export interface UnshipMessage {
 export interface BuyMessage {
   itemId: string;
   count: number;
-  at?: "seedStand" | "store";
+  at?: "seedStand" | "store" | "gardenShop";
+}
+
+// ---------- The garden shop (Milestone 8) ----------
+
+/**
+ * Client → server ("upgradeTool"), next to the open garden shop: buy the tool upgrade `tool` (the
+ * tool it gives): coins from the shared wallet, materials from my bag, the new tool in the old
+ * one's slot. Seeds there are a "buy" with `at: "gardenShop"`.
+ */
+export interface UpgradeToolMessage {
+  tool: string;
 }
 
 // ---------- Houses ----------
@@ -212,10 +229,11 @@ export interface PickUpMessage {
   row: number;
 }
 
-/** Client → server ("cast"), holding the fishing rod: cast into the water tile col, row (the one in front). */
+/** Client → server ("cast"), holding a fishing rod: cast into the water tile col, row (the one in front). `slot`: the rod's (Milestone 8). */
 export interface CastMessage {
   col: number;
   row: number;
+  slot?: number;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { ArraySchema, MapSchema } from "@colyseus/schema";
 import { describe, expect, it } from "vitest";
-import { collectBug, collectFind, collectFish } from "./collection/collect";
+import { collectBug, collectFind, collectFish, lyingAround } from "./collection/collect";
 import { FISH } from "./content/fish";
 import { countOf, INVENTORY_SLOTS } from "./inventory/inventory";
 import { BeachFindState, BookEntryState, BugState } from "./schema";
@@ -153,5 +153,20 @@ describe("syncing the beach, the bugs and the book", () => {
     writeBook(target, world.book);
     expect(target.get("fish:tuna")?.biggestCm).toBe(120);
     expect(readBook(target)).toEqual(world.book);
+  });
+});
+
+describe("the shell basket's sweep (Milestone 8)", () => {
+  it("finds everything lying within a tile of you, finds and driftwood alike, nearest first", () => {
+    const world = {
+      beach: { day: 4, finds: [{ findId: "starfish" as const, col: 21, row: 23 }, { findId: "sea_glass" as const, col: 24, row: 23 }] },
+      forage: { day: 4, items: [{ itemId: "driftwood" as const, col: 20, row: 22 }, { itemId: "branch" as const, col: 20, row: 23 }] },
+    };
+    expect(lyingAround(world, { col: 20, row: 23 }, 1)).toEqual([
+      { col: 20, row: 23 },
+      { col: 20, row: 22 },
+      { col: 21, row: 23 },
+    ]);
+    expect(lyingAround(world, { col: 20, row: 23 }, 0)).toEqual([{ col: 20, row: 23 }]);
   });
 });

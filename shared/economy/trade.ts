@@ -55,7 +55,7 @@ export function buyAtStore(world: World, farmerId: FarmerId, itemId: string, cou
 }
 
 /** Buys from a stock list: only what's on it, 1 to MAX_BUY at a time, all or nothing. */
-function buyFrom(stock: readonly string[], world: World, farmerId: FarmerId, itemId: string, count: number): TradeResult {
+export function buyFrom(stock: readonly string[], world: World, farmerId: FarmerId, itemId: string, count: number): TradeResult {
   const farmer = farmerOf(world, farmerId);
   if (!farmer) return refuse("gone");
   if (!stock.includes(itemId)) return refuse("not-for-sale");

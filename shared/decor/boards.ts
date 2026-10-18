@@ -41,14 +41,14 @@ export function houseBoard(plan: HousePlan, occupied?: (col: number, row: number
 
 /**
  * Tiles on the farm that stay clear so everything can still be reached: in front of the tent, the
- * seed stand, the store, the Village Board, the lighthouse and each cottage's door, all round the
+ * seed stand, the store, the Village Board, the lighthouse, the garden shop and each cottage's door, all round the
  * shipping crate, where Marlow stands by day, and where everyone wakes up. Also every tile under a
  * building or stand (you can walk behind their tops).
  */
 export function farmKeepClear(map: WorldMap): Set<string> {
   const clear = new Set<string>();
   const add = (tiles: Tile[]) => tiles.forEach((tile) => clear.add(key(tile)));
-  for (const rect of [map.tent, map.seedStand, map.store, map.board, map.lighthouse]) if (rect) add([...tilesIn(rect), ...rowBelow(rect)]);
+  for (const rect of [map.tent, map.seedStand, map.store, map.board, map.lighthouse, map.gardenShop]) if (rect) add([...tilesIn(rect), ...rowBelow(rect)]);
   // Where Marlow stands by the board in the daytime.
   if (map.board && map.keeper.day) add([map.keeper.day]);
   const crate = map.shippingCrate;

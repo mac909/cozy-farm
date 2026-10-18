@@ -415,6 +415,12 @@
   image-rendering: pixelated;
 }
 
+/* The garden shop (Milestone 8), shop and bench, at twice its size. */
+.opening-hero.wide img {
+  width: 128px;
+  height: 96px;
+}
+
 .opening-line {
   display: flex;
   align-items: center;
@@ -526,4 +532,10 @@ img.home-need {
 .home-note {
   margin: 8px 0 0;
   text-align: center;
+}
+
+/* The garden shop's picture (Milestone 8): the whole shopfront, a little smaller. */
+.board-pic img.wide {
+  width: 48px;
+  height: 36px;
 }

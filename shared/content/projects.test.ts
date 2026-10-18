@@ -7,6 +7,8 @@ import { ITEMS, isItemId, type ItemId } from "./items";
 import { PROJECTS, PROJECT_IDS, needKey, type Need } from "./projects";
 import { RARITY_WEIGHTS } from "./rarity";
 import { SEED_STAND_STOCK } from "./seedStand";
+import { GARDEN_SHOP_SEEDS } from "./gardenShop";
+import { isSeasonal } from "../time/seasons";
 import { BEACHCOMBING, MARLOWS_LUCK } from "../beachcombing/beachcombing";
 
 const allSteps = PROJECT_IDS.flatMap((id) => PROJECTS[id].steps.map((step, i) => ({ project: id, i, step })));
@@ -15,7 +17,11 @@ const allNeeds = allSteps.flatMap(({ project, i, step }) => step.needs.map((need
 /** Where an item comes from in the game today, or null if nowhere. */
 function sourceOf(itemId: ItemId): string | null {
   const item = ITEMS[itemId];
-  if (item.category === "crop") return (SEED_STAND_STOCK as readonly ItemId[]).includes(`${item.cropId}_seeds` as ItemId) ? "the seed stand" : null;
+  if (item.category === "crop") {
+    const seeds = `${item.cropId}_seeds` as ItemId;
+    if ((SEED_STAND_STOCK as readonly ItemId[]).includes(seeds)) return "the seed stand";
+    return (GARDEN_SHOP_SEEDS as readonly ItemId[]).includes(seeds) ? "the garden shop" : null;
+  }
   if (item.category === "fish") return "fishing";
   if (item.category === "bug") return "the meadow";
   if (item.category === "beach") return "the tide";
@@ -52,8 +58,8 @@ describe("the projects", () => {
     for (const { where, need } of allNeeds) {
       if (need.kind !== "item") continue;
       const item = ITEMS[need.itemId];
-      // Nothing in the game has a season yet; once something does, a step can't ask for it.
-      expect("season" in item, `${where}: ${need.itemId} is seasonal`).toBe(false);
+      // Since Milestone 8 some crops have seasons: a step can never ask for one.
+      expect(isSeasonal(need.itemId), `${where}: ${need.itemId} is seasonal`).toBe(false);
       if (item.category === "crop") {
         const crop = CROPS[item.cropId];
         expect((crop.stages - 1) * crop.daysPerStage, `${where}: ${crop.name} takes too long`).toBeLessThanOrEqual(6);
@@ -62,6 +68,25 @@ describe("the projects", () => {
     // "Any crop" is fine as long as one quick crop is sold.
     const quick = Object.values(CROPS).some((crop) => (crop.stages - 1) * crop.daysPerStage <= 6);
     expect(quick).toBe(true);
+  });
+
+  it("know which crops are seasonal (the test above means something)", () => {
+    expect(isSeasonal("peas")).toBe(true);
+    expect(isSeasonal("melon_seeds")).toBe(true);
+    expect(isSeasonal("wheat")).toBe(false);
+    expect(isSeasonal("radish")).toBe(false);
+    expect(isSeasonal("driftwood")).toBe(false);
+  });
+
+  it("go lighthouse, then the garden shop (Milestone 8), each asking only for what can be had before it", () => {
+    expect(PROJECT_IDS.slice(0, 2)).toEqual(["lighthouse", "gardenShop"]);
+    // The garden shop can't ask for its own seeds: they're sold once it's open.
+    for (const step of PROJECTS.gardenShop.steps) {
+      for (const need of step.needs) {
+        if (need.kind === "item" && ITEMS[need.itemId].category === "crop") expect(sourceOf(need.itemId), need.itemId).toBe("the seed stand");
+      }
+    }
+    expect(PROJECTS.gardenShop.teaser?.title).toBe("Something on the boardwalk");
   });
 
   it("ask for no more than two sea glass in a step before the cove", () => {

@@ -11,6 +11,8 @@ export class Clock extends Schema {
   @type("uint32") day = 1;
   /** Game minutes after midnight, a multiple of HUD_MINUTE_STEP. */
   @type("uint16") minute = 360;
+  /** The day spring first came (Milestone 8), 0 before the seasons begin: the season follows from it and the day. */
+  @type("uint32") yearStart = 0;
 }
 
 /** One slot of a bag. */
