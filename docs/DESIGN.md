@@ -28,7 +28,7 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Look | A name (up to 12 characters) and one of six preset shirt colors, picked on first join and remembered on that device. Change it any time from the button in the top right. | 2026-10-17 |
 | Emotes | Wave and heart, as buttons in the bottom right (keys 1 and 2). A bubble shows above your head for 2 seconds, for everyone. | 2026-10-17 |
 | Farming rules | Crops never die; six starter crops, two of which regrow; the day ends when everyone online is in bed. Details under Time and Farming. | 2026-10-17 |
-| Art | Ninja Adventure (pixel-boy, CC0) as the base, plus our own matching sprites for crops, beach and shells. | 2026-10-17 |
+| Art pack | Ninja Adventure (pixel-boy, CC0) as the base, plus our own matching sprites for crops, beach and shells. | 2026-10-17 |
 
 ## Setting
 
