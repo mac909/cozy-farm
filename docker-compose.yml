@@ -6,6 +6,9 @@ services:
     container_name: cozy-farm
     ports:
       - "8080:2567"
+    environment:
+      # Where the server keeps the save database: the farm-data volume below.
+      DATA_DIR: /app/data
     volumes:
       # Saves live here from Milestone 2 on. Never delete this volume.
       - farm-data:/app/data

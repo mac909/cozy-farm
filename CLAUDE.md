@@ -38,6 +38,8 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 | `npm run build` | Builds the client into `dist/client` |
 | `npm run farm:up` | Rebuilds and (re)starts the **real farm** container on :8080 |
 | `npm run farm:logs` / `npm run farm:down` | Follow its logs / stop it |
+| `npm run farm:backup` | Copies the real farm's save into `%OneDrive%\CozyFarm\backups`, keeping the newest 14. `scripts/backup-farm.ps1` has the nightly scheduled-task command. |
+| `npm run farm:restore` | Asks which backup to restore (or `-- <path>`), checks that it loads, then swaps it in and restarts the farm. The replaced save stays in the volume as `saves.before-restore-<date>_<time>.sqlite`; `scripts/restore-farm.ps1` says how to undo. |
 
 ## Rules
 
@@ -46,8 +48,8 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 - **Content is data.** Define crops, items, furniture, critters, and maps in data files under `shared/`, never inline in logic.
 - **Touch first.** Every action must work with one thumb on a phone as well as with a keyboard. HUD and controls go in `UIScene` (camera zoom 1). The world goes in `WorldScene` (integer zoom only, so the pixels stay crisp).
 - **Pixel art:** 16×16 tiles, `pixelArt: true`. Until the art pack is chosen, placeholder art is drawn in code in `client/src/art/placeholderArt.ts`; its frame order must match `shared/world/tiles.ts`.
-- **Protect the real farm.** It runs in Docker on :8080, with saves in the `farm-data` volume. Never run `docker compose down -v`, never delete that volume, and never point dev at it. Dev uses its own ports and, from Milestone 2, its own `data-dev/` folder.
-- **Saves are versioned** (from Milestone 2). Every save carries a `version`. Changing the format means adding a migration, never breaking old saves.
+- **Protect the real farm.** It runs in Docker on :8080, with saves in the `farm-data` volume. Never run `docker compose down -v`, never delete that volume, and never point dev at it. Dev uses its own ports and, from Milestone 2, its own `data-dev/` folder. Test the farm scripts by pointing their `-Container`, `-Volume` and `-Image` options at throwaway ones.
+- **Saves are versioned** (from Milestone 2). Every save carries a `version`. Changing the format means adding a migration, never breaking old saves. The save layer is `server/src/persistence/`: SQLite through Node's built-in `node:sqlite`, in the folder named by `DATA_DIR` (`data-dev/` in dev, the farm-data volume in Docker). The world's save format and its migrations are in `worldSave.ts`. If a save won't load, the server must stop rather than start a fresh world over it.
 - **Two trusted players.** No accounts, passwords, or anti-cheat. Validate messages only enough to avoid crashes or corrupt state (types, bounds).
 - **Free only.** No paid services or assets. Asset licenses must allow this use; record every pack and its license in `client/public/assets/CREDITS.md`.
 - Keep dependencies few. Mention any new one in chat and say why.
