@@ -23,6 +23,9 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | `ui.ts` | HUD icons the pack lacks: music on and off |
 | `materials.ts` | Building materials: driftwood and a branch (Milestone 6) |
 | `village.ts` | The lighthouse in four states, the Village Board with its notes, and brambles, drawn in code (Milestone 6) |
+| `rewards.ts` | The six gifts a skill's levels bring: a straw hat on a stand, a mounted fish, a shell wreath, a golden can planter, a lobster pot, a butterfly jar (Milestone 7) |
+| `porch.ts` | A cottage's porch: decking, a bench, and a lantern dark and lit (Milestone 7) |
+| `golden.ts` | Golden crops: each crop's harvested item recoloured in gold (Milestone 7) |
 | `markers.ts` | Marker tiles for the map's hidden Collision and Farmland layers |
 | `render.ts` | Puts it all together and writes the PNGs |
 | `lib/image.ts` | Tiny image helpers on top of `pngjs` |
@@ -65,3 +68,6 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
 - `lighthouse.png`: 48×96 frames, dark, scaffold, ready, lit; it stands on the bottom of the frame.
 - `village-board.png`: 32×32 frames; frame n has n notes pinned on.
 - `brambles.png`: two 16×16 tiles, a tileset in the village map (the `Brambles` layer).
+- `reward-furniture.png`: 32×32 frames in `REWARD_FRAMES` order, each picture at its rectangle (the render checks every pixel is inside it).
+- `porch.png`: 64×48, cut out by `PORCH_FRAMES`: the decking along the top (64×16), the bench (32×32) and the lantern dark and lit (16×32 each) below.
+- `golden-crops.png`: one row of 16×16 icons in `crops.ts` order.

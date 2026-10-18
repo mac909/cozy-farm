@@ -67,9 +67,9 @@ answers to the open questions are approved (2026-10-18).
 
 ## Milestone 7: Skills, badges and porches
 
-- [ ] Farming, fishing and foraging levels with small perks, on the You card behind your face (save v5)
-- [ ] Badges, with silhouettes for the ones still to earn
-- [ ] The board's Your home tab and the porch upgrade
+- [x] Farming, fishing and foraging levels with small perks, on the You card behind your face (save v5)
+- [x] Badges, with silhouettes for the ones still to earn
+- [x] The board's Your home tab and the porch upgrade
 
 ## Milestone 8: The garden shop and the seasons
 

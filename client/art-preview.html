@@ -150,6 +150,10 @@
         <h2>The village (Milestone 6): the lighthouse, the board, brambles, materials, night fish</h2>
       </section>
 
+      <section id="progress">
+        <h2>Skills, badges and porches (Milestone 7): a porch, the level gifts, golden crops</h2>
+      </section>
+
       <section id="sand">
         <h2>Beach sand (recoloured from the pack's own autotiles)</h2>
         <p>Same tile layout as the source blocks, so the pack's autotile rules apply unchanged.</p>
@@ -194,6 +198,9 @@
         board: CU + "village-board.png",
         brambles: CU + "brambles.png",
         materials: CU + "materials.png",
+        porch: CU + "porch.png",
+        rewards: CU + "reward-furniture.png",
+        golden: CU + "golden-crops.png",
         fish: CU + "fish.png",
         keeper: NA + "Actor/Character/OldMan3/SpriteSheet.png",
         sandGrass: CU + "sand-grass.png",
@@ -535,6 +542,29 @@
         frame(ctx, img.materials, T, T, 0, 0, 0);
         frame(ctx, img.materials, T, T, 1, T, 0);
         for (let i = 0; i < 3; i++) frame(ctx, img.fish, T, T, 12 + i, (2 + i) * T, 0);
+      }, 3, "#d2b37d");
+
+      // ---------- skills, badges and porches ----------
+
+      const progressRow = row(document.getElementById("progress"));
+      figure(progressRow, "ours", "a cottage's porch: decking, a lantern (dark, then lit at dusk) and a bench", 9 * T, 4 * T, (ctx) => {
+        for (let x = 0; x < 9; x++) for (let y = 0; y < 4; y++) piece(ctx, img.sandGrass, 16, 16, x * T, y * T);
+        for (const [left, lit] of [
+          [0, false],
+          [5 * T, true],
+        ]) {
+          piece(ctx, img.house, 0, 0, left, 0, 4 * T, 3 * T);
+          piece(ctx, img.porch, 0, 0, left, 3 * T, 4 * T, T);
+          piece(ctx, img.porch, lit ? 48 : 32, 16, left, 2 * T, T, 2 * T);
+          piece(ctx, img.porch, 0, 16, left + 2 * T, 2 * T, 2 * T, 2 * T);
+        }
+      });
+      figure(progressRow, "ours", "gifts at level 4 and 6: straw hat, mounted fish, shell wreath, golden can, lobster pot, butterfly jar", 12 * T, 2 * T, (ctx) => {
+        for (let x = 0; x < 12; x++) for (let y = 0; y < 2; y++) piece(ctx, img.sandGrass, 16, 16, x * T, y * T);
+        for (let i = 0; i < 6; i++) frame(ctx, img.rewards, 32, 32, i, i * 32, 0);
+      });
+      figure(progressRow, "ours", "golden crops (Farming level 10)", 6 * T, T, (ctx) => {
+        for (let i = 0; i < 6; i++) frame(ctx, img.golden, T, T, i, i * T, 0);
       }, 3, "#d2b37d");
 
       // ---------- crate ----------

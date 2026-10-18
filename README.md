@@ -33,6 +33,7 @@ The first time you open it from the home screen, it asks **Who's playing?**, bec
 | Open your bag | The bag button | B or Tab |
 | Wave / heart | The two small buttons | Z / X |
 | Look round from the top of the lighthouse | Drag to look round; Down comes back | The arrow keys; Esc |
+| See your skills and badges, or change your name or look | Tap your face at the top right (a gold dot means something new) | Click it |
 | Close a card, get out of bed, stop arranging or fishing | The ×, Get up, Done or Stop | Esc |
 
 Dig in the farm field, plant seeds, water them, and go to bed in the tent by the farm gate: watered crops grow overnight. Pick what's ripe, put it in the shipping crate on the dock, and it sells overnight for coins you share. Buy more seeds at the stand by the beach path.
@@ -42,6 +43,8 @@ Move into one of the two cottages in the meadow above the farm, visit each other
 Fish off the dock, the beach and the end of the dock (different fish at different spots and times of day), pick up the shells and sea glass that wash up on the beach each morning, and catch butterflies in the meadow (fireflies after dark). Everything new goes in the collection book you share; it all sells in the crate too.
 
 Marlow, the old lighthouse keeper, stands by the Village Board next to the seed stand. Driftwood washes up on the beach and branches fall under the meadow's trees each morning: pick them up, walk up to the board holding something it wants and tap **Give** (or tap **Board** to see what's wanted and give from there). When a step's last thing goes in, it's built overnight. **Talk** to Marlow for his notes. Once the lighthouse on the point is lit, it shines every night, night fish bite off the point after dark, and you can **Climb** it for the view. The book's **Village** page shows the board from anywhere.
+
+Farming, fishing and foraging each get better as you do them: every level brings a little something (planting waters the tile too, bites come sooner, finds glint more, and gifts for your house), with a card on your own screen. Badges come for all sorts of things, and the village's go to both of you. Tap your face at the top right to see them. Once the lighthouse is lit, the board's **Your home** tab has a porch for each cottage: either of you can give to either, and Marlow builds it overnight, with a bench and a lantern that lights at dusk.
 
 ## Develop
 
