@@ -4,7 +4,7 @@ import type { BoardState } from "./boardText";
 import { el, openPanel, panelHead, picture, type Panel } from "./panel";
 import { VillageBoard, type VillageBoardOptions } from "./VillageBoard";
 
-export interface BoardPanelOptions extends Omit<VillageBoardOptions, "readOnly"> {
+export interface BoardPanelOptions extends Omit<VillageBoardOptions, "readOnly" | "tabs"> {
   keeperFace: string;
   /** Open on this project's card rather than the board. */
   project?: string | null;
@@ -13,7 +13,8 @@ export interface BoardPanelOptions extends Omit<VillageBoardOptions, "readOnly">
 
 /**
  * The Village Board's card (Milestone 6), from the Action button's "Board" next to it: Marlow's
- * line, what's up now, what's finished and his notes; a project's card with Give buttons.
+ * line, what's up now, what's finished and his notes; a project's card with Give buttons. Its
+ * second tab, Your home (Milestone 7), has each cottage's porch and what's to come.
  */
 export class BoardPanel {
   private readonly panel: Panel;
@@ -27,7 +28,7 @@ export class BoardPanel {
     head.prepend(ring);
     const body = el("div");
     this.panel.card.append(head, body);
-    this.board = new VillageBoard(body, { ...options, readOnly: false });
+    this.board = new VillageBoard(body, { ...options, readOnly: false, tabs: true });
     if (options.project) this.board.showProject(options.project);
   }
 

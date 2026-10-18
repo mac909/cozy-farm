@@ -12,13 +12,19 @@ export interface HouseLook {
   door: number;
   /** The bed waiting inside on moving in. */
   bed: FurnitureId;
+  /**
+   * Its porch (Milestone 7), on the row in front of it, in columns from its left: the lantern's
+   * post, and the left end of the bench (two wide). The map's "Collision porch <house>" layer
+   * paints the same tiles (map.test.ts checks).
+   */
+  porch: { lantern: number; bench: number };
 }
 
-export const DEFAULT_HOUSE: HouseLook = { style: "orange", door: 1, bed: "red_bed" };
+export const DEFAULT_HOUSE: HouseLook = { style: "orange", door: 1, bed: "red_bed", porch: { lantern: 0, bench: 2 } };
 
 export const HOUSES: Readonly<Record<string, HouseLook>> = {
-  house1: { style: "orange", door: 1, bed: "red_bed" },
-  house2: { style: "cream", door: 1, bed: "blue_bed" },
+  house1: { style: "orange", door: 1, bed: "red_bed", porch: { lantern: 0, bench: 2 } },
+  house2: { style: "cream", door: 1, bed: "blue_bed", porch: { lantern: 0, bench: 2 } },
 };
 
 export function houseLook(houseId: string): HouseLook {

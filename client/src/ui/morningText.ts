@@ -1,6 +1,7 @@
 import { ITEMS } from "../../../shared/content/items";
 import { keeperWords } from "../../../shared/content/keeper";
-import { PROJECTS } from "../../../shared/content/projects";
+import { projectDef } from "../../../shared/content/projects";
+import { ownerWords } from "../../../shared/content/houseUpgrades";
 import type { BuiltStep } from "../../../shared/village/village";
 import type { MorningReport } from "../../../shared/world/world";
 
@@ -35,8 +36,11 @@ export function growthLine(grew: number, ready: number): string | null {
   return null;
 }
 
-/** The morning card's words. `keeperArrived`: Marlow came this morning (his first). */
-export function morningWords(report: MorningReport, keeperArrived = false): MorningWords {
+/**
+ * The morning card's words. `keeperArrived`: Marlow came this morning (his first). `owner`: whose a
+ * cottage is, for a house upgrade's line (Milestone 7).
+ */
+export function morningWords(report: MorningReport, keeperArrived = false, owner: (houseId: string) => string = () => "Someone"): MorningWords {
   const sales = report.sale.lines.map((line) => ({
     text: `${ITEMS[line.itemId]?.name ?? line.itemId} ${line.count} × ${line.priceEach}`,
     total: String(line.total),
@@ -46,8 +50,11 @@ export function morningWords(report: MorningReport, keeperArrived = false): Morn
     growth: growthLine(report.grew, report.ready),
     storm: keeperArrived ? STORM_LINE : null,
     village: (report.built ?? []).flatMap((built) => {
-      const step = PROJECTS[built.project]?.steps[built.step];
-      return step ? [{ built, line: step.builtLine, note: keeperWords(step.note) }] : [];
+      const project = projectDef(built.project);
+      const step = project?.steps[built.step];
+      if (!project || !step) return [];
+      const who = project.house ? owner(project.house.houseId) : "";
+      return [{ built, line: ownerWords(step.builtLine, who), note: keeperWords(step.note) }];
     }),
     beach: (report.washedUp?.length ?? 0) + (report.foraged?.length ?? 0) > 0 ? "Something washed up on the beach!" : null,
     sales,

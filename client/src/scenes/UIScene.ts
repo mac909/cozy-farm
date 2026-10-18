@@ -63,6 +63,20 @@ const BEAM_BANDS: readonly [number, number][] = [
   [0.09, 0.08],
 ];
 const BEAM_LENGTH = 1600;
+/** A porch lantern's little halo (Milestone 7): radius in world pixels, alpha. */
+const LANTERN_BANDS: readonly [number, number][] = [
+  [18, 0.07],
+  [11, 0.1],
+  [5, 0.14],
+];
+
+/** A lit porch lantern on the screen, with the world's zoom and how strong the glow is (0 to 1). */
+export interface LanternView {
+  x: number;
+  y: number;
+  zoom: number;
+  strength: number;
+}
 
 /** Where everything goes on this screen. Computed from the screen size, so it follows rotation. */
 interface Layout {
@@ -450,11 +464,18 @@ export class UIScene extends Phaser.Scene {
     this.showArrangeMode(this.arrangeHud);
   }
 
-  /** The lighthouse's glow and beam, or null for none. Cheap to call every frame. */
-  setGlow(view: GlowView | null) {
+  /** The lighthouse's glow and beam (or null for none), and the porch lanterns' halos. Cheap to call every frame. */
+  setGlow(view: GlowView | null, lanterns: readonly LanternView[] = []) {
     const g = this.glow;
     if (!g) return;
     g.clear();
+    for (const lantern of lanterns) {
+      if (lantern.strength <= 0) continue;
+      for (const [radius, alpha] of LANTERN_BANDS) {
+        g.fillStyle(GLOW_COLOR, alpha * lantern.strength);
+        g.fillCircle(lantern.x, lantern.y, radius * lantern.zoom);
+      }
+    }
     if (!view || view.strength <= 0) return;
     const { x, y, zoom, strength, angle } = view;
     for (const [radius, alpha] of HALO_BANDS) {

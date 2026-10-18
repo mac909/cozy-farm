@@ -67,4 +67,15 @@ describe("the morning card in the village (Milestone 6)", () => {
     expect(words.beach).toBe("Something washed up on the beach!");
     expect(morningWords(quiet).storm).toBeNull();
   });
+
+  it("says whose cottage has a porch now", () => {
+    const words = morningWords(
+      { day: 9, grew: 0, ready: 0, coins: 0, sale: { lines: [], total: 0 }, washedUp: [], foraged: [], built: [{ project: "house2:porch", step: 0 }] },
+      false,
+      (houseId) => (houseId === "house2" ? "Juno" : "Pip"),
+    );
+    expect(words.village).toEqual([
+      { built: { project: "house2:porch", step: 0 }, line: "Juno's cottage has a porch now.", note: "A porch! Somewhere to sit and watch the boats come in." },
+    ]);
+  });
 });

@@ -10,8 +10,12 @@ import { button, el, openPanel, picture } from "./panel";
 export interface MorningVillage {
   /** Marlow arrived this morning: the storm's line. */
   keeperArrived: boolean;
-  /** A picture of something built (the lighthouse as it is now). */
+  /** A picture of something built (the lighthouse as it is now, a porch). */
   picture(built: BuiltStep): string;
+  /** Whether that picture is tall (the lighthouse) rather than square (a porch). */
+  tall?(built: BuiltStep): boolean;
+  /** Whose a cottage is, by name, for a house upgrade's line ("Pip's cottage has a porch now"). */
+  owner?(houseId: string): string;
   /** Look: the card closes and the camera glides there and back. */
   look(built: BuiltStep): void;
 }
@@ -28,7 +32,7 @@ export function showMorningCard(
   village?: MorningVillage,
 ): Promise<void> {
   return new Promise((resolve) => {
-    const words = morningWords(report, village?.keeperArrived ?? false);
+    const words = morningWords(report, village?.keeperArrived ?? false, village?.owner);
     const panel = openPanel({ cardClass: "morning", closeKeys: [" ", "Enter"], closeOnBackdrop: true, onClose: resolve });
     const { card } = panel;
     card.append(el("h2", "panel-title center", words.title));
@@ -39,8 +43,9 @@ export function showMorningCard(
       for (const { built, line, note } of words.village) {
         const row = el("div", "morning-village");
         const pic = picture(village.picture(built));
-        pic.style.width = "24px";
-        pic.style.height = "48px";
+        const tall = village.tall?.(built) ?? true;
+        pic.style.width = tall ? "24px" : "32px";
+        pic.style.height = tall ? "48px" : "32px";
         const text = el("div", "grow");
         text.append(el("b", "", line), el("small", "", `“${note}”`));
         const look = button("Look", "board-give", () => {

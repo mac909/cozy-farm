@@ -3,7 +3,8 @@ import type { CharacterId } from "../../../shared/content/characters";
 import type { Inventory } from "../../../shared/inventory/inventory";
 import type { HelperView } from "../../../shared/stateSync";
 import "./board.css";
-import { boardWords, projectCard, type BoardState, type ProjectCard } from "./boardText";
+import "./book.css";
+import { boardWords, homeWords, projectCard, type BoardState, type HomeRow, type ProjectCard } from "./boardText";
 import { button, el, picture } from "./panel";
 
 export interface VillageBoardOptions {
@@ -12,8 +13,12 @@ export interface VillageBoardOptions {
   icon(itemId: ItemId): string;
   coinIcon: string;
   face(character: CharacterId): string;
-  /** A project's picture as it stands (the lighthouse dark, scaffolded or lit). */
+  /** A project's picture as it stands (the lighthouse dark, scaffolded or lit; a porch). */
   projectPicture(projectId: string): string;
+  /** The porch's picture, for the Your home tab (Milestone 7). */
+  porchPicture?: string;
+  /** Show the Village and Your home tabs (the board card; the book's page is the village only). */
+  tabs?: boolean;
   give?(project: string, need: string): void;
   giveAll?(project: string): void;
   /** Marlow's notes, to read again. */
@@ -24,13 +29,16 @@ export interface VillageBoardOptions {
  * The Village Board's insides (Milestone 6): what's up now (one project at a time), what's
  * finished, and Marlow's notes; tap a project for its card, with each need, Give buttons, who's
  * helping (faces, never counts), what's next and what it opens. The board card and the
- * collection book's Village page both show it. It stays up to date while it's open.
+ * collection book's Village page both show it. It stays up to date while it's open. On the board
+ * card, a second tab (Milestone 7) shows Your home: each cottage's upgrades, the porch first,
+ * which anyone can give to.
  */
 export class VillageBoard {
   private state: BoardState | null = null;
   private bag: Inventory | null = null;
   private coins: number | null = null;
   private project: string | null = null;
+  private tab: "village" | "home" = "village";
   private shown = "";
 
   constructor(
@@ -46,9 +54,18 @@ export class VillageBoard {
     this.render();
   }
 
-  /** Opens a project's card (or the board, with null). */
+  /** Opens a project's card (or the board, with null), on its own tab. */
   showProject(id: string | null) {
     this.project = id;
+    if (id !== null) this.tab = id.includes(":") ? "home" : "village";
+    this.shown = "";
+    this.render();
+  }
+
+  /** Shows the Village or Your home tab. */
+  showTab(tab: "village" | "home") {
+    this.tab = tab;
+    this.project = null;
     this.shown = "";
     this.render();
   }
@@ -57,17 +74,74 @@ export class VillageBoard {
     const state = this.state;
     if (!state) return;
     const card = this.project ? projectCard(this.project, state, this.options.readOnly ? null : this.bag, this.coins) : null;
-    const key = JSON.stringify([this.project, card ?? boardWords(state), this.options.readOnly ? null : this.coins]);
+    const words = card ?? (this.tab === "home" ? homeWords(state) : boardWords(state));
+    const key = JSON.stringify([this.project, this.tab, words, this.options.readOnly ? null : this.coins]);
     if (key === this.shown) return;
     this.shown = key;
-    this.root.replaceChildren(...(card ? this.projectView(card) : this.boardView(state)));
+    const body = card ? this.projectView(card) : this.tab === "home" ? this.homeView(state) : this.boardView(state);
+    this.root.replaceChildren(...(this.options.tabs && !card ? [this.tabsRow()] : []), ...body);
   }
 
-  /** A project's picture in its little frame: the top of the lighthouse, where the lamp is. */
+  /** Village and Your home. */
+  private tabsRow(): HTMLElement {
+    const row = el("div", "book-tabs board-tabs");
+    for (const [tab, title] of [
+      ["village", "Village"],
+      ["home", "Your home"],
+    ] as const) {
+      row.append(button(title, `book-tab${this.tab === tab ? " on" : ""}`, () => this.showTab(tab)));
+    }
+    return row;
+  }
+
+  /** A project's picture in its little frame: the top of the lighthouse, where the lamp is; a porch as it is. */
   private picture(projectId: string): HTMLElement {
-    const pic = el("span", "board-pic tall");
-    pic.append(picture(this.options.projectPicture(projectId), "tall"));
+    const tall = !projectId.includes(":");
+    const pic = el("span", `board-pic${tall ? " tall" : ""}`);
+    pic.append(picture(this.options.projectPicture(projectId), tall ? "tall" : "square"));
     return pic;
+  }
+
+  /** The Your home tab: each cottage someone lives in, its upgrades built, up, or still to come. */
+  private homeView(state: BoardState): HTMLElement[] {
+    const words = homeWords(state);
+    const says = el("p", "board-says", `“${words.line}” `);
+    says.append(el("span", "board-sig", "— M."));
+    const out: HTMLElement[] = [says];
+    if (words.note) out.push(el("p", "board-quiet home-note", words.note));
+    for (const cottage of words.cottages) {
+      out.push(el("div", "panel-label", cottage.title));
+      for (const row of cottage.rows) out.push(this.homeRow(row));
+    }
+    if (words.cottages.length > 0) out.push(el("p", "board-quiet home-note", "Either of you can help build either house."));
+    return out;
+  }
+
+  private homeRow(row: HomeRow): HTMLElement {
+    const open = row.state === "open" || row.state === "waiting";
+    const node = open && row.id ? button("", "board-project", () => this.showProject(row.id)) : el("div", `board-project ${row.state === "later" ? "later" : "finished"}`);
+    const pic = el("span", "board-pic");
+    const src = row.icon === "porch" ? this.options.porchPicture : this.options.icon(row.icon);
+    if (src) pic.append(picture(src, "square"));
+    const words = el("div", "grow");
+    words.append(el("b", "", row.name));
+    if (row.state === "open") {
+      const needs = el("small", "home-needs");
+      row.needs.forEach((need, i) => {
+        if (i > 0) needs.append(document.createTextNode(" · "));
+        if (need.icon) needs.append(picture(this.options.icon(need.icon), "home-need"));
+        needs.append(document.createTextNode(need.icon ? ` ${need.text}` : need.text));
+      });
+      const bar = el("div", "board-bar");
+      const fill = el("i");
+      fill.style.width = `${Math.round(row.progress * 100)}%`;
+      bar.append(fill);
+      words.append(needs, bar);
+    } else if (row.sub) words.append(el("small", "", row.sub));
+    node.append(pic, words);
+    if (open) node.append(el("span", "board-chev", "›"));
+    else if (row.state === "built") node.append(el("span", "board-tick", "✓"));
+    return node;
   }
 
   private faces(faces: readonly HelperView[], label: string): HTMLElement {
@@ -118,7 +192,7 @@ export class VillageBoard {
   }
 
   private projectView(card: ProjectCard): HTMLElement[] {
-    const back = button("‹ The board", "panel-pill board-back", () => this.showProject(null));
+    const back = button(card.home ? "‹ Your home" : "‹ The board", "panel-pill board-back", () => this.showProject(null));
     back.style.background = "#e4d3ad";
     back.style.color = "#4a3b2a";
     const head = el("div", "board-step");
@@ -126,11 +200,9 @@ export class VillageBoard {
     const words = el("div", "grow");
     const step = card.step === null ? card.steps : card.step + 1;
     const dots = "●".repeat(Math.min(step, card.steps)) + "○".repeat(Math.max(0, card.steps - step));
-    words.append(
-      el("div", "board-dots", dots),
-      el("b", "", card.step === null ? `${card.name}: done!` : `Step ${step} of ${card.steps} · ${card.stepName}`),
-      el("small", "", `“${card.blurb}”`),
-    );
+    // A one-step project (a house upgrade) needs no dots or step count.
+    const title = card.step === null ? `${card.name}: done!` : card.steps === 1 ? card.stepName : `Step ${step} of ${card.steps} · ${card.stepName}`;
+    words.append(...(card.steps > 1 ? [el("div", "board-dots", dots)] : []), el("b", "", title), el("small", "", `“${card.blurb}”`));
     head.append(pic, words);
     const out: HTMLElement[] = [back, el("h3", "panel-title", card.name), head];
     for (const need of card.needs) out.push(this.needRow(card, need));

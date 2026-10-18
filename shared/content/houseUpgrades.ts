@@ -76,6 +76,18 @@ export const LATER_UPGRADES: readonly { readonly name: string; readonly afterHin
   { name: "A loft", afterHint: "After the tailor's", icon: "wide_shelf" },
 ];
 
+/** Marlow's line on the Your home tab when there's nothing to give to. */
+export const HOME_LINES = {
+  /** Before the lighthouse is lit. */
+  before: "The light first. Then I'll see what I can do for your cottages.",
+  /** Every upgrade there is so far is built. */
+  allBuilt: "A fine porch on every cottage. I'll have more ideas for them before long.",
+  /** Nobody lives in a cottage yet. */
+  nobodyHome: "Nobody's moved into the cottages in the meadow yet.",
+  /** This farmer hasn't moved in, but someone has. */
+  moveIn: "Move into a cottage in the meadow, and I'll help with yours too.",
+} as const;
+
 /** A line about a cottage, with its owner's name in it. */
 export function ownerWords(line: string, owner: string): string {
   return line.replaceAll("{owner}", owner || "Someone");

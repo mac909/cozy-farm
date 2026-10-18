@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import { isWalkable, type Rect, tileAt, type TilePos, type WorldMap } from "./map";
 import { exitTile, frontOfDoor } from "./houses";
 import { mapFor } from "./gates";
-import { PROJECT_IDS, PROJECTS, stepName } from "../content/projects";
+import { PROJECT_IDS, PROJECTS, houseProjectId, isProjectId, stepName } from "../content/projects";
+import { HOUSE_UPGRADE_IDS } from "../content/houseUpgrades";
+import { houseLook } from "../content/houses";
 import { isHint } from "../farming/actions";
 import { parseTiledMap, type TiledMapJson, tilesetImageUrl } from "./tiledMap";
 import { VILLAGE_MAP, VILLAGE_TILED } from "./villageMap";
@@ -323,7 +325,8 @@ const MILESTONE_5 = {
 
 describe("growing the map (Milestone 6: 32 columns east)", () => {
   const map = VILLAGE_MAP;
-  const everything = new Set(["keeper", "lighthouse/path", "lighthouse/stairs", "lighthouse/lamp", "lighthouse"]);
+  const porches = map.houses.flatMap((plan) => [houseProjectId(plan.id, "porch"), `${houseProjectId(plan.id, "porch")}/build`]);
+  const everything = new Set(["keeper", "lighthouse/path", "lighthouse/stairs", "lighthouse/lamp", "lighthouse", ...porches]);
 
   it("only grows east or down, so the farm, the places and the rooms stay exactly where they were", () => {
     expect(map.width).toBeGreaterThanOrEqual(MILESTONE_5.width);
@@ -384,12 +387,51 @@ describe("growing the map (Milestone 6: 32 columns east)", () => {
 
   it("only gates layers and objects on things that can be built", () => {
     const steps = PROJECT_IDS.flatMap((id) => PROJECTS[id].steps.map((_, i) => stepName(PROJECTS[id], i)));
+    // House upgrades (Milestone 7): "house1:porch", for every cottage on the map.
+    const upgrades = map.houses.flatMap((plan) => HOUSE_UPGRADE_IDS.map((upgrade) => houseProjectId(plan.id, upgrade)));
+    for (const id of upgrades) expect(isProjectId(id), id).toBe(true);
     // "bridge" is Milestone 9's project; its broken bridge is drawn already, as a teaser.
-    const known = new Set(["keeper", "bridge", ...PROJECT_IDS, ...steps]);
+    const known = new Set(["keeper", "bridge", ...PROJECT_IDS, ...steps, ...upgrades]);
     for (const layer of map.gates.layers) {
       for (const name of [layer.from, layer.until]) if (name) expect(known.has(name), `${layer.name}: ${name}`).toBe(true);
       if (layer.hint) expect(isHint({ reason: layer.hint }), `${layer.name}'s hint`).toBe(true);
     }
     for (const object of map.gates.objects) if (object.needs) expect(known.has(object.needs), `${object.name}: ${object.needs}`).toBe(true);
+  });
+});
+
+describe("porches (Milestone 7)", () => {
+  const map = VILLAGE_MAP;
+  const front = (plan: (typeof map.houses)[number]) => tileAt(plan.building.x, plan.building.y + plan.building.height).row;
+  const leftCol = (plan: (typeof map.houses)[number]) => tileAt(plan.building.x, plan.building.y).col;
+
+  it("wall off the lantern and the bench in front of each cottage, once its porch is built, as houses.ts says", () => {
+    for (const plan of map.houses) {
+      const layer = map.gates.layers.find((l) => l.name === `Collision porch ${plan.id}`);
+      expect(layer, plan.id).toBeDefined();
+      expect(layer!.kind).toBe("collision");
+      expect(layer!.from).toBe(houseProjectId(plan.id, "porch"));
+      const { porch } = houseLook(plan.id);
+      const painted: string[] = [];
+      layer!.tiles.forEach((row, r) => row.forEach((on, c) => on && painted.push(`${c},${r}`)));
+      const row = front(plan);
+      const col = leftCol(plan);
+      expect(painted.sort()).toEqual([col + porch.lantern, col + porch.bench, col + porch.bench + 1].map((c) => `${c},${row}`).sort());
+    }
+  });
+
+  it("leave the way to each door open, and everywhere else reachable, with every porch built", () => {
+    const built = new Set(["keeper", "lighthouse/path", "lighthouse", ...map.houses.map((plan) => houseProjectId(plan.id, "porch"))]);
+    const all = mapFor(map, built);
+    const walk = reachable(all, all.spawn);
+    for (const plan of all.houses) {
+      const door = frontOfDoor(plan);
+      expect(walk.has(`${door.col},${door.row}`), plan.id).toBe(true);
+      // The door's own column isn't part of the porch's walls.
+      expect(all.blocked[door.row][door.col]).toBe(false);
+    }
+    const before = reachable(mapFor(map, new Set(["keeper", "lighthouse/path", "lighthouse"])), map.spawn);
+    // Only the porch's own tiles stop being walkable.
+    expect(before.size - walk.size).toBe(map.houses.length * 3);
   });
 });

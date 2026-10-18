@@ -1,12 +1,13 @@
 import { FORAGE, isForageId } from "../../../shared/content/forage";
 import { ITEMS, pluralName, type ItemId } from "../../../shared/content/items";
 import { FIRST_NOTE, KEEPER_NAME, NEXT_PLAN_LINE, keeperWords } from "../../../shared/content/keeper";
-import { PROJECTS, PROJECT_IDS, stepName, type AnyKind, type Need, type ProjectDef } from "../../../shared/content/projects";
+import { PROJECTS, PROJECT_IDS, houseProjectId, houseProjectOf, projectDef, stepName, type AnyKind, type Need, type ProjectDef } from "../../../shared/content/projects";
+import { HOME_LINES, HOUSE_UPGRADES, HOUSE_UPGRADE_IDS, LATER_UPGRADES, ownerWords } from "../../../shared/content/houseUpgrades";
 import type { Inventory } from "../../../shared/inventory/inventory";
 import type { HelperView } from "../../../shared/stateSync";
 import type { GameClock } from "../../../shared/time/clock";
 import { builtThings } from "../../../shared/village/built";
-import { canGive, finishedProjects, givingStep, isFinished, needsOf, openProjects, progressOf } from "../../../shared/village/projects";
+import { canGive, finishedProjects, givingStep, isFinished, needsOf, openProjects, openUpgrades, progressOf } from "../../../shared/village/projects";
 import type { Village } from "../../../shared/village/village";
 
 /**
@@ -20,6 +21,21 @@ export interface BoardState {
   village: Village;
   helpers: Readonly<Record<string, readonly HelperView[]>>;
   clock: GameClock;
+  /** Who lives in each cottage, and their name (for the Your home tab, Milestone 7). Missing: nobody. */
+  houses?: Readonly<Record<string, { readonly owner: string; readonly ownerName: string }>>;
+  /** The farmer on this device, so their own cottage comes first. */
+  me?: string | null;
+}
+
+/** A project's name on its card and in lines: a house upgrade's says whose ("Pip's porch"). */
+export function projectName(project: ProjectDef, state: Pick<BoardState, "houses">): string {
+  if (!project.house) return project.name;
+  return `${ownerOf(state, project.house.houseId)}'s ${HOUSE_UPGRADES[project.house.upgrade].noun}`;
+}
+
+/** Whose a cottage is, by name ("Someone" if nobody's, or the name isn't known). */
+export function ownerOf(state: Pick<BoardState, "houses">, houseId: string): string {
+  return state.houses?.[houseId]?.ownerName || "Someone";
 }
 
 /** A project on the board's "Now" list. */
@@ -148,6 +164,8 @@ export interface NeedRow {
 export interface ProjectCard {
   id: string;
   name: string;
+  /** A house upgrade: its card goes back to the Your home tab. */
+  home: boolean;
   /** Step being gathered (or just gathered), counted from 0; null once the project is finished. */
   step: number | null;
   steps: number;
@@ -163,10 +181,11 @@ export interface ProjectCard {
   opens: readonly string[];
 }
 
-/** A project's card, for someone with `bag` and the shared `coins`. */
+/** A project's card (the village's, or a house upgrade's), for someone with `bag` and the shared `coins`. */
 export function projectCard(projectId: string, state: BoardState, bag: Inventory | null, coins: number | null): ProjectCard | null {
-  const project = PROJECTS[projectId];
+  const project = projectDef(projectId);
   if (!project) return null;
+  const owner = project.house ? ownerOf(state, project.house.houseId) : "";
   const progress = progressOf(state.village, projectId);
   const giving = givingStep(project, progress);
   const finished = isFinished(project, progress);
@@ -199,11 +218,12 @@ export function projectCard(projectId: string, state: BoardState, bag: Inventory
   const next = !finished && nextIndex < project.steps.length ? project.steps[nextIndex] : null;
   return {
     id: projectId,
-    name: project.name,
+    name: projectName(project, state),
+    home: project.house !== undefined,
     step,
     steps: project.steps.length,
     stepName: project.steps[shown].name,
-    blurb: keeperWords(project.steps[shown].blurb),
+    blurb: ownerWords(keeperWords(project.steps[shown].blurb), owner),
     needs,
     waiting: finished ? null : giving === null ? `${project.steps[shown].tonight}` : null,
     canGiveAll: needs.some((n) => !n.coins && n.give > 0),
@@ -221,8 +241,11 @@ export interface KeeperNote {
   paragraphs: readonly string[];
 }
 
-/** Every note Marlow has written so far, oldest first: his first, one per step built, one per project opened. */
-export function keeperNotes(village: Village, clock: GameClock): KeeperNote[] {
+/**
+ * Every note Marlow has written so far, oldest first: his first, one per step built, one per
+ * project opened, then one per house upgrade built (`houses` for whose).
+ */
+export function keeperNotes(village: Village, clock: GameClock, houses?: BoardState["houses"]): KeeperNote[] {
   const built = builtThings({ village, clock });
   if (!built.has("keeper")) return [];
   const notes: KeeperNote[] = [{ id: "first", title: `${KEEPER_NAME} says hello`, paragraphs: FIRST_NOTE.map(keeperWords) }];
@@ -234,5 +257,79 @@ export function keeperNotes(village: Village, clock: GameClock): KeeperNote[] {
     });
     if (built.has(id)) notes.push({ id, title: project.opening.title, paragraphs: [keeperWords(project.opening.note)] });
   }
+  // House upgrades, in the order they were built.
+  const upgrades = Object.entries(village.projects)
+    .filter(([id]) => houseProjectOf(id) && built.has(id))
+    .sort(([a, x], [b, y]) => (x.doneDay ?? 0) - (y.doneDay ?? 0) || a.localeCompare(b));
+  for (const [id] of upgrades) {
+    const project = projectDef(id)!;
+    notes.push({ id, title: projectName(project, { houses }), paragraphs: [keeperWords(project.steps[0].note)] });
+  }
   return notes;
+}
+
+/** One upgrade on the Your home tab (Milestone 7). */
+export interface HomeRow {
+  /** Its project id ("house1:porch"), or null for one still to come in a later milestone. */
+  id: string | null;
+  name: string;
+  /** "later": not yet (after the lighthouse, after the garden shop); "open": taking gifts; "waiting": all in, built tonight; "built". */
+  state: "later" | "open" | "waiting" | "built";
+  /** "After the lighthouse", "Built on day 15", "All in! Marlow's building it tonight." Null while it's open (its needs show instead). */
+  sub: string | null;
+  /** While it's open: each need, short ("12" of driftwood), with its picture; null for coins. */
+  needs: { icon: ItemId | null; text: string }[];
+  /** How much is in, 0 to 1, while it's open. */
+  progress: number;
+  /** Its picture: the porch, or a later one's stand-in item. */
+  icon: ItemId | "porch";
+}
+
+export interface HomeWords {
+  /** Marlow's line at the top. */
+  line: string;
+  /** Each cottage someone lives in, this device's first. */
+  cottages: { houseId: string; title: string; mine: boolean; rows: HomeRow[] }[];
+  /** For someone who hasn't moved in yet. */
+  note: string | null;
+}
+
+/** The board's Your home tab (Milestone 7): every cottage's upgrades, built, up, or still to come. */
+export function homeWords(state: BoardState): HomeWords {
+  const houses = state.houses ?? {};
+  const me = state.me ?? null;
+  const built = builtThings({ village: state.village, clock: state.clock });
+  const open = openUpgrades({ village: state.village, clock: state.clock, houses }, me ?? undefined);
+  const ids = Object.keys(houses).sort((a, b) => Number(houses[b].owner === me) - Number(houses[a].owner === me) || a.localeCompare(b, undefined, { numeric: true }));
+  const cottages = ids.map((houseId, index) => {
+    const rows: HomeRow[] = HOUSE_UPGRADE_IDS.map((upgrade) => {
+      const def = HOUSE_UPGRADES[upgrade];
+      const id = houseProjectId(houseId, upgrade);
+      const progress = progressOf(state.village, id);
+      if (built.has(id)) return { id, name: def.name, state: "built", sub: progress.doneDay ? `Built on day ${progress.doneDay}` : "Built", needs: [], progress: 1, icon: "porch" };
+      if (!built.has(def.after)) return { id: null, name: def.name, state: "later", sub: def.afterHint, needs: [], progress: 0, icon: "porch" };
+      const project = projectDef(id)!;
+      const giving = givingStep(project, progress);
+      if (giving === null) return { id, name: def.name, state: "waiting", sub: "All in! Marlow's building it tonight.", needs: [], progress: 1, icon: "porch" };
+      const views = needsOf(project, progress, giving);
+      return {
+        id,
+        name: def.name,
+        state: "open",
+        sub: null,
+        needs: views.map((v) => ({ icon: needIcon(v.need), text: v.need.kind === "coins" ? `${v.need.count.toLocaleString("en-GB")} coins` : String(v.need.count) })),
+        progress: views.reduce((sum, v) => sum + v.given / v.need.count, 0) / views.length,
+        icon: "porch",
+      };
+    });
+    // What's still to come, under the first cottage listed (yours, if you have one).
+    if (index === 0) for (const later of LATER_UPGRADES) rows.push({ id: null, name: later.name, state: "later", sub: later.afterHint, needs: [], progress: 0, icon: later.icon });
+    return { houseId, title: `${houses[houseId].ownerName || "Someone"}'s cottage`, mine: houses[houseId].owner === me, rows };
+  });
+  // Every upgrade there is so far built on every cottage (the ones still to come don't count).
+  const allBuilt = cottages.length > 0 && cottages.every((c) => c.rows.slice(0, HOUSE_UPGRADE_IDS.length).every((r) => r.state === "built"));
+  const line = open.length > 0 ? open[0].boardLine : allBuilt ? HOME_LINES.allBuilt : HOME_LINES.before;
+  const mine = me !== null && Object.values(houses).some((house) => house.owner === me);
+  const note = cottages.length === 0 ? HOME_LINES.nobodyHome : mine ? null : HOME_LINES.moveIn;
+  return { line: keeperWords(line), cottages, note };
 }

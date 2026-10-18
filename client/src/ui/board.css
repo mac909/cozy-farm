@@ -479,3 +479,51 @@
 .book-village {
   margin-top: 4px;
 }
+
+/* The board card's tabs (Milestone 7): Village and Your home, the book's tabs a little shorter. */
+.board-tabs .book-tab {
+  min-height: 38px;
+  justify-content: center;
+}
+
+/* A square picture (a porch) fills its little frame. */
+.board-pic img.square {
+  width: 40px;
+  height: 40px;
+}
+
+/* Your home: what a porch needs, with little pictures, and the ones still to come, faded. */
+.home-needs {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+img.home-need {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.board-project.later {
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+  opacity: 0.6;
+}
+
+.board-project.later .board-pic img {
+  filter: brightness(0) opacity(0.3);
+}
+
+.board-project.later + .board-project,
+.board-project.finished + .board-project,
+.board-project + .board-project.later {
+  margin-top: 6px;
+}
+
+.home-note {
+  margin: 8px 0 0;
+  text-align: center;
+}

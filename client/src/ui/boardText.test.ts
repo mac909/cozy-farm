@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addItems, newInventory, type Inventory } from "../../../shared/inventory/inventory";
 import type { ProjectProgress, Village } from "../../../shared/village/village";
-import { boardWords, keeperNotes, needCount, needName, projectCard, type BoardState } from "./boardText";
+import { boardWords, homeWords, keeperNotes, needCount, needName, projectCard, type BoardState } from "./boardText";
 
 const pip = { farmerId: "pip", name: "Pip", character: "woman" as const };
 const juno = { farmerId: "juno", name: "Juno", character: "boy" as const };
@@ -80,5 +80,84 @@ describe("Marlow's notes", () => {
     expect(needName({ kind: "any", category: "beach", count: 4 })).toBe("Any beach find");
     expect(needCount({ kind: "item", itemId: "sea_glass", count: 2 })).toBe("2 Sea Glass");
     expect(needCount({ kind: "coins", count: 1500 })).toBe("1,500 coins");
+  });
+});
+
+describe("the Your home tab (Milestone 7)", () => {
+  const lit: ProjectProgress = { gathered: 3, built: 3, given: {}, helpers: ["pip"], doneDay: 5 };
+  const houses = { house1: { owner: "pip", ownerName: "Pip" }, house2: { owner: "juno", ownerName: "Juno" } };
+  const home = (projects: Village["projects"], me: string | null = "juno"): BoardState => ({
+    village: { keeperDay: 2, projects },
+    helpers: {},
+    clock: { day: 8, minute: 600 },
+    houses,
+    me,
+  });
+
+  it("waits for the lighthouse, with what's to come under your own cottage", () => {
+    const words = homeWords(home({}));
+    expect(words.line).toMatch(/The light first/);
+    expect(words.cottages.map((c) => [c.title, c.mine])).toEqual([
+      ["Juno's cottage", true],
+      ["Pip's cottage", false],
+    ]);
+    expect(words.cottages[0].rows.map((r) => [r.name, r.state, r.sub])).toEqual([
+      ["A porch", "later", "After the lighthouse"],
+      ["A garden", "later", "After the garden shop"],
+      ["A bedroom", "later", "After the bridge"],
+      ["A kitchen", "later", "After the café"],
+      ["A loft", "later", "After the tailor's"],
+    ]);
+    expect(words.cottages[1].rows.map((r) => r.name)).toEqual(["A porch"]);
+    expect(words.note).toBeNull();
+  });
+
+  it("puts a porch up for each cottage once the lighthouse is lit, with what it needs and how much is in", () => {
+    const words = homeWords(home({ lighthouse: lit, "house1:porch": { gathered: 0, built: 0, given: { driftwood: 12, coins: 1000 }, helpers: ["juno"], doneDay: null } }));
+    expect(words.line).toMatch(/porch/);
+    const pips = words.cottages[1].rows[0];
+    expect(pips).toMatchObject({ id: "house1:porch", state: "open", sub: null });
+    expect(pips.needs).toEqual([
+      { icon: "driftwood", text: "12" },
+      { icon: "branch", text: "8" },
+      { icon: null, text: "2,000 coins" },
+    ]);
+    expect(pips.progress).toBeCloseTo((1 + 0 + 0.5) / 3);
+  });
+
+  it("says when it's all in, and when it's built", () => {
+    const words = homeWords(
+      home({
+        lighthouse: lit,
+        "house1:porch": { gathered: 1, built: 0, given: {}, helpers: ["juno"], doneDay: null },
+        "house2:porch": { gathered: 1, built: 1, given: {}, helpers: ["pip"], doneDay: 7 },
+      }),
+    );
+    expect(words.cottages[0].rows[0]).toMatchObject({ state: "built", sub: "Built on day 7" });
+    expect(words.cottages[1].rows[0]).toMatchObject({ state: "waiting", sub: expect.stringMatching(/tonight/) });
+  });
+
+  it("asks someone without a cottage to move in first", () => {
+    expect(homeWords(home({ lighthouse: lit }, "stranger")).note).toMatch(/Move into a cottage/);
+    expect(homeWords({ ...home({}), houses: {} }).note).toMatch(/Nobody/);
+  });
+
+  it("names a porch's card by whose it is, with one step and a way back home", () => {
+    const card = projectCard("house1:porch", home({ lighthouse: lit }), bag(["driftwood", 5]), 3000)!;
+    expect(card).toMatchObject({ name: "Pip's porch", home: true, steps: 1, step: 0, stepName: "Build the porch" });
+    expect(card.needs.map((n) => [n.name, n.give])).toEqual([
+      ["Driftwood", 5],
+      ["Branches", 0],
+      ["Coins", 2000],
+    ]);
+  });
+
+  it("keeps Marlow's note for each porch built, by whose it is", () => {
+    const notes = keeperNotes(
+      { keeperDay: 2, projects: { lighthouse: lit, "house2:porch": { gathered: 1, built: 1, given: {}, helpers: [], doneDay: 7 } } },
+      { day: 8, minute: 400 },
+      houses,
+    );
+    expect(notes.at(-1)).toEqual({ id: "house2:porch", title: "Juno's porch", paragraphs: ["A porch! Somewhere to sit and watch the boats come in."] });
   });
 });
