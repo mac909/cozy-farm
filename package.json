@@ -14,7 +14,8 @@
     "farm:up": "docker compose up -d --build",
     "farm:down": "docker compose down",
     "farm:logs": "docker compose logs -f",
-    "farm:backup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backup-farm.ps1"
+    "farm:backup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backup-farm.ps1",
+    "farm:restore": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restore-farm.ps1"
   },
   "dependencies": {
     "@colyseus/schema": "^3.0.0",

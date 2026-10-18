@@ -136,8 +136,8 @@ export class SaveStore<T extends VersionedSave> {
   }
 }
 
-/** A world that went into a snapshot. */
-export interface SnapshotWorld {
+/** A world found in a save database by `checkSaveFile` or `snapshotSaves`. */
+export interface StoredWorld {
   worldId: string;
   /** The version it's stored in. */
   version: number;
@@ -153,7 +153,7 @@ export function snapshotSaves<T extends VersionedSave>(
   dataDir: string,
   dest: string,
   format: SaveFormat<T>,
-): SnapshotWorld[] {
+): StoredWorld[] {
   const file = path.join(dataDir, SAVE_FILE);
   if (!existsSync(file)) throw new Error(`There's no save database at ${file} yet.`);
 
@@ -166,19 +166,42 @@ export function snapshotSaves<T extends VersionedSave>(
     source.close();
   }
 
-  const copy = openDatabase(dest, { readOnly: true });
+  return checkSaveFile(dest, format);
+}
+
+/**
+ * Checks a save database file (a backup, say) without changing it: runs SQLite's integrity check,
+ * then loads every world in it, and returns them. Throws if the file is damaged, isn't a save
+ * database, or has a world that won't load.
+ */
+export function checkSaveFile<T extends VersionedSave>(file: string, format: SaveFormat<T>): StoredWorld[] {
+  if (!existsSync(file)) throw new Error(`There's no file at ${file}.`);
+
+  const db = openDatabase(file, { readOnly: true });
   try {
-    const integrity = copy.prepare("PRAGMA integrity_check").all() as { integrity_check: string }[];
-    if (integrity[0]?.integrity_check !== "ok") {
-      throw new Error(`The snapshot at ${dest} failed SQLite's integrity check: ${JSON.stringify(integrity)}`);
+    let rows: SaveRow[];
+    try {
+      const integrity = db.prepare("PRAGMA integrity_check").all() as { integrity_check: string }[];
+      if (integrity[0]?.integrity_check !== "ok") {
+        throw new SaveLoadError(
+          "not-a-database",
+          `the saves in ${file}`,
+          `the file failed SQLite's integrity check (${JSON.stringify(integrity)})`,
+        );
+      }
+      if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'saves'").get()) {
+        throw new SaveLoadError("not-a-database", `the saves in ${file}`, "it has no saves table, so it isn't a save database");
+      }
+      rows = db.prepare("SELECT world_id, data, saved_at FROM saves ORDER BY world_id").all() as unknown as SaveRow[];
+    } catch (error) {
+      throw asLoadError(error, file);
     }
-    const rows = copy.prepare("SELECT world_id, data, saved_at FROM saves ORDER BY world_id").all() as unknown as SaveRow[];
     return rows.map((row) => {
-      const { fromVersion } = upgradeSave(row.data, format, saveName(row.world_id, dest));
+      const { fromVersion } = upgradeSave(row.data, format, saveName(row.world_id, file));
       return { worldId: row.world_id, version: fromVersion, savedAt: row.saved_at };
     });
   } finally {
-    copy.close();
+    db.close();
   }
 }
 

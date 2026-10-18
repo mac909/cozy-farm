@@ -13,17 +13,20 @@ export type SaveLoadReason =
  */
 export class SaveLoadError extends Error {
   readonly reason: SaveLoadReason;
+  /** What's wrong, without the advice on what to do about it that `message` adds. */
+  readonly summary: string;
 
   /** `where` names the save, `problem` says what's wrong with it. */
   constructor(reason: SaveLoadReason, where: string, problem: string, cause?: unknown) {
+    const summary = `Can't load ${where}: ${problem}.`;
     super(
-      `Can't load ${where}: ${problem}.\n` +
-        "The save was left as it is. Restore a backup (npm run farm:backup keeps them in " +
-        "%OneDrive%\\CozyFarm\\backups) or fix it by hand.",
+      `${summary}\n` +
+        "The save was left as it is. Restore a backup with npm run farm:restore, or fix it by hand.",
       { cause },
     );
     this.name = "SaveLoadError";
     this.reason = reason;
+    this.summary = summary;
   }
 }
 

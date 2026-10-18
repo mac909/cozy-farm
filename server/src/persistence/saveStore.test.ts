@@ -1,11 +1,11 @@
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SaveLoadError } from "./errors";
 import type { SaveFormat, VersionedSave } from "./saveFormat";
-import { SAVE_FILE, SaveStore, snapshotSaves } from "./saveStore";
+import { SAVE_FILE, SaveStore, checkSaveFile, snapshotSaves } from "./saveStore";
 import { WORLD_ID, WORLD_SAVE, type WorldSave, newWorldSave } from "./worldSave";
 
 let dataDir: string;
@@ -218,6 +218,47 @@ describe("snapshotSaves", () => {
     openStore(WORLD_SAVE);
     writeRawSave(WORLD_ID, "not json");
     expect(() => snapshotSaves(dataDir, path.join(dataDir, "backup.sqlite"), WORLD_SAVE)).toThrow(SaveLoadError);
+  });
+});
+
+describe("checkSaveFile", () => {
+  it("lists the worlds in a good save database without changing it", () => {
+    openStore(WORLD_SAVE).save(WORLD_ID, { ...newWorldSave(), day: 4 });
+    const file = path.join(dataDir, SAVE_FILE);
+    const before = readFileSync(file);
+
+    expect(checkSaveFile(file, WORLD_SAVE)).toEqual([{ worldId: WORLD_ID, version: 1, savedAt: expect.any(String) }]);
+    expect(readFileSync(file).equals(before)).toBe(true);
+  });
+
+  it("accepts a save database with no worlds yet", () => {
+    openStore(WORLD_SAVE);
+    expect(checkSaveFile(path.join(dataDir, SAVE_FILE), WORLD_SAVE)).toEqual([]);
+  });
+
+  it("fails when there's no file", () => {
+    expect(() => checkSaveFile(path.join(dataDir, "missing.sqlite"), WORLD_SAVE)).toThrow(/no file/);
+  });
+
+  it("fails on a file that isn't a database", () => {
+    const file = path.join(dataDir, "notes.sqlite");
+    writeFileSync(file, "these are not the saves you're looking for ".repeat(100));
+    expectLoadError(() => checkSaveFile(file, WORLD_SAVE), "not-a-database");
+  });
+
+  it("fails on a database that isn't a save database", () => {
+    const file = path.join(dataDir, "other.sqlite");
+    const db = new DatabaseSync(file);
+    db.exec("CREATE TABLE crops (name TEXT)");
+    db.close();
+    const error = expectLoadError(() => checkSaveFile(file, WORLD_SAVE), "not-a-database");
+    expect(error.summary).toContain("no saves table");
+  });
+
+  it("fails when a world won't load, such as one from a newer server", () => {
+    openStore(WORLD_SAVE);
+    writeRawSave(WORLD_ID, JSON.stringify({ version: 99, day: 3 }));
+    expectLoadError(() => checkSaveFile(path.join(dataDir, SAVE_FILE), WORLD_SAVE), "newer-version");
   });
 });
 

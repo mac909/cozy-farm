@@ -21,12 +21,9 @@ the PC is on, if it was off), from a normal PowerShell window:
   $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
   Register-ScheduledTask -TaskName 'Cozy Farm backup' -Action $action -Trigger $trigger -Settings $settings
 
-Restoring a backup replaces the farm's current save. With the farm stopped:
-
-  docker stop cozy-farm
-  docker run --rm -v cozy-farm_farm-data:/data cozy-farm-farm rm -f /data/saves.sqlite-journal
-  docker cp "<path to backup>.sqlite" cozy-farm:/app/data/saves.sqlite
-  docker start cozy-farm
+To restore a backup, run `npm run farm:restore` (scripts/restore-farm.ps1). It lists the newest
+backups and asks which one, checks it loads, then swaps it in and restarts the farm. The save it
+replaces is kept in the volume as saves.before-restore-<date>_<time>.sqlite.
 #>
 [CmdletBinding()]
 param(
