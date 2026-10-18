@@ -37,6 +37,7 @@ describe("item data", () => {
       CROP_IDS.length * 2 +
       inCategory("tool").length +
       inCategory("beach").length +
+      inCategory("fish").length +
       inCategory("furniture").length;
     expect(items.length).toBe(expected);
   });

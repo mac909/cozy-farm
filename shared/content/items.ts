@@ -1,14 +1,15 @@
 import { CROPS, type CropId } from "./crops";
+import { FISH, FISH_IDS, type FishId } from "./fish";
 
 /**
  * Everything a player can carry. Every number here is a first guess, meant to be tuned by playing.
  *
- * Seeds and harvested crops are built from CROPS, so their prices live there.
+ * Seeds and harvested crops are built from CROPS, and fish from FISH, so their prices live there.
  * An item's `buyPrice` is what the general store charges (no `buyPrice`: the
  * store doesn't sell it); its `sellPrice` is what the shipping crate pays
  * (no `sellPrice`: it can't be sold).
  */
-export type ItemCategory = "seed" | "crop" | "tool" | "beach" | "furniture";
+export type ItemCategory = "seed" | "crop" | "tool" | "beach" | "fish" | "furniture";
 
 /** The floor tiles a piece of furniture covers, before it's rotated. */
 export interface Footprint {
@@ -49,12 +50,24 @@ export interface BeachItemDef extends BaseItemDef {
   category: "beach";
 }
 
+export interface FishItemDef extends BaseItemDef {
+  category: "fish";
+  /** The fish this is. */
+  fishId: FishId;
+}
+
 export interface FurnitureItemDef extends BaseItemDef {
   category: "furniture";
   footprint: Footprint;
 }
 
-export type ItemDef = SeedItemDef | CropItemDef | ToolItemDef | BeachItemDef | FurnitureItemDef;
+export type ItemDef =
+  | SeedItemDef
+  | CropItemDef
+  | ToolItemDef
+  | BeachItemDef
+  | FishItemDef
+  | FurnitureItemDef;
 
 /** How many of a stackable item fit in one inventory slot. */
 const STACK = 99;
@@ -72,6 +85,11 @@ export function seedItemId(cropId: CropId): SeedItemId {
 /** The item a harvest of `cropId` gives. Harvested crops share their crop's id. */
 export function cropItemId(cropId: CropId): CropId {
   return cropId;
+}
+
+/** The item a caught `fishId` gives. Fish items share their fish's id. */
+export function fishItemId(fishId: FishId): FishId {
+  return fishId;
 }
 
 const CROP_IDS = Object.keys(CROPS) as CropId[];
@@ -149,6 +167,24 @@ const beachData = {
   starfish: { id: "starfish", name: "Starfish", category: "beach", maxStack: STACK, sellPrice: 60 },
 } satisfies Record<string, BeachItemDef>;
 
+/** Caught, never bought. */
+const fishItems = Object.fromEntries(
+  FISH_IDS.map((fishId): [FishId, FishItemDef] => {
+    const fish = FISH[fishId];
+    return [
+      fishItemId(fishId),
+      {
+        id: fishItemId(fishId),
+        name: fish.name,
+        category: "fish",
+        fishId,
+        maxStack: STACK,
+        sellPrice: fish.sellPrice,
+      },
+    ];
+  }),
+) as Record<FishId, FishItemDef>;
+
 /** Starter furniture for decorating. Each ships back for about half its price. */
 const furnitureData = {
   wooden_chair: {
@@ -212,14 +248,16 @@ export type ItemId =
   | CropId
   | keyof typeof toolData
   | keyof typeof beachData
+  | FishId
   | keyof typeof furnitureData;
 
-/** Every item, grouped seeds, crops, tools, beach finds, furniture. Shop and bag listings follow this order. */
+/** Every item, grouped seeds, crops, tools, beach finds, fish, furniture. Shop and bag listings follow this order. */
 export const ITEMS: Readonly<Record<ItemId, ItemDef>> = {
   ...seedItems,
   ...cropItems,
   ...toolData,
   ...beachData,
+  ...fishItems,
   ...furnitureData,
 };
 
