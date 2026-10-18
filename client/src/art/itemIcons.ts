@@ -13,6 +13,8 @@ import {
   FISHING_KEY,
   furnitureIconKey,
   HOE_KEY,
+  MATERIAL_FRAME,
+  MATERIALS_KEY,
   WATERING_CAN_KEY,
 } from "./assets";
 import { cropItemFrame, seedPacketFrame } from "./cropFrames";
@@ -68,6 +70,8 @@ export function itemIcon(itemId: ItemId): Icon {
       return { key: itemId === "watering_can" ? WATERING_CAN_KEY : HOE_KEY };
     case "beach":
       return { key: BEACH_ITEMS_KEY, frame: BEACH_FRAMES[itemId] ?? 0 };
+    case "material":
+      return { key: MATERIALS_KEY, frame: MATERIAL_FRAME[itemId as keyof typeof MATERIAL_FRAME] ?? 0 };
     case "fish":
       return { key: FISH_ICONS_KEY, frame: FISH_IDS.indexOf(item.fishId) };
     case "bug":

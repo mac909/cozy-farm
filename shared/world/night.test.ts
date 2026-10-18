@@ -4,7 +4,9 @@ import { ripeStage, type FarmTile, type PlantedTile } from "../farming/farming";
 import { DAY_START_MINUTE } from "../time/clock";
 import { BEACHCOMBING } from "../beachcombing/beachcombing";
 import { shoreOf } from "../beachcombing/tide";
-import { endNight } from "./night";
+import { NO_GROUNDS } from "../foraging/forage";
+import { endNight, startOfServer } from "./night";
+import { FORAGE } from "../content/forage";
 import { VILLAGE_MAP } from "./villageMap";
 import { farmTileAt, newWorld, setFarmTile, type World } from "./world";
 
@@ -65,14 +67,14 @@ describe("endNight", () => {
     const before: World = { ...newWorld(), clock: { day: 3, minute: 23 * 60 } };
     const { world, report } = endNight(before);
     expect(world.clock).toEqual({ day: 4, minute: DAY_START_MINUTE });
-    expect(report).toEqual({ day: 4, grew: 0, ready: 0, sale: { lines: [], total: 0 }, coins: before.coins, washedUp: [] });
+    expect(report).toEqual({ day: 4, grew: 0, ready: 0, sale: { lines: [], total: 0 }, coins: before.coins, washedUp: [], foraged: [], built: [] });
     expect(world.lastMorning).toEqual(report);
   });
 
   it("brings a few finds onto the beach, and says what on the morning card", () => {
     const shore = shoreOf(VILLAGE_MAP);
     const before: World = { ...newWorld(42), clock: { day: 3, minute: 23 * 60 }, beach: { day: 3, finds: [] } };
-    const { world, report } = endNight(before, shore);
+    const { world, report } = endNight(before, () => ({ shore, grounds: NO_GROUNDS }));
     expect(world.beach.day).toBe(4);
     expect(world.beach.finds.length).toBeGreaterThanOrEqual(BEACHCOMBING.perMorning.min);
     expect(report.washedUp).toEqual(world.beach.finds.map((find) => find.findId));
@@ -82,9 +84,9 @@ describe("endNight", () => {
   it("keeps what nobody picked up, and stops when the beach is full", () => {
     const shore = shoreOf(VILLAGE_MAP);
     let world: World = { ...newWorld(7), beach: { day: 1, finds: [] } };
-    for (let night = 0; night < 10; night++) world = endNight(world, shore).world;
+    for (let night = 0; night < 10; night++) world = endNight(world, () => ({ shore, grounds: NO_GROUNDS })).world;
     expect(world.beach.finds.length).toBe(BEACHCOMBING.maxOnBeach);
-    const full = endNight(world, shore);
+    const full = endNight(world, () => ({ shore, grounds: NO_GROUNDS }));
     expect(full.report.washedUp).toEqual([]);
     expect(full.world.beach.finds).toEqual(world.beach.finds);
   });
@@ -96,11 +98,55 @@ describe("endNight", () => {
       beach: { day: 1, finds: [] },
       decorations: [{ itemId: "beach_umbrella", col: 20, row: 23, turn: 0 }],
     };
-    expect(endNight(before, shore).world.beach.finds).toEqual([]);
+    expect(endNight(before, () => ({ shore, grounds: NO_GROUNDS })).world.beach.finds).toEqual([]);
   });
 
   it("leaves the farmers alone", () => {
     const before: World = { ...newWorld(), farmers: { pip: { name: "Pip", character: "woman", bag: [] } } };
     expect(endNight(before).world.farmers).toBe(before.farmers);
+  });
+});
+
+describe("the village overnight (Milestone 6)", () => {
+  const strip = (row: number, from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => ({ col: from + i, row }));
+  const places = () => ({ shore: { sand: strip(22, 0, 40) }, grounds: { beach: strip(22, 0, 40), woods: strip(4, 0, 40) } });
+
+  it("brings Marlow on the morning of day 2, with a storm of driftwood and branches", () => {
+    const { world, report } = endNight(newWorld(11), places);
+    expect(world.village.keeperDay).toBe(2);
+    expect(world.forage.items.filter((i) => i.itemId === "driftwood")).toHaveLength(FORAGE.driftwood.storm);
+    expect(world.forage.items.filter((i) => i.itemId === "branch")).toHaveLength(FORAGE.branch.storm);
+    expect(report.foraged).toEqual(world.forage.items.map((i) => i.itemId));
+    // Nothing lies on top of a shell.
+    const finds = new Set(world.beach.finds.map((f) => `${f.col},${f.row}`));
+    for (const item of world.forage.items) expect(finds.has(`${item.col},${item.row}`)).toBe(false);
+  });
+
+  it("brings no driftwood before Marlow, and the usual few after", () => {
+    const later = endNight({ ...newWorld(11), clock: { day: 5, minute: 1000 }, village: { keeperDay: 2, projects: {} }, forage: { day: 5, items: [] } }, places);
+    const driftwood = later.report.foraged.filter((id) => id === "driftwood").length;
+    expect(driftwood).toBeGreaterThanOrEqual(FORAGE.driftwood.perMorning.min);
+    expect(driftwood).toBeLessThanOrEqual(FORAGE.driftwood.perMorning.max);
+  });
+
+  it("builds what was gathered, and says so on the morning card", () => {
+    const gathered = { gathered: 1, built: 0, given: {}, helpers: ["pip"], doneDay: null };
+    const before: World = { ...newWorld(), clock: { day: 4, minute: 1300 }, village: { keeperDay: 2, projects: { lighthouse: gathered } } };
+    const { world, report } = endNight(before);
+    expect(world.village.projects.lighthouse).toMatchObject({ gathered: 1, built: 1 });
+    expect(report.built).toEqual([{ project: "lighthouse", step: 0 }]);
+    expect(world.lastMorning?.built).toEqual(report.built);
+  });
+
+  it("brings Marlow when the server starts on a world past its first day, but not on day 1", () => {
+    const real = startOfServer({ ...newWorld(3), clock: { day: 9, minute: 700 }, beach: { day: 9, finds: [] } }, places);
+    expect(real.village.keeperDay).toBe(9);
+    expect(real.forage.items.filter((i) => i.itemId === "driftwood")).toHaveLength(FORAGE.driftwood.storm);
+    expect(real.beach.finds).toEqual([]);
+    const fresh = startOfServer(newWorld(3), places);
+    expect(fresh.village.keeperDay).toBe(0);
+    expect(fresh.forage.items).toEqual([]);
+    // Started again later the same day: no second storm.
+    expect(startOfServer(real, places)).toBe(real);
   });
 });

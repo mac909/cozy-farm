@@ -33,11 +33,16 @@ export class Character {
   private facing: Facing = "down";
   private moving = false;
 
+  /**
+   * `texture` is a sheet that isn't a player's character (Marlow, the pack's OldMan3): he only
+   * stands, so it has no walk.
+   */
   constructor(
     private readonly scene: Phaser.Scene,
     readonly sprite: Phaser.GameObjects.Sprite,
     look: Look,
     zoom: number,
+    private readonly texture?: string,
   ) {
     this.look = look;
     this.nameTag = scene.add
@@ -85,7 +90,7 @@ export class Character {
     this.moving = false;
     this.swingTimer?.remove();
     this.sprite.stop();
-    this.sprite.setTexture(characterKey(this.look.character), swingFrame(facing));
+    this.sprite.setTexture(this.texture ?? characterKey(this.look.character), swingFrame(facing));
     this.swingTimer = this.scene.time.delayedCall(SWING_MS, () => {
       this.swingTimer = undefined;
       this.showPose();
@@ -242,11 +247,11 @@ export class Character {
 
   private showPose() {
     const { character } = this.look;
-    if (this.moving) {
+    if (this.moving && !this.texture) {
       this.sprite.play(walkAnimKey(character, this.facing), true);
     } else {
       this.sprite.stop();
-      this.sprite.setTexture(characterKey(character), idleFrame(this.facing));
+      this.sprite.setTexture(this.texture ?? characterKey(character), idleFrame(this.facing));
     }
   }
 }

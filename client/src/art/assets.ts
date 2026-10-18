@@ -65,6 +65,19 @@ export const BITE_KEY = "bite";
 export const PARTICLE_KEY = "particle";
 /** The general store: the pack's green-roofed shop, a named frame on the house tileset. */
 export const STORE_FRAME = "store";
+/** Our building materials (Milestone 6): one 16×16 icon each, frames named in MATERIAL_FRAME. */
+export const MATERIALS_KEY = "materials";
+export const MATERIAL_FRAME = { driftwood: 0, branch: 1 } as const;
+/** Our lighthouse, 48 × 96: dark, scaffolded, mended, lit. */
+export const LIGHTHOUSE_KEY = "lighthouse";
+export const LIGHTHOUSE_FRAME = { dark: 0, scaffold: 1, ready: 2, lit: 3 } as const;
+/** Our Village Board, 32 × 32: frame n has n notes pinned on. */
+export const BOARD_KEY = "village-board";
+/** Marlow: the pack's OldMan3, and his face. */
+export const KEEPER_KEY = "keeper";
+export const KEEPER_FACE_KEY = "keeper-face";
+/** Each character's face (the pack's facesets, 38 × 38), for the board's helpers. */
+export const faceKey = (id: CharacterId) => `face-${id}`;
 /** Furniture icons for the hotbar, the bag and the store: 32×32, made at boot from each piece's picture. */
 export const furnitureIconKey = (id: FurnitureId) => `icon-${id}`;
 
@@ -108,7 +121,13 @@ export function loadArt(scene: Phaser.Scene): void {
       frameWidth: 16,
       frameHeight: 16,
     });
+    load.image(faceKey(id), `${PACK}Actor/Character/${folder}/Faceset.png`);
   }
+  load.spritesheet(KEEPER_KEY, `${PACK}Actor/Character/OldMan3/SpriteSheet.png`, { frameWidth: 16, frameHeight: 16 });
+  load.image(KEEPER_FACE_KEY, `${PACK}Actor/Character/OldMan3/Faceset.png`);
+  load.spritesheet(MATERIALS_KEY, `${CUSTOM}materials.png`, { frameWidth: 16, frameHeight: 16 });
+  load.spritesheet(LIGHTHOUSE_KEY, `${CUSTOM}lighthouse.png`, { frameWidth: 48, frameHeight: 96 });
+  load.spritesheet(BOARD_KEY, `${CUSTOM}village-board.png`, { frameWidth: 32, frameHeight: 32 });
   load.spritesheet(EMOTES_KEY, `${CUSTOM}emotes.png`, { frameWidth: 14, frameHeight: 13 });
   load.spritesheet(UI_ICONS_KEY, `${CUSTOM}ui-icons.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(SHIPPING_CRATE_KEY, `${CUSTOM}shipping-crate.png`, { frameWidth: 32, frameHeight: 32 });

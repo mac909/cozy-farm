@@ -31,6 +31,64 @@ export interface WorldMap {
   cluttered: boolean[][];
   /** The deep water off the end of the dock, where the big fish are: `deepWater` rectangles in Tiled. */
   deepWater: Rect[];
+  /**
+   * The Village Board (Milestone 6), right of the seed stand, 2 × 2 tiles: null until Marlow
+   * arrives (its object `needs: keeper`). Like the seed stand, it counts all over.
+   */
+  board: Rect | null;
+  /** The lighthouse on the point (Milestone 6), drawn whatever state it's in. Its door is the middle of its bottom row. */
+  lighthouse: Rect | null;
+  /** The water round the point, where the night fish bite: `pointWater` rectangles, `needs: lighthouse`. */
+  pointWater: Rect[];
+  /** Round the meadow's trees, where branches fall each morning: `woods` rectangles. */
+  woods: Rect[];
+  /** Where Marlow stands at each time of day: `keeper…` points (see shared/world/keeper.ts). */
+  keeper: Readonly<Partial<Record<KeeperSpotId, KeeperPoint>>>;
+  /** What changes as the village is built: layers and objects shown from or until something is (shared/world/gates.ts). */
+  gates: MapGates;
+}
+
+/** The times of day Marlow has a spot for: by the board, fishing in the evening, his boat at night, and the point once it's lit. */
+export type KeeperSpotId = "day" | "evening" | "night" | "eveningLit";
+
+/** Where Marlow stands, and which way he faces. */
+export interface KeeperPoint extends TilePos {
+  facing: "up" | "down" | "left" | "right";
+}
+
+/**
+ * A tile layer shown only from (`shownFrom`) or until (`shownUntil`) something is built. Layers named
+ * "Collision …" or "Farmland …" count as walls or farmland while they're shown; the rest are art.
+ */
+export interface GatedLayer {
+  name: string;
+  kind: "collision" | "farmland" | "art";
+  from: string | null;
+  until: string | null;
+  /** Painted tiles, indexed [row][col]. */
+  tiles: boolean[][];
+  /** What the Action button says facing it, for a collision layer (a hint reason, e.g. "brambles"), or null. */
+  hint: string | null;
+}
+
+/** A named object in Tiled's Objects layer, with the built thing it `needs` (null: always there). */
+export interface MapObject {
+  name: string;
+  rect: Rect;
+  point: boolean;
+  needs: string | null;
+  /** Its string properties besides `needs` (`facing` for Marlow's points). */
+  props: Readonly<Record<string, string>>;
+}
+
+/** Everything the map needs to work out "the map as of today" (gates.ts's mapFor). */
+export interface MapGates {
+  layers: GatedLayer[];
+  /** The objects that can come and go (board, lighthouse, pointWater, woods, deepWater, keeper points). */
+  objects: MapObject[];
+  /** The plain Collision and Farmland layers, before any gated layer is added. */
+  baseBlocked: boolean[][];
+  baseFarmland: boolean[][];
 }
 
 /**

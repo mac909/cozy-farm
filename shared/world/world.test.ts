@@ -30,6 +30,8 @@ describe("newWorld", () => {
       worldSeed: 0,
       beach: { day: 0, finds: [] },
       book: { fish: {}, finds: {}, bugs: {} },
+      village: { keeperDay: 0, projects: {} },
+      forage: { day: 0, items: [] },
     });
   });
 

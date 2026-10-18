@@ -8,7 +8,6 @@ import { countOf, roomFor } from "../../../shared/inventory/inventory";
 import type { CastMessage, CastStartedMessage, LandFishMessage } from "../../../shared/messages";
 import { farmerOf } from "../../../shared/world/world";
 import { feetTile, inReach } from "../../../shared/world/places";
-import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { applyCollected } from "./collection";
 import type { FarmRoom } from "./FarmRoom";
 
@@ -53,7 +52,8 @@ export function registerFishing(room: FarmRoom) {
     const feet = feetTile(player);
     const water = { col, row };
     if (!inReach(feet, water)) return room.hint(client, { reason: "too-far" });
-    const spot = fishingSpot(VILLAGE_MAP, feet, water);
+    const { map } = room.today;
+    const spot = fishingSpot(map, feet, water);
     if (!spot) return room.hint(client, { reason: "no-water" });
     const line = cast(spot, room.world.clock.minute, Math.floor(Math.random() * 2 ** 32));
     if (!line.ok) return room.hint(client, { reason: "nothing-biting" });
@@ -62,7 +62,7 @@ export function registerFishing(room: FarmRoom) {
     const now = Date.now();
     for (const [id, old] of lines) if (now - old.at > CAST_FORGOTTEN_MS) lines.delete(id);
     lines.set(client.sessionId, { fishId: line.state.fishId, at: now });
-    const bobber = bobberTile(VILLAGE_MAP, feet, water);
+    const bobber = bobberTile(map, feet, water);
     player.fishing = `${bobber.col},${bobber.row}`;
     client.send("castStarted", { state: line.state } satisfies CastStartedMessage);
   });

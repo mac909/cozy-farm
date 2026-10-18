@@ -7,9 +7,8 @@ import { bobberTile } from "../../../shared/fishing/spots";
 import type { CastMessage, CastStartedMessage, LandFishMessage, ReelInMessage } from "../../../shared/messages";
 import { facingFor, type Facing } from "../../../shared/movement";
 import type { FarmState } from "../../../shared/schema";
-import { tileCenter, type TilePos } from "../../../shared/world/map";
+import { tileCenter, type TilePos, type WorldMap } from "../../../shared/world/map";
 import { feetTile } from "../../../shared/world/places";
-import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { BITE_KEY, FISHING_FRAME, FISHING_KEY } from "../art/assets";
 import { iconScale, itemIcon } from "../art/itemIcons";
 import { playSound } from "../audio/sounds";
@@ -28,6 +27,8 @@ const BITE_BUBBLE_MS = 1100;
 export interface FishingOptions {
   me: Character;
   room(): Room<FarmState> | null;
+  /** The map as of today (the point's water counts once the lighthouse is lit). */
+  map(): WorldMap;
   /** Turns your character to face somewhere. */
   face(facing: Facing): void;
   showAction(view: ActionView): void;
@@ -109,7 +110,7 @@ export class Fishing {
     this.state = null;
     this.pressed = false;
     this.water = { col, row };
-    const bobber = bobberTile(VILLAGE_MAP, feet, this.water);
+    const bobber = bobberTile(this.options.map(), feet, this.water);
     const at = tileCenter(bobber.col, bobber.row);
     this.rest = { x: at.x, y: at.y + 2 };
     room.send("cast", { col, row } satisfies CastMessage);

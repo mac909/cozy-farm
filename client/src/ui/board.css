@@ -1,0 +1,481 @@
+/*
+ * The Village Board (client/src/ui/BoardPanel.ts and VillageBoard.ts), Marlow's notes
+ * (KeeperNote.ts), the opening card (OpeningCard.ts) and the village lines on the morning card.
+ * In the look of docs/plans/progression-mockups.html.
+ */
+
+.board {
+  width: min(100%, 400px);
+}
+
+/* A face in a round frame: Marlow at the top of the board, helpers on a project. */
+.board-ring {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  overflow: hidden;
+  border: 2px solid #b89b68;
+  border-radius: 50%;
+  background: #d9c49a;
+}
+
+.board-ring img {
+  width: 38px;
+  height: 38px;
+  image-rendering: pixelated;
+}
+
+.board-faces {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  font-size: 13px;
+  color: #8a7556;
+}
+
+.board-face {
+  width: 22px;
+  height: 22px;
+  margin-right: -6px;
+  border: 1.5px solid #b89b68;
+  border-radius: 50%;
+  background: #d9c49a;
+  image-rendering: pixelated;
+}
+
+/* Room after the overlapping faces; none when nobody's helped yet. */
+.board-face + small {
+  margin-left: 12px;
+}
+
+/* Marlow's line, in his hand. */
+.board-says {
+  margin: 0 0 4px;
+  padding: 8px 12px;
+  border: 2px solid #dcc79c;
+  border-radius: 12px;
+  background: #fffdf5;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-style: italic;
+}
+
+.board-sig {
+  font-style: normal;
+  font-weight: 700;
+  color: #9b8664;
+  white-space: nowrap;
+}
+
+.board-quiet {
+  margin: 0;
+  font-size: 14px;
+  color: #8a7556;
+}
+
+/* A project on the board. */
+.board-project {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #dcc79c;
+  border-radius: 14px;
+  background: #efe2c4;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.board-project + .board-project {
+  margin-top: 6px;
+}
+
+.board-project.finished {
+  background: transparent;
+  cursor: default;
+}
+
+.board-project .grow,
+.board-step .grow,
+.board-need .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.board-project b,
+.board-project small,
+.board-need b,
+.board-need small {
+  display: block;
+}
+
+.board-project small,
+.board-need small {
+  font-size: 13px;
+  color: #8a7556;
+}
+
+.board-pic {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #e6d4ab;
+}
+
+.board-pic img {
+  image-rendering: pixelated;
+}
+
+/* A tall picture (the lighthouse) shows its top, where the lamp is. */
+.board-pic.tall {
+  place-items: start center;
+}
+
+.board-pic img.tall {
+  width: 48px;
+  height: 96px;
+  margin-top: 2px;
+}
+
+.board-bar {
+  height: 10px;
+  margin: 6px 0 5px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #e0cc9f;
+}
+
+.board-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: #ef7d6d;
+}
+
+.board-bar.full i {
+  background: #6a9a3a;
+}
+
+.board-chev {
+  font-size: 26px;
+  font-weight: 700;
+  color: #9b8664;
+}
+
+/* The project card: the step, then each need. */
+.board-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.board-step small {
+  display: block;
+  color: #8a7556;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.board-dots {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #ef7d6d;
+}
+
+.board-need {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid #ead9b4;
+}
+
+.board-need:last-of-type {
+  border-bottom: 1px solid #ead9b4;
+}
+
+.board-need .board-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  background: #efe2c4;
+}
+
+.board-need .board-icon img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.board-need .board-icon img.coin {
+  width: 21px;
+  height: 21px;
+}
+
+.board-count {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.board-need.done .grow,
+.board-need.done .board-count {
+  opacity: 0.55;
+}
+
+.board-tick {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 50%;
+  background: #6a9a3a;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.board-give {
+  flex: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 18px;
+  background: #ef7d6d;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.board-give:active {
+  transform: scale(0.96);
+}
+
+.board-waiting {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #e5efd2;
+  color: #4d6b2a;
+  font-weight: 700;
+  text-align: center;
+}
+
+.board-next {
+  font-size: 14px;
+  color: #8a7556;
+}
+
+.board-opens {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+}
+
+/* Marlow's note: paper, with a pin. */
+.note {
+  position: relative;
+  width: min(100%, 360px);
+  border: 2px solid #e2cfa6;
+  background: #fffcf1;
+  background-image: repeating-linear-gradient(#fffcf1 0 25px, #e9e1cc 25px 26px);
+  overflow: visible;
+}
+
+.note::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: #e8765f;
+  box-shadow: inset -2px -2px 0 #b5503d;
+}
+
+.note-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.note-head b {
+  display: block;
+  font-size: 18px;
+}
+
+.note-head small {
+  color: #8a7556;
+}
+
+.note-face {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border: 3px solid #8a5a32;
+  border-radius: 6px;
+  background: #d9c49a;
+}
+
+.note-face img {
+  width: 38px;
+  height: 38px;
+  image-rendering: pixelated;
+}
+
+.note-letter {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 26px;
+}
+
+.note-letter + .note-letter {
+  margin-top: 8px;
+}
+
+.note .board-sig {
+  display: block;
+  margin-top: 2px;
+  text-align: right;
+}
+
+.note-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.note-buttons .panel-button {
+  flex: 1;
+}
+
+/* The list of every note he's written, to read again. */
+.notes-list .note-title {
+  margin: 14px 0 2px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9b8664;
+}
+
+.notes-list .note-letter {
+  font-size: 15px;
+  line-height: 22px;
+}
+
+/* The opening card: bunting across the top. */
+.opening {
+  padding-top: 0;
+}
+
+.opening-bunting {
+  height: 26px;
+  margin: 0 -16px 6px;
+  border-top: 3px solid #8a5a32;
+  background:
+    linear-gradient(135deg, transparent 50%, #fff8e7 50%) 0 12px / 16px 14px repeat-x,
+    linear-gradient(225deg, transparent 50%, #fff8e7 50%) 0 12px / 16px 14px repeat-x,
+    repeating-linear-gradient(90deg, #e8765f 0 16px, #ffd36b 16px 32px, #7ab3d1 32px 48px, #8fbf5a 48px 64px);
+}
+
+.opening-hero {
+  display: grid;
+  place-items: center;
+  margin: 4px 0 8px;
+}
+
+.opening-hero img {
+  width: 72px;
+  height: 144px;
+  image-rendering: pixelated;
+}
+
+.opening-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 15px;
+}
+
+.opening-line .board-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  background: #efe2c4;
+}
+
+.opening-line .board-icon img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+/* The morning card's "In the village". */
+.morning-village {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 8px;
+  padding: 8px;
+  border: 2px solid #dcc79c;
+  border-radius: 12px;
+  background: #f4ead2;
+}
+
+.morning-village .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.morning-village b,
+.morning-village small {
+  display: block;
+}
+
+.morning-village small {
+  color: #8a7556;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+}
+
+.morning-village img {
+  image-rendering: pixelated;
+}
+
+/* The book's Village page swaps the grid for the board. */
+.book [hidden] {
+  display: none !important;
+}
+
+.book-village {
+  margin-top: 4px;
+}

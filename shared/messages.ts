@@ -7,6 +7,7 @@ import type { Hint } from "./farming/actions";
 import type { CastingState } from "./fishing/fishing";
 import type { Facing } from "./movement";
 import type { Look } from "./player";
+import type { VillageEvent } from "./village/projects";
 import type { MorningReport } from "./world/world";
 
 /**
@@ -53,8 +54,12 @@ export interface EmoteEvent {
 
 // ---------- Dev commands (refused when NODE_ENV is production) ----------
 
-/** What a dev command does: start the night now, set the clock (value: game minutes after midnight), or add coins (value: how many). */
-export type DevCommand = "nextDay" | "setTime" | "addCoins";
+/**
+ * What a dev command does: start the night now, set the clock (value: game minutes after midnight),
+ * add coins (value: how many), fill the open project's step as if everything was given, or build
+ * what's been gathered now instead of overnight.
+ */
+export type DevCommand = "nextDay" | "setTime" | "addCoins" | "fillStep" | "build";
 
 /** Client → server ("dev"): a shortcut for testing. Also on window.dev in the browser console. */
 export interface DevMessage {
@@ -240,4 +245,43 @@ export interface BookEventMessage {
   event: BookEvent;
   by: string;
   sessionId: string;
+}
+
+// ---------- The village: Marlow, the board and the projects (Milestone 6) ----------
+
+/**
+ * Client → server ("give"), at the Village Board: give to the need `need` ("driftwood",
+ * "any:fish", "coins") of `project`'s step being gathered. With `slot`, from that bag slot (the
+ * Action button's "Give 7"); without, as many as I can from my whole bag, cheapest first for "any
+ * of a kind", or coins from the shared wallet. Only as many as are still wanted.
+ */
+export interface GiveMessage {
+  project: string;
+  need: string;
+  slot?: number;
+}
+
+/** Client → server ("giveAll"), at the board: everything in my bag the step wants. Never coins. */
+export interface GiveAllMessage {
+  project: string;
+}
+
+/**
+ * Server → everyone ("villageEvent"): a gift (it floats up from the board) or a step's last thing
+ * going in (the cheer on both screens). `by` gave it; `sessionId` is theirs, so each screen can
+ * put a heart over the right head.
+ */
+export interface VillageEventMessage {
+  event: VillageEvent;
+  by: string;
+  sessionId: string;
+}
+
+/**
+ * Server → client ("placed"), on joining: where you said you were isn't somewhere you can stand on
+ * today's map (a stale tab, a map edit), so you're at the spawn point instead.
+ */
+export interface PlacedMessage {
+  x: number;
+  y: number;
 }

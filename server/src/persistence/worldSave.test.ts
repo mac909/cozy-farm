@@ -40,6 +40,8 @@ function busyWorld(): World {
       coins: 640,
       sale: { lines: [{ itemId: "radish", count: 4, priceEach: 35, total: 140 }], total: 140 },
       washedUp: ["scallop_shell", "sea_glass"],
+      foraged: ["driftwood", "branch"],
+      built: [{ project: "lighthouse", step: 0 }],
     },
     worldSeed: 3141592653,
     beach: {
@@ -53,6 +55,19 @@ function busyWorld(): World {
       fish: { sea_bream: { caught: 2, firstDay: 3, firstBy: "Pip", biggestCm: 41, biggestBy: "Juno 🌻" } },
       finds: { starfish: { found: 1, firstDay: 2, firstBy: "Juno 🌻" } },
       bugs: { brimstone: { caught: 3, firstDay: 4, firstBy: "Pip" } },
+    },
+    village: {
+      keeperDay: 2,
+      projects: {
+        lighthouse: { gathered: 1, built: 1, given: { driftwood: 4, "any:fish": 2, coins: 150 }, helpers: ["farmer-2", "farmer-1"], doneDay: null },
+      },
+    },
+    forage: {
+      day: 4,
+      items: [
+        { itemId: "driftwood", col: 22, row: 23 },
+        { itemId: "branch", col: 40, row: 6 },
+      ],
     },
   };
 }
@@ -70,9 +85,9 @@ describe("the world save", () => {
     expect(loaded).toEqual(world);
   });
 
-  it("is version 3 and lists dug tiles in reading order", () => {
+  it("is version 4 and lists dug tiles in reading order", () => {
     const save = worldToSave(busyWorld());
-    expect(save.version).toBe(3);
+    expect(save.version).toBe(4);
     expect(save.farm.map(({ col, row }) => `${col},${row}`)).toEqual(["12,4", "4,6", "5,6"]);
     expect(save.farmers["farmer-1"].bag).toHaveLength(INVENTORY_SLOTS);
   });
@@ -134,6 +149,20 @@ describe("the world save", () => {
     ["furniture that isn't", { houses: { house1: { owner: "farmer-1", furniture: [{ itemId: "radish", col: 0, row: 0, turn: 0 }] } } }, /isn't furniture/],
     ["a decoration off the edge", { decorations: [{ itemId: "fence", col: -1, row: 0, turn: 0 }] }, /decorations\[0\].col/],
     ["decorations that aren't a list", { decorations: {} }, /decorations should be a list/],
+    ["a project the game doesn't know", { village: { keeperDay: 2, projects: { castle: { gathered: 0, built: 0, given: {}, helpers: [], doneDay: null } } } }, /village.projects has a project/],
+    ["a village without its projects", { village: { keeperDay: 0 } }, /village.projects should be an object/],
+    ["a keeper's day that isn't one", { village: { keeperDay: -2, projects: {} } }, /village.keeperDay/],
+    ["something odd lying about", { forage: { day: 1, items: [{ itemId: "anchor", col: 1, row: 1 }] } }, /forage.items\[0\].itemId/],
+    [
+      "two things lying on one tile",
+      { forage: { day: 1, items: [{ itemId: "branch", col: 1, row: 1 }, { itemId: "driftwood", col: 1, row: 1 }] } },
+      /two things on tile 1,1/,
+    ],
+    [
+      "a morning that built a step that isn't",
+      { lastMorning: { day: 2, grew: 0, ready: 0, coins: 0, sale: { lines: [], total: 0 }, washedUp: [], foraged: [], built: [{ project: "lighthouse", step: 7 }] } },
+      /lastMorning.built\[0\].step/,
+    ],
   ])("refuses %s", (_what, part, message) => {
     expect(() => WORLD_SAVE.validate(withPart(part))).toThrow(message);
   });
@@ -153,6 +182,22 @@ describe("the world save", () => {
   it("turns a piece back to its first way round if it can't turn that way any more", () => {
     const save = WORLD_SAVE.validate(withPart({ decorations: [{ itemId: "sofa", col: 3, row: 3, turn: 4 }] }));
     expect(save.decorations[0].turn).toBe(0);
+  });
+
+  it("keeps a project within its data if its steps were tuned since", () => {
+    const project = (p: unknown) => WORLD_SAVE.validate(withPart({ village: { keeperDay: 2, projects: { lighthouse: p } } })).village.projects.lighthouse;
+    // Past the last step: kept at the last, and finished on its day.
+    expect(project({ gathered: 9, built: 9, given: {}, helpers: [], doneDay: 5 })).toEqual({ gathered: 3, built: 3, given: {}, helpers: [], doneDay: 5 });
+    // More given than a need asks: kept at the need; gifts to a need the step doesn't have: dropped; strangers: left out.
+    expect(project({ gathered: 0, built: 0, given: { driftwood: 99, starfish: 3 }, helpers: ["farmer-1", "farmer-9"], doneDay: 4 })).toEqual({
+      gathered: 0,
+      built: 0,
+      given: { driftwood: 10 },
+      helpers: ["farmer-1"],
+      doneDay: null,
+    });
+    // Everything a step asks for is in: it counts as gathered, to be built tonight.
+    expect(project({ gathered: 0, built: 0, given: { driftwood: 10, branch: 6, coins: 300 }, helpers: [], doneDay: null })).toMatchObject({ gathered: 1, built: 0, given: {} });
   });
 
   it("drops anything it doesn't know about", () => {

@@ -16,6 +16,8 @@ export interface BagPanelOptions {
   place(slot: number): void;
   /** Opens the collection book instead. */
   openBook(): void;
+  /** What the Village Board still wants of an item ("The lighthouse needs 3 more"), or null. */
+  wanted?(itemId: ItemId): string | null;
   onClose(): void;
 }
 
@@ -104,6 +106,8 @@ export class BagPanel {
     const { title, detail } = itemInfo(stack);
     const words = el("div", "grow");
     words.append(el("b", "", title), el("small", "", detail));
+    const wanted = this.options.wanted?.(stack.itemId);
+    if (wanted) words.append(el("small", "bag-wanted", wanted));
     this.info.append(picture(this.options.icon(stack.itemId)), words);
     if (furnitureOf(stack.itemId)) {
       this.info.append(button("Place", "panel-button bag-split", () => this.options.place(from)));

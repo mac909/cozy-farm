@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { isWalkable, type Rect, tileAt, type TilePos, type WorldMap } from "./map";
 import { exitTile, frontOfDoor } from "./houses";
+import { mapFor } from "./gates";
+import { PROJECT_IDS, PROJECTS, stepName } from "../content/projects";
+import { isHint } from "../farming/actions";
 import { parseTiledMap, type TiledMapJson, tilesetImageUrl } from "./tiledMap";
 import { VILLAGE_MAP, VILLAGE_TILED } from "./villageMap";
 
@@ -245,5 +248,148 @@ describe("the village map", () => {
       const url = tilesetImageUrl(tileset.image!);
       expect(fs.existsSync(path.join(ROOT, "client/public", decodeURI(url))), url).toBe(true);
     }
+  });
+});
+
+/**
+ * The Milestone 5 map (48 × 46), as it reached the real farm. Saves hold farm tiles, decorations,
+ * beach finds and positions in map tiles (and furniture in room-floor tiles), so the map may only
+ * ever grow east or down: everything here must stay exactly where it was.
+ */
+const MILESTONE_5 = {
+  width: 48,
+  height: 46,
+  farmland: { cols: [4, 19], rows: [4, 10], tiles: 112 },
+  spawn: { col: 7, row: 15 },
+  shippingCrate: { x: 464, y: 416, width: 32, height: 32 },
+  tent: { x: 96, y: 192, width: 48, height: 48 },
+  seedStand: { x: 496, y: 224, width: 32, height: 32 },
+  store: { x: 416, y: 192, width: 64, height: 48 },
+  houses: [
+    { id: "house1", building: { x: 448, y: 48, width: 64, height: 48 }, interior: { x: 48, y: 592, width: 176, height: 128 } },
+    { id: "house2", building: { x: 544, y: 48, width: 64, height: 48 }, interior: { x: 272, y: 592, width: 176, height: 128 } },
+  ],
+  deepWater: [{ x: 400, y: 512, width: 128, height: 64 }],
+  /** Where nobody could walk, "#". */
+  collision: [
+    "################################################",
+    "################################################",
+    "##............................................##",
+    "##.##################.........................##",
+    "##.#................#.........................##",
+    "##.#................#....##.####..####.###....##",
+    "##.#................#.........................##",
+    "##.#................#.........................##",
+    "##.#................#.........................##",
+    "##.#................#............##...........##",
+    "##.#................#.........................##",
+    "##.########..########.........................##",
+    "##.....................##.....................##",
+    "##..................................###.......##",
+    "##.##.###........##.......####................##",
+    "##.............................##........####.##",
+    "##..............................................",
+    "##....##........................................",
+    "................................................",
+    "................................................",
+    ".....................##.........................",
+    "...............................................#",
+    "#.............................................##",
+    "###..........##..............................###",
+    "#####.............................##...##..#####",
+    "######.##...........##.........########...######",
+    "###############...........#....#################",
+    "###########################..###################",
+    "###########################....#################",
+    "###########################....#################",
+    "###########################....#################",
+    "###########################....#################",
+    "###########################....#################",
+    "###########################....#################",
+    "################################################",
+    "################################################",
+    "################################################",
+    "################################################",
+    "####.........#####.........#####################",
+    "####.........#####.........#####################",
+    "####.........#####.........#####################",
+    "####.........#####.........#####################",
+    "####.........#####.........#####################",
+    "####.........#####.........#####################",
+    "########.#############.#########################",
+    "################################################",
+  ],
+};
+
+describe("growing the map (Milestone 6: 32 columns east)", () => {
+  const map = VILLAGE_MAP;
+  const everything = new Set(["keeper", "lighthouse/path", "lighthouse/stairs", "lighthouse/lamp", "lighthouse"]);
+
+  it("only grows east or down, so the farm, the places and the rooms stay exactly where they were", () => {
+    expect(map.width).toBeGreaterThanOrEqual(MILESTONE_5.width);
+    expect(map.height).toBe(MILESTONE_5.height);
+    expect(map.spawn).toEqual(MILESTONE_5.spawn);
+    for (const place of ["shippingCrate", "tent", "seedStand", "store"] as const) expect(map[place], place).toEqual(MILESTONE_5[place]);
+    expect(map.houses).toEqual(MILESTONE_5.houses);
+    expect(map.deepWater).toEqual(MILESTONE_5.deepWater);
+    const farm: string[] = [];
+    map.farmland.forEach((row, r) => row.forEach((on, c) => on && farm.push(`${c},${r}`)));
+    expect(farm).toHaveLength(MILESTONE_5.farmland.tiles);
+    const { cols, rows } = MILESTONE_5.farmland;
+    for (const tile of farm) {
+      const [c, r] = tile.split(",").map(Number);
+      expect(c >= cols[0] && c <= cols[1] && r >= rows[0] && r <= rows[1], tile).toBe(true);
+    }
+  });
+
+  it("keeps everywhere you could walk before walkable, so no saved decoration, find or position is shut in", () => {
+    MILESTONE_5.collision.forEach((line, row) =>
+      [...line].forEach((was, col) => {
+        if (was === ".") expect(map.blocked[row][col], `${col},${row}`).toBe(false);
+      }),
+    );
+  });
+
+  it("keeps the point closed until its path is cleared, and opens it then", () => {
+    const lighthouse = map.lighthouse!;
+    const front = tileAt(lighthouse.x + lighthouse.width / 2, lighthouse.y + lighthouse.height);
+    expect(reachable(map, map.spawn).has(`${front.col},${front.row}`)).toBe(false);
+    const cleared = mapFor(map, new Set(["keeper", "lighthouse/path"]));
+    expect(reachable(cleared, cleared.spawn).has(`${front.col},${front.row}`)).toBe(true);
+  });
+
+  it("reaches the new land from the old, and the board once Marlow is here", () => {
+    const all = mapFor(map, everything);
+    const walk = reachable(all, all.spawn);
+    for (const plan of all.houses) expect(walk.has(`${frontOfDoor(plan).col},${frontOfDoor(plan).row}`), plan.id).toBe(true);
+    const board = all.board!;
+    expect(board).not.toBeNull();
+    const below = tileAt(board.x, board.y + board.height);
+    expect(walk.has(`${below.col},${below.row}`)).toBe(true);
+    // The far east of the meadow, and the end of the beach by the inlet.
+    expect(walk.has("70,5")).toBe(true);
+    expect(walk.has("65,18")).toBe(true);
+    // The night fishing round the point.
+    expect(all.pointWater.length).toBeGreaterThan(0);
+    // Marlow's spots are all on the map.
+    for (const spot of ["day", "evening", "night", "eveningLit"] as const) expect(all.keeper[spot], spot).toBeDefined();
+  });
+
+  it("keeps the cove shut away until its bridge is mended (Milestone 9)", () => {
+    const all = mapFor(map, everything);
+    expect(reachable(all, all.spawn).has("74,20")).toBe(false);
+    const bridged = mapFor(map, new Set(["keeper", "lighthouse/path", "bridge"]));
+    expect(reachable(bridged, bridged.spawn).has("74,20")).toBe(true);
+  });
+
+  it("only gates layers and objects on things that can be built", () => {
+    const steps = PROJECT_IDS.flatMap((id) => PROJECTS[id].steps.map((_, i) => stepName(PROJECTS[id], i)));
+    // "bridge" is Milestone 9's project; its broken bridge is drawn already, as a teaser.
+    const known = new Set(["keeper", "bridge", ...PROJECT_IDS, ...steps]);
+    for (const layer of map.gates.layers) {
+      for (const name of [layer.from, layer.until]) if (name) expect(known.has(name), `${layer.name}: ${name}`).toBe(true);
+      if (layer.hint) expect(isHint({ reason: layer.hint }), `${layer.name}'s hint`).toBe(true);
+    }
+    for (const object of map.gates.objects) if (object.needs) expect(known.has(object.needs), `${object.name}: ${object.needs}`).toBe(true);
   });
 });

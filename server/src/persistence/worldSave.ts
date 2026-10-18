@@ -3,6 +3,9 @@ import { isBeachFindId, type BeachFindId } from "../../../shared/content/beachFi
 import { isBugId } from "../../../shared/content/bugs";
 import { CROPS, isCropId } from "../../../shared/content/crops";
 import { isFishId } from "../../../shared/content/fish";
+import { isForageId, type ForageId } from "../../../shared/content/forage";
+import { PROJECTS, isProjectId, needKey, type ProjectDef } from "../../../shared/content/projects";
+import type { BuiltStep } from "../../../shared/village/village";
 import { FURNITURE, isFurnitureId } from "../../../shared/content/furniture";
 import type { PlacedPiece } from "../../../shared/decor/pieces";
 import { ITEMS, isItemId, type ItemId } from "../../../shared/content/items";
@@ -34,6 +37,7 @@ export type SavedFarmTile = { col: number; row: number } & Exclude<FarmTile, { k
  * Everything about the shared world that survives a restart: the World (shared/world/world.ts) as
  * JSON. Version 2: version 1 (Milestone 2) plus the houses and the farm's decorations (Milestone 4).
  * Version 3: plus the world seed, the beach and the collection book (Milestone 5).
+ * Version 4: plus the village (Marlow and the projects) and the driftwood and branches lying about (Milestone 6).
  *
  * To change this shape once it has reached the real farm: add a migration below that turns the
  * previous version into the new one, then update this type, `validate` and the converters.
@@ -58,7 +62,14 @@ export interface WorldSave {
   beach: { day: number; finds: { findId: BeachFindId; col: number; row: number }[] };
   /** The shared collection book. Since version 3. */
   book: CollectionBook;
+  /** When Marlow arrived (0: not yet) and how far each project has got. Since version 4. */
+  village: { keeperDay: number; projects: Record<string, SavedProject> };
+  /** Driftwood and branches lying about, and the day the morning last brought some (0: never). Since version 4. */
+  forage: { day: number; items: { itemId: ForageId; col: number; row: number }[] };
 }
+
+/** A project's progress in a save (see shared/village/village.ts). */
+export type SavedProject = { gathered: number; built: number; given: Record<string, number>; helpers: string[]; doneDay: number | null };
 
 /** A piece of furniture or a decoration in a save. */
 export type SavedPiece = { itemId: string; col: number; row: number; turn: number };
@@ -83,6 +94,15 @@ const migrations: Migration[] = [
     farmers: isJsonObject(save.farmers)
       ? Object.fromEntries(Object.entries(save.farmers).map(([id, farmer]) => [id, withRod(farmer)]))
       : save.farmers,
+  }),
+  // 3 → 4 (Milestone 6): an empty village (Marlow hasn't arrived, nothing started), nothing lying
+  // about, and empty "foraged" and "built" lists on the last morning. Only empty things: Marlow and
+  // the storm come when the server first starts (shared/world/night.ts), not here.
+  (save) => ({
+    ...save,
+    village: { keeperDay: 0, projects: {} },
+    forage: { day: 0, items: [] },
+    lastMorning: isJsonObject(save.lastMorning) ? { ...save.lastMorning, foraged: [], built: [] } : save.lastMorning,
   }),
 ];
 
@@ -162,6 +182,8 @@ export const WORLD_SAVE: SaveFormat<WorldSave> = {
       worldSeed: whole(save.worldSeed, "worldSeed", 0, 0xffffffff),
       beach: savedBeach(save.beach, "beach"),
       book: savedBook(save.book, "book"),
+      village: savedVillage(save.village, "village", farmers),
+      forage: savedForage(save.forage, "forage"),
     };
   },
 };
@@ -199,6 +221,16 @@ export function worldToSave(world: World): WorldSave {
     worldSeed: world.worldSeed,
     beach: { day: world.beach.day, finds: world.beach.finds.map(({ findId, col, row }) => ({ findId, col, row })) },
     book: world.book,
+    village: {
+      keeperDay: world.village.keeperDay,
+      projects: Object.fromEntries(
+        Object.entries(world.village.projects).map(([id, p]): [string, SavedProject] => [
+          id,
+          { gathered: p.gathered, built: p.built, given: { ...p.given }, helpers: [...p.helpers], doneDay: p.doneDay },
+        ]),
+      ),
+    },
+    forage: { day: world.forage.day, items: world.forage.items.map(({ itemId, col, row }) => ({ itemId, col, row })) },
   };
 }
 
@@ -229,6 +261,8 @@ export function worldFromSave(save: WorldSave): World {
     worldSeed: save.worldSeed,
     beach: { day: save.beach.day, finds: save.beach.finds },
     book: save.book,
+    village: save.village,
+    forage: save.forage,
   };
 }
 
@@ -428,6 +462,79 @@ function morningReport(value: unknown, path: string): MorningReport {
     washedUp: array(report.washedUp, `${path}.washedUp`).map((id, i) => {
       if (!isBeachFindId(id)) throw new Error(`${path}.washedUp[${i}] isn't a beach find the game knows: ${JSON.stringify(id)}`);
       return id;
+    }),
+    foraged: array(report.foraged, `${path}.foraged`).map((id, i) => {
+      if (!isForageId(id)) throw new Error(`${path}.foraged[${i}] isn't something that turns up on the ground: ${JSON.stringify(id)}`);
+      return id;
+    }),
+    built: array(report.built, `${path}.built`).map((entry, i): BuiltStep => {
+      const at = `${path}.built[${i}]`;
+      const built = object(entry, at);
+      if (!isProjectId(built.project)) throw new Error(`${at}.project isn't a project the game knows: ${JSON.stringify(built.project)}`);
+      return { project: built.project, step: whole(built.step, `${at}.step`, 0, PROJECTS[built.project].steps.length - 1) };
+    }),
+  };
+}
+
+/**
+ * The village. An unknown project stops the load, like an unknown item (renaming one is a
+ * migration). Its numbers are kept within today's project data rather than refused, so tuning a
+ * step never stops a save loading: steps past the end are dropped, gifts to needs a step no longer
+ * has are dropped, and a step whose needs are now all in counts as gathered (to be built tonight).
+ * Helpers who aren't farmers in this save are left out.
+ */
+function savedVillage(value: unknown, path: string, farmers: SaveJson): WorldSave["village"] {
+  const village = object(value, path);
+  return {
+    keeperDay: whole(village.keeperDay, `${path}.keeperDay`, 0),
+    projects: Object.fromEntries(
+      Object.entries(object(village.projects, `${path}.projects`)).map(([id, entry]) => {
+        const at = `${path}.projects.${id}`;
+        if (!isProjectId(id)) throw new Error(`${path}.projects has a project the game doesn't know: ${JSON.stringify(id)}`);
+        return [id, savedProject(PROJECTS[id], object(entry, at), at, farmers)];
+      }),
+    ),
+  };
+}
+
+function savedProject(project: ProjectDef, entry: SaveJson, path: string, farmers: SaveJson): SavedProject {
+  const steps = project.steps.length;
+  let gathered = Math.min(whole(entry.gathered, `${path}.gathered`, 0), steps);
+  const built = Math.min(whole(entry.built, `${path}.built`, 0), gathered);
+  const given: Record<string, number> = {};
+  const rawGiven = object(entry.given, `${path}.given`);
+  const giving = gathered === built && gathered < steps ? project.steps[gathered] : null;
+  for (const [key, count] of Object.entries(rawGiven)) {
+    const n = whole(count, `${path}.given.${key}`, 0);
+    const need = giving?.needs.find((nd) => needKey(nd) === key);
+    if (need && n > 0) given[key] = Math.min(n, need.count);
+  }
+  let keptGiven = given;
+  if (giving && giving.needs.every((need) => (given[needKey(need)] ?? 0) >= need.count)) {
+    gathered += 1;
+    keptGiven = {};
+  }
+  const helpers = [...new Set(array(entry.helpers, `${path}.helpers`).filter((id): id is string => isFarmerId(id) && Object.hasOwn(farmers, id)))];
+  const doneDay = entry.doneDay === null || entry.doneDay === undefined ? null : whole(entry.doneDay, `${path}.doneDay`, 1);
+  return { gathered, built, given: keptGiven, helpers, doneDay: built >= steps ? doneDay : null };
+}
+
+/** What's lying about: each driftwood or branch on its own tile. */
+function savedForage(value: unknown, path: string): WorldSave["forage"] {
+  const forage = object(value, path);
+  const seen = new Set<string>();
+  return {
+    day: whole(forage.day, `${path}.day`, 0),
+    items: array(forage.items, `${path}.items`).map((entry, i) => {
+      const at = `${path}.items[${i}]`;
+      const item = object(entry, at);
+      if (!isForageId(item.itemId)) throw new Error(`${at}.itemId isn't something that turns up on the ground: ${JSON.stringify(item.itemId)}`);
+      const col = whole(item.col, `${at}.col`, 0, MAX_TILE);
+      const row = whole(item.row, `${at}.row`, 0, MAX_TILE);
+      const key = tileKey(col, row);
+      if (seen.has(key)) throw new Error(`${path}.items has two things on tile ${key}`);
+      seen.add(key);
+      return { itemId: item.itemId, col, row };
     }),
   };
 }

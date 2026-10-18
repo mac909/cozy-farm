@@ -10,6 +10,9 @@ import { FISHING_ROD } from "../content/items";
 import { addItems, countOf, starterInventory, type Inventory } from "../inventory/inventory";
 import type { Look } from "../player";
 import { newClock, type GameClock } from "../time/clock";
+import type { ForageId } from "../content/forage";
+import type { Forage } from "../foraging/forage";
+import { EMPTY_VILLAGE, type BuiltStep, type Village } from "../village/village";
 
 /**
  * The whole shared world, as plain data. The server keeps one of these as the source of truth: the
@@ -38,12 +41,22 @@ export interface World {
   readonly beach: BeachState;
   /** The shared collection book: every fish, beach find and bug found so far. */
   readonly book: CollectionBook;
+  /** Marlow and the village's projects (Milestone 6). */
+  readonly village: Village;
+  /** Driftwood and branches lying about, and the day the morning last brought some (Milestone 6). */
+  readonly forage: ForageState;
 }
 
 /** The beach: finds lying on the sand, in the order they washed up, and the day of the last tide (0: never). */
 export interface BeachState {
   readonly day: number;
   readonly finds: Beach;
+}
+
+/** Materials on the ground, in the order they turned up, and the day the morning last brought some (0: never). */
+export interface ForageState {
+  readonly day: number;
+  readonly items: Forage;
 }
 
 /** A cottage's name in the map ("house1"). */
@@ -83,12 +96,17 @@ export interface MorningReport {
   readonly coins: number;
   /** What washed up on the beach this morning, in order. */
   readonly washedUp: readonly BeachFindId[];
+  /** The driftwood and branches that turned up this morning, in order (Milestone 6). */
+  readonly foraged: readonly ForageId[];
+  /** What was built overnight, for the card's "In the village" (Milestone 6). */
+  readonly built: readonly BuiltStep[];
 }
 
 /**
  * Day 1, 6 am, the starting coins, an empty farm and crate, nobody yet, every cottage empty, an
- * empty beach (the first tide comes when the room starts) and an empty book. `worldSeed` is any
- * whole number; the server picks a random one for a new world.
+ * empty beach (the first tide comes when the room starts), an empty book, no Marlow yet (he comes
+ * on the morning of day 2) and nothing lying about. `worldSeed` is any whole number; the server
+ * picks a random one for a new world.
  */
 export function newWorld(worldSeed = 0): World {
   return {
@@ -103,6 +121,8 @@ export function newWorld(worldSeed = 0): World {
     worldSeed: worldSeed >>> 0,
     beach: { day: 0, finds: [] },
     book: EMPTY_BOOK,
+    village: EMPTY_VILLAGE,
+    forage: { day: 0, items: [] },
   };
 }
 

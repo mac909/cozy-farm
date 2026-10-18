@@ -227,7 +227,7 @@
   },
   "fish": {
     "file": "fish.png",
-    "width": 192,
+    "width": 240,
     "height": 16,
     "frameWidth": 16,
     "frameHeight": 16,
@@ -243,7 +243,10 @@
       "moray_eel": 8,
       "seahorse": 9,
       "tuna": 10,
-      "moonfish": 11
+      "moonfish": 11,
+      "lanternfish": 12,
+      "cuttlefish": 13,
+      "conger_eel": 14
     },
     "note": "One icon per fish, in FISH order (shared/content/fish.ts), facing right."
   },
@@ -275,5 +278,47 @@
       "dipped": 2
     },
     "note": "The rod is the pack's own, centred on a 16×16 frame."
+  },
+  "materials": {
+    "file": "materials.png",
+    "width": 32,
+    "height": 16,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "frames": {
+      "driftwood": 0,
+      "branch": 1
+    },
+    "note": "Building materials: the bag's icon and what lies on the ground. Frame names are item ids."
+  },
+  "lighthouse": {
+    "file": "lighthouse.png",
+    "width": 192,
+    "height": 96,
+    "frameWidth": 48,
+    "frameHeight": 96,
+    "frames": {
+      "dark": 0,
+      "scaffold": 1,
+      "ready": 2,
+      "lit": 3
+    },
+    "note": "Three tiles wide and six tall, standing on the bottom of the frame; the door is the middle of the bottom row."
+  },
+  "village-board": {
+    "file": "village-board.png",
+    "width": 96,
+    "height": 32,
+    "frameWidth": 32,
+    "frameHeight": 32,
+    "layout": "Frame n has n notes pinned on: one per open project."
+  },
+  "brambles": {
+    "file": "brambles.png",
+    "width": 32,
+    "height": 16,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "note": "A tileset in the village map: the Brambles layer across the old path to the point."
   }
 }

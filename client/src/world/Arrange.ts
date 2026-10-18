@@ -3,7 +3,8 @@ import type { Room } from "colyseus.js";
 import { TILE_SIZE } from "../../../shared/constants";
 import { FURNITURE, footprintOf, goesIn, nextTurn, type FurnitureId } from "../../../shared/content/furniture";
 import { furnitureOf, ITEMS } from "../../../shared/content/items";
-import { farmBoard, farmKeepClear, houseBoard } from "../../../shared/decor/boards";
+import { farmBoard, houseBoard } from "../../../shared/decor/boards";
+import type { Today } from "../../../shared/world/today";
 import { pieceArea, pieceAt, placeRefusal, type Board, type PlacedPiece } from "../../../shared/decor/pieces";
 import { hintText, type HintReason } from "../../../shared/farming/actions";
 import type { Inventory } from "../../../shared/inventory/inventory";
@@ -73,6 +74,8 @@ export interface ArrangeOptions {
   hudInput: Phaser.Input.InputPlugin;
   /** Arranging started: for the tips. */
   started?(): void;
+  /** The village as of today: the farm's open ground changes as things are built (the board stands). */
+  today(): Today;
 }
 
 /**
@@ -93,7 +96,6 @@ export class Arrange {
   private readonly frame: Phaser.GameObjects.Graphics;
   /** The camera follows this while arranging, so the cursor can go anywhere on the farm. */
   private readonly focus: Phaser.GameObjects.Zone;
-  private readonly keepClear = farmKeepClear(VILLAGE_MAP);
   private step: { dir: string; next: number } | null = null;
   private lastSlot = -1;
   private downAt: { x: number; y: number; time: number } | null = null;
@@ -304,7 +306,7 @@ export class Arrange {
     const occupied = (col: number, row: number) => standing.some((feet) => feet.col === col && feet.row === row);
     return {
       pieces: this.options.homes.farmDecorations,
-      board: farmBoard(VILLAGE_MAP, (col, row) => this.options.dug(col, row), occupied, this.keepClear),
+      board: farmBoard(this.options.today().map, (col, row) => this.options.dug(col, row), occupied, this.options.today().keepClear),
       local: (at) => at,
       toMap: (at) => ({ col: at.col, row: at.row }),
     };

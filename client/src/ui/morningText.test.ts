@@ -25,6 +25,8 @@ describe("the morning card's words", () => {
         total: 260,
       },
       washedUp: [],
+      foraged: [],
+      built: [],
     });
     expect(words.title).toBe("Good morning! Day 4");
     expect(words.sales).toEqual([
@@ -35,12 +37,34 @@ describe("the morning card's words", () => {
   });
 
   it("keeps a quiet night short", () => {
-    const words = morningWords({ day: 2, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: [] });
-    expect(words).toEqual({ title: "Good morning! Day 2", growth: null, beach: null, sales: [], earned: null });
+    const words = morningWords({ day: 2, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: [], foraged: [], built: [] });
+    expect(words).toEqual({ title: "Good morning! Day 2", growth: null, storm: null, village: [], beach: null, sales: [], earned: null });
   });
 
   it("says when something washed up on the beach", () => {
-    const words = morningWords({ day: 3, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: ["starfish", "sea_glass"] });
+    const words = morningWords({ day: 3, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: ["starfish", "sea_glass"], foraged: [], built: [] });
     expect(words.beach).toBe("Something washed up on the beach!");
+  });
+});
+
+describe("the morning card in the village (Milestone 6)", () => {
+  const quiet = { day: 5, grew: 0, ready: 0, coins: 500, sale: { lines: [], total: 0 }, washedUp: [], foraged: [], built: [] };
+
+  it("says what was built overnight, with Marlow's note", () => {
+    const words = morningWords({ ...quiet, built: [{ project: "lighthouse", step: 1 }] });
+    expect(words.village).toEqual([
+      {
+        built: { project: "lighthouse", step: 1 },
+        line: "The lighthouse stairs are mended.",
+        note: expect.stringContaining("Ninety-two steps"),
+      },
+    ]);
+  });
+
+  it("tells of the storm the morning Marlow arrives, and counts driftwood as washing up", () => {
+    const words = morningWords({ ...quiet, foraged: ["driftwood", "branch"] }, true);
+    expect(words.storm).toMatch(/boat is tied up at the dock/);
+    expect(words.beach).toBe("Something washed up on the beach!");
+    expect(morningWords(quiet).storm).toBeNull();
   });
 });

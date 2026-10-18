@@ -163,6 +163,63 @@ describe("old saves", () => {
   });
 });
 
+describe("every save from before Milestone 6", () => {
+  for (const name of ["world-v1.json", "world-v2.json", "world-v3.json"]) {
+    it(`${name} comes through with an empty village, nothing lying about, and an empty "built" on the last morning`, () => {
+      const before = JSON.parse(readFixture(name));
+      const loaded = worldFromSave(upgradeSave(readFixture(name), WORLD_SAVE, name).save);
+      expect(loaded.village).toEqual({ keeperDay: 0, projects: {} });
+      expect(loaded.forage).toEqual({ day: 0, items: [] });
+      expect(loaded.lastMorning?.built).toEqual([]);
+      expect(loaded.lastMorning?.foraged).toEqual([]);
+      // And everything that was there is as it was.
+      expect(loaded.clock).toEqual(before.clock);
+      expect(loaded.coins).toBe(before.coins);
+      expect(loaded.crate).toEqual(before.crate);
+      expect(Object.keys(loaded.farm)).toHaveLength(before.farm.length);
+      expect(Object.keys(loaded.farmers)).toEqual(Object.keys(before.farmers));
+      for (const id of Object.keys(before.farmers)) {
+        const was = before.farmers[id].bag as unknown[];
+        const now = loaded.farmers[id].bag;
+        // Slot for slot, but for the fishing rod Milestone 5 put in an empty one.
+        now.forEach((slot, i) => {
+          if (slot?.itemId === "fishing_rod" && was[i] === null) return;
+          expect(slot, `${id} slot ${i}`).toEqual(was[i]);
+        });
+      }
+      if (before.houses) expect(loaded.houses).toEqual(before.houses);
+      if (before.decorations) expect(loaded.decorations).toEqual(before.decorations);
+      if (before.beach) expect(loaded.beach).toEqual(before.beach);
+      if (before.book) expect(loaded.book).toEqual(before.book);
+    });
+  }
+});
+
+describe("version 4 (Milestone 6: Marlow, the board and the lighthouse)", () => {
+  const world = () => worldFromSave(upgradeSave(readFixture("world-v4.json"), WORLD_SAVE, "world-v4.json").save);
+
+  it("keeps when Marlow came and how far the lighthouse has got, helpers and all", () => {
+    const loaded = world();
+    expect(loaded.village.keeperDay).toBe(10);
+    expect(loaded.village.projects.lighthouse).toEqual({
+      gathered: 1,
+      built: 1,
+      given: { driftwood: 7, branch: 8, "any:fish": 2, coins: 150 },
+      helpers: [JUNO, PIP],
+      doneDay: null,
+    });
+  });
+
+  it("keeps the driftwood and branches lying about, and the morning that built the path", () => {
+    const loaded = world();
+    expect(loaded.forage.day).toBe(12);
+    expect(loaded.forage.items).toContainEqual({ itemId: "driftwood", col: 15, row: 23 });
+    expect(loaded.forage.items.filter((i) => i.itemId === "branch")).toHaveLength(2);
+    expect(loaded.lastMorning?.built).toEqual([{ project: "lighthouse", step: 0 }]);
+    expect(loaded.farmers[PIP].bag[6]).toEqual({ itemId: "driftwood", count: 3 });
+  });
+});
+
 describe("old saves in the save database", () => {
   const dirs: string[] = [];
   afterEach(() => {

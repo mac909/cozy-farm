@@ -40,3 +40,9 @@
   margin: 0;
   font-size: 16px;
 }
+
+/* What the Village Board still wants of it. */
+.bag-info small.bag-wanted {
+  color: #c2412d;
+  font-weight: 700;
+}

@@ -4,6 +4,7 @@ import { isWalkable, tileCenter } from "./map";
 import {
   CLIENT_NEAR_TILES,
   SERVER_NEAR_TILES,
+  canStandAt,
   distanceToRect,
   feetTile,
   inReach,
@@ -14,6 +15,7 @@ import {
   targetTile,
   wakeSpots,
 } from "./places";
+import { mapFor } from "./gates";
 import { VILLAGE_MAP } from "./villageMap";
 
 describe("feetTile and targetTile", () => {
@@ -79,7 +81,7 @@ describe("places in the village", () => {
   });
 
   it("lets the server accept a little further away than the button shows", () => {
-    const door = placeArea(map, "tent");
+    const door = placeArea(map, "tent")!;
     const justOutside = { x: door.x + door.width / 2, y: door.y + door.height + CLIENT_NEAR_TILES * TILE_SIZE + 4 - FEET_OFFSET };
     expect(placeNear(map, justOutside, CLIENT_NEAR_TILES)).toBeNull();
     expect(placeNear(map, justOutside, SERVER_NEAR_TILES)).toBe("tent");
@@ -97,5 +99,22 @@ describe("places in the village", () => {
     expect(spots[0]).toEqual(map.spawn);
     expect(new Set(spots.map((s) => `${s.col},${s.row}`)).size).toBe(spots.length);
     for (const spot of spots) expect(isWalkable(map, spot.col, spot.row), `${spot.col},${spot.row}`).toBe(true);
+  });
+});
+
+describe("rejoining", () => {
+  const map = VILLAGE_MAP;
+  const at = (col: number, row: number) => ({ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 - FEET_OFFSET });
+
+  it("carries on where you were if you can stand there, and sends you to the spawn point if not", () => {
+    expect(canStandAt(map, at(map.spawn.col, map.spawn.row))).toBe(true);
+    // In the sea, off the map, or somewhere since built over.
+    expect(canStandAt(map, at(10, 30))).toBe(false);
+    expect(canStandAt(map, { x: -50, y: 20 })).toBe(false);
+    expect(canStandAt(map, { x: 99_999, y: 20 })).toBe(false);
+    const board = mapFor(map, new Set(["keeper"])).board!;
+    const underBoard = at(board.x / TILE_SIZE, board.y / TILE_SIZE + 1);
+    expect(canStandAt(map, underBoard)).toBe(true);
+    expect(canStandAt(mapFor(map, new Set(["keeper"])), underBoard)).toBe(false);
   });
 });

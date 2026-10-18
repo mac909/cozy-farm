@@ -199,3 +199,13 @@
   color: #8a7556;
   font-size: 14px;
 }
+
+/* Marlow's face on a village cheer, in a round frame. */
+.celebrate-icon.face {
+  width: 44px;
+  height: 44px;
+  border: 2px solid #b89b68;
+  border-radius: 50%;
+  background: #d9c49a;
+  animation: none;
+}

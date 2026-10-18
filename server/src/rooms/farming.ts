@@ -31,7 +31,7 @@ export function registerFarming(room: FarmRoom) {
         room.hint(client, { reason: "too-far" });
         return;
       }
-      const result = applyFarmAction(room.world, VILLAGE_MAP, {
+      const result = applyFarmAction(room.world, room.today.map, {
         farmerId: player.farmerId,
         action,
         col: tile.col,

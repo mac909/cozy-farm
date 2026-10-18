@@ -1,4 +1,3 @@
-import type { BeachFindId } from "../content/beachFinds";
 import type { BugId } from "../content/bugs";
 import { CROPS, isCropId, type CropId } from "../content/crops";
 import type { FishingSpot } from "../content/fish";
@@ -20,22 +19,28 @@ export type DoorKind = "home" | "visit" | "moveIn";
 
 /**
  * Something you're standing next to that takes over the Action button: a place on the map, a
- * cottage's door, the way out of a room, or a bed.
+ * cottage's door, the way out of a room, a bed, Marlow, the lighthouse's door once it's lit, or
+ * something closed (the brambles, the dark lighthouse) whose hint the button gives instead.
  */
 export type Spot =
   | { kind: "place"; place: PlaceId }
   | { kind: "door"; houseId: string; how: DoorKind }
   | { kind: "exit"; houseId: string }
-  | { kind: "bed" };
+  | { kind: "bed" }
+  | { kind: "keeper" }
+  | { kind: "climb" }
+  | { kind: "closed"; reason: HintReason };
 
 /**
- * Things to collect near you, found by the caller: the beach find on the tile in front (or under
- * your feet), a bug fluttering close by, and where a line would go in if you're facing water.
+ * Things to collect near you, found by the caller: the beach find, driftwood or branch on the tile
+ * in front (or under your feet), a bug fluttering close by, and where a line would go in if you're
+ * facing water. `give`: at the board, what the item you're holding would give to (and how many).
  */
 export interface Nearby {
-  find?: { findId: BeachFindId; col: number; row: number } | null;
+  find?: { itemId: ItemId; col: number; row: number } | null;
   bug?: { id: string; bugId: BugId } | null;
   fishing?: { spot: FishingSpot; col: number; row: number } | null;
+  give?: { project: string; need: string; itemId: ItemId; count: number } | null;
 }
 
 /** What the Action button does. */
@@ -44,10 +49,15 @@ export type Action =
   | { kind: "crate" }
   | { kind: "seeds" }
   | { kind: "shop" }
+  | { kind: "board" }
+  | { kind: "give"; project: string; need: string; itemId: ItemId; count: number }
+  | { kind: "talk" }
+  | { kind: "climb" }
+  | { kind: "closed"; reason: HintReason }
   | { kind: "enter"; houseId: string; how: DoorKind }
   | { kind: "leave"; houseId: string }
   | { kind: "place"; itemId: FurnitureId }
-  | { kind: "pickUp"; findId: BeachFindId; col: number; row: number }
+  | { kind: "pickUp"; itemId: ItemId; col: number; row: number }
   | { kind: "catch"; bugId: BugId; id: string }
   | { kind: "fish"; spot: FishingSpot; col: number; row: number }
   | { kind: "harvest"; cropId: CropId }
@@ -64,6 +74,7 @@ const PLACE_ACTION: Record<PlaceId, Action> = {
   crate: { kind: "crate" },
   seedStand: { kind: "seeds" },
   store: { kind: "shop" },
+  board: { kind: "board" },
 };
 
 /** The item that digs. */
@@ -80,8 +91,9 @@ export function seedCrop(itemId: ItemId | null): CropId | null {
 
 /**
  * What the Action button does, checked in this order:
- * next to a place (tent, crate, seed stand, store), a door, the way out or a bed → that;
- * a beach find in front (or underfoot) → pick it up, whatever you're holding;
+ * next to a place (tent, crate, seed stand, store, the board), a door, the way out, a bed, Marlow
+ * or the lit lighthouse's door → that (at the board, holding something it wants → give it);
+ * a beach find, driftwood or a branch in front (or underfoot) → pick it up, whatever you're holding;
  * a bug fluttering close by → catch it, whatever you're holding;
  * holding furniture where it can go (`placing`: your own house, or the farm) → put it down;
  * the fishing rod, facing water you can fish → cast;
@@ -89,6 +101,7 @@ export function seedCrop(itemId: ItemId | null): CropId | null {
  * the hoe on farmland grass → dig;
  * seeds on bare dug soil → plant;
  * the watering can on soil that isn't watered yet → water;
+ * facing something closed (the brambles, the dark lighthouse) → its hint;
  * otherwise nothing.
  *
  * `tile` is the tile in front of you; `isFarmland` whether the map allows digging there; `held` the
@@ -103,7 +116,13 @@ export function chooseAction(
   placing: PlaceKind | null = null,
   nearby: Nearby = {},
 ): Action {
-  if (spot) return spotAction(spot);
+  if (spot?.kind === "place" && spot.place === "board" && nearby.give) return { kind: "give", ...nearby.give };
+  if (spot && spot.kind !== "closed") return spotAction(spot);
+  const action = collectOrFarm(tile, isFarmland, held, placing, nearby);
+  return action.kind === "none" && spot?.kind === "closed" ? { kind: "closed", reason: spot.reason } : action;
+}
+
+function collectOrFarm(tile: FarmTile, isFarmland: boolean, held: ItemId | null, placing: PlaceKind | null, nearby: Nearby): Action {
   if (nearby.find) return { kind: "pickUp", ...nearby.find };
   if (nearby.bug) return { kind: "catch", ...nearby.bug };
   const furniture = furnitureOf(held);
@@ -128,16 +147,26 @@ export function spotAction(spot: Spot): Action {
       return { kind: "leave", houseId: spot.houseId };
     case "bed":
       return { kind: "sleep" };
+    case "keeper":
+      return { kind: "talk" };
+    case "climb":
+      return { kind: "climb" };
+    case "closed":
+      return { kind: "closed", reason: spot.reason };
   }
 }
 
 const DOOR_WORD: Record<DoorKind, string> = { home: "Home", visit: "Visit", moveIn: "Move in" };
 
-const ACTION_WORD: Record<Exclude<Action["kind"], "enter">, string | null> = {
+const ACTION_WORD: Record<Exclude<Action["kind"], "enter" | "give">, string | null> = {
   sleep: "Sleep",
   crate: "Crate",
   seeds: "Seeds",
   shop: "Shop",
+  board: "Board",
+  talk: "Talk",
+  climb: "Climb",
+  closed: null,
   leave: "Leave",
   place: "Place",
   pickUp: "Pick up",
@@ -152,7 +181,9 @@ const ACTION_WORD: Record<Exclude<Action["kind"], "enter">, string | null> = {
 
 /** The word on the Action button's tag, or null when it's faded. */
 export function actionWord(action: Action): string | null {
-  return action.kind === "enter" ? DOOR_WORD[action.how] : ACTION_WORD[action.kind];
+  if (action.kind === "enter") return DOOR_WORD[action.how];
+  if (action.kind === "give") return `Give ${action.count}`;
+  return ACTION_WORD[action.kind];
 }
 
 /** Why an action can't happen. Each one has a line of text in HINT_TEXT. */
@@ -194,7 +225,16 @@ export type HintReason =
   | "no-water"
   | "nothing-biting"
   | "no-rod"
-  | "flew-off";
+  | "flew-off"
+  | "not-near-board"
+  | "not-open"
+  | "step-waiting"
+  | "not-needed"
+  | "need-done"
+  | "no-coins"
+  | "nothing-to-give"
+  | "brambles"
+  | "lighthouse-dark";
 
 /** A hint, with the details some of them need. */
 export interface Hint {
@@ -243,6 +283,15 @@ const HINT_TEXT: Record<Exclude<HintReason, "growing">, string> = {
   "nothing-biting": "Nothing's biting here just now.",
   "no-rod": "You need the fishing rod for that.",
   "flew-off": "It fluttered off!",
+  "not-near-board": "Walk up to the board first.",
+  "not-open": "That isn't up on the board just now.",
+  "step-waiting": "Marlow's seeing to that tonight.",
+  "not-needed": "The board doesn't need that just now.",
+  "need-done": "That's all in already!",
+  "no-coins": "The wallet's empty.",
+  "nothing-to-give": "Nothing in your bag the board needs just now.",
+  brambles: "Brambles, right across the old path. Marlow has a plan for them on the board.",
+  "lighthouse-dark": "The lighthouse is dark. Marlow has a plan for it on the board.",
 };
 
 /** True for a hint the client can show; use it on hints that arrive from the server. */

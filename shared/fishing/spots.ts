@@ -4,14 +4,17 @@ import { inAnyRect, isDock, isWater } from "../world/terrain";
 
 /**
  * Where a line goes in: standing somewhere you can walk, with water in front. The deep water off
- * the dock's end (the map's `deepWater` rectangles) is "deep"; anywhere else it's "dock" if you're
- * on the dock and "shore" if you're on the beach (or any other bit of land by the sea).
+ * the dock's end (the map's `deepWater` rectangles) is "deep"; the water round the point once the
+ * lighthouse is lit (`pointWater`, cast from land) is "point"; anywhere else it's "dock" if you're
+ * on the dock and "shore" if you're on the beach (or any other bit of land by the sea). Hand it the
+ * map as of today (shared/world/today.ts), so the point only counts once it's lit.
  * `feet` is the tile you stand on, `water` the tile the line goes into. Null if it can't go in there.
  */
 export function fishingSpot(map: WorldMap, feet: TilePos, water: TilePos): FishingSpot | null {
   if (!isWater(map, water.col, water.row) || !isWalkable(map, feet.col, feet.row)) return null;
   const onDock = isDock(map, feet.col, feet.row);
   if (onDock && inAnyRect(map.deepWater, water.col, water.row)) return "deep";
+  if (!onDock && inAnyRect(map.pointWater, water.col, water.row)) return "point";
   return onDock ? "dock" : "shore";
 }
 
@@ -20,6 +23,7 @@ export const SPOT_NAMES: Readonly<Record<FishingSpot, string>> = {
   dock: "the dock",
   shore: "the shore",
   deep: "the end of the dock",
+  point: "the point",
 };
 
 /** Where the bobber lands: two tiles out if that's water too, else the tile in front. */

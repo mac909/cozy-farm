@@ -10,12 +10,18 @@ import type { Rarity } from "./rarity";
  */
 
 /**
- * Where a line can go in: off the sides of the dock, from the beach, or into
- * the deep water off the dock's end.
+ * Where a line can go in: off the sides of the dock, from the beach, into the deep water off the
+ * dock's end, or (once the lighthouse is lit) off the rocks at the point.
  */
-export type FishingSpot = "dock" | "shore" | "deep";
+export type FishingSpot = "dock" | "shore" | "deep" | "point";
 
-export const FISHING_SPOTS: readonly FishingSpot[] = ["dock", "shore", "deep"];
+export const FISHING_SPOTS: readonly FishingSpot[] = ["dock", "shore", "deep", "point"];
+
+/**
+ * The point fishes like the shore by day. From this minute (6 pm) the lighthouse's light draws in
+ * its own night fish: only fish with "point" in their spots bite there then.
+ */
+export const POINT_NIGHT_FROM = 18 * 60;
 
 /** Part of the day when a fish bites, in game minutes. */
 export interface BiteWindow {
@@ -112,7 +118,7 @@ const fishData = {
   squid: {
     id: "squid",
     name: "Squid",
-    spots: ["dock", "deep"],
+    spots: ["dock", "deep", "point"],
     windows: [{ from: 19 * 60, to: DAY_END_MINUTE }],
     rarity: "uncommon",
     sellPrice: 70,
@@ -153,6 +159,34 @@ const fishData = {
     rarity: "rare",
     sellPrice: 260,
     sizeCm: { min: 60, max: 110 },
+  },
+  // Night fish at the point, drawn in by the lighthouse (Milestone 6).
+  lanternfish: {
+    id: "lanternfish",
+    name: "Lanternfish",
+    spots: ["point"],
+    windows: [{ from: 18 * 60, to: DAY_END_MINUTE }],
+    rarity: "common",
+    sellPrice: 45,
+    sizeCm: { min: 5, max: 12 },
+  },
+  cuttlefish: {
+    id: "cuttlefish",
+    name: "Cuttlefish",
+    spots: ["point"],
+    windows: [{ from: 20 * 60, to: DAY_END_MINUTE }],
+    rarity: "uncommon",
+    sellPrice: 110,
+    sizeCm: { min: 15, max: 40 },
+  },
+  conger_eel: {
+    id: "conger_eel",
+    name: "Conger Eel",
+    spots: ["point"],
+    windows: [{ from: 21 * 60, to: DAY_END_MINUTE }],
+    rarity: "rare",
+    sellPrice: 240,
+    sizeCm: { min: 80, max: 200 },
   },
 } satisfies Record<string, FishDef>;
 

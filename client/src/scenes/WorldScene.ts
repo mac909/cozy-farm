@@ -16,14 +16,35 @@ import type {
   JoinOptions,
   LookMessage,
   MorningMessage,
+  GiveAllMessage,
+  GiveMessage,
   MoveItemMessage,
   MoveMessage,
+  PlacedMessage,
   ShipMessage,
   SplitStackMessage,
   UnshipMessage,
+  VillageEventMessage,
   WakeUpMessage,
   YouMessage,
 } from "../../../shared/messages";
+import { smallTalkFor } from "../../../shared/content/keeper";
+import { PROJECTS, PROJECT_IDS, stepName } from "../../../shared/content/projects";
+import { builtThings } from "../../../shared/village/built";
+import { openProjects, wantedFor } from "../../../shared/village/projects";
+import { EMPTY_VILLAGE, type BuiltStep, type Village } from "../../../shared/village/village";
+import { lookAt, NOTHING_BUILT } from "../../../shared/world/gates";
+import { villageRect } from "../../../shared/world/houses";
+import { todayFor, type Today } from "../../../shared/world/today";
+import { readForage, readVillage, type HelperView } from "../../../shared/stateSync";
+import { BoardPanel } from "../ui/BoardPanel";
+import { keeperNotes, type BoardState, type KeeperNote } from "../ui/boardText";
+import { showKeeperNote, showNotesList } from "../ui/KeeperNote";
+import { showOpeningCard } from "../ui/OpeningCard";
+import { eveningTint } from "../ui/evening";
+import { markNoteRead, markOpeningShown, notesRead, openingShown } from "../ui/villageStorage";
+import { ForageView } from "../world/Forage";
+import { lighthouseFrame, VillageView, type GatedOnScreen } from "../world/Village";
 import { clampMove, type Facing, facingFor, isFacing, turnsOnly, type Vec } from "../../../shared/movement";
 import { isEmote, type Look, lookFrom } from "../../../shared/player";
 import type { FarmState, Player } from "../../../shared/schema";
@@ -40,6 +61,10 @@ import { isFarmerId, type FarmerId } from "../../../shared/world/world";
 import {
   characterKey,
   COIN_KEY,
+  faceKey,
+  KEEPER_FACE_KEY,
+  LIGHTHOUSE_FRAME,
+  LIGHTHOUSE_KEY,
   RIPPLE_ANIM,
   RIPPLES_KEY,
   HOUSE_SHEET_KEY,
@@ -100,6 +125,16 @@ const ABOVE_DEPTH = 500_000;
 /** A remote player counts as walking until they've stood still this long, so brief pauses between updates don't flicker. */
 const REMOTE_STILL_MS = 150;
 
+/** The view from the top of the lighthouse: how fast the stick looks round, in world pixels a second. */
+const VIEW_PAN_SPEED = 260;
+/** The lighthouse's beam goes round once in this long. */
+const BEAM_TURN_MS = 14_000;
+/** The glow comes up with the dusk and is full this far into it (the evening tint's strength). */
+const FULL_GLOW_TINT = 0.12;
+/** The sea's colour (our beach terrain's), and over everything in the world but the rooms' dark. */
+const VIEW_SEA_COLOR = 0x71ddee;
+const VIEW_SEA_DEPTH = 900_000;
+
 type Direction = "up" | "down" | "left" | "right";
 
 /** Another player, drawn a moment behind where the server says they are, so they move smoothly. */
@@ -151,6 +186,22 @@ export class WorldScene extends Phaser.Scene {
   /** The shared collection book, as the server last said, and the cards that cheer what's new in it. */
   private book: CollectionBook = EMPTY_BOOK;
   private celebrations!: Celebrations;
+  /** The village (Milestone 6) as the server last said: Marlow, the projects and who helped, what's lying about. */
+  private village: Village = EMPTY_VILLAGE;
+  private helpers: Record<string, HelperView[]> = {};
+  private clock: GameClock = { day: 1, minute: 360 };
+  /** The map as of today, with what's built. */
+  private today: Today = todayFor(VILLAGE_MAP, NOTHING_BUILT);
+  private villageView!: VillageView;
+  private forage!: ForageView;
+  /** A note or opening card is up (they wait for each other and for the morning card). */
+  private noteOpen = false;
+  /** How many times you've talked to Marlow, so his small talk goes round. */
+  private talks = 0;
+  /** Up the lighthouse, looking at the view. */
+  private viewing = false;
+  /** More sea below the village while looking at the view, so the rooms drawn down there stay out of sight. */
+  private viewSea!: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super("world");
@@ -158,7 +209,7 @@ export class WorldScene extends Phaser.Scene {
 
   create() {
     const map = this.make.tilemap({ key: VILLAGE_KEY });
-    const collision = this.buildMap(map);
+    const { collision, gated } = this.buildMap(map);
 
     const savedLook = loadLook();
     this.farmerId = loadFarmerId();
@@ -172,12 +223,26 @@ export class WorldScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.physics.add.collider(this.player, collision);
+    // Walls that come and go as the village is built (the brambles, the board): each its own collider.
+    const onScreen: GatedOnScreen[] = gated.map(({ gate, layer }) =>
+      gate.kind === "collision" ? { gate, layer, collider: this.physics.add.collider(this.player, layer) } : { gate, layer },
+    );
 
     const camera = this.cameras.main;
     camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     camera.startFollow(this.player, true);
     this.fitZoom();
     this.me = new Character(this, this.player, this.look, this.zoom);
+    this.villageView = new VillageView(this, VILLAGE_MAP.lighthouse, this.zoom);
+    this.villageView.setGated(onScreen);
+    this.villageView.show(this.today, this.clock.minute, 0);
+    this.forage = new ForageView(this);
+    const village = villageRect(VILLAGE_MAP);
+    this.viewSea = this.add
+      .rectangle(village.x, village.y + village.height, village.width, 4000, VIEW_SEA_COLOR)
+      .setOrigin(0, 0)
+      .setDepth(VIEW_SEA_DEPTH)
+      .setVisible(false);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitZoom, this);
     // Name tags and bubbles follow their sprites after physics has moved them this frame.
     this.events.on(Phaser.Scenes.Events.POST_UPDATE, this.followSprites, this);
@@ -237,6 +302,7 @@ export class WorldScene extends Phaser.Scene {
         this.closePanel();
         this.arrange.stop();
         this.fishing.stop();
+        this.stopView();
       },
       show: ({ inBed, sleepers }) => {
         if (this.registry.get("inBed") !== inBed) this.registry.set("inBed", inBed);
@@ -246,9 +312,15 @@ export class WorldScene extends Phaser.Scene {
       itemIcon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
       morningShown: (report) => playSound(this, report.sale.total > 0 ? "coin" : "morning"),
       cardClosed: () => this.releaseKeys(),
+      village: (report) => ({
+        keeperArrived: report.day === this.village.keeperDay,
+        picture: (built) => this.builtPicture(built),
+        look: (built) => this.lookAtBuilt(built),
+      }),
     });
     this.ui.events.on("escape", () => {
-      if (this.fishing.isActive) this.fishing.stop();
+      if (this.viewing) this.stopView();
+      else if (this.fishing.isActive) this.fishing.stop();
       else if (this.arrange.isActive) this.arrange.stop();
       else this.bedtime.wake();
     });
@@ -261,10 +333,15 @@ export class WorldScene extends Phaser.Scene {
       bag: () => this.registry.get("bag") as Inventory | null,
       selectedSlot: () => this.registry.get("selectedSlot") as number,
       showAction: (view) => this.ui.setAction(view),
-      busy: () => this.bedtime.asleep || this.panel?.isOpen === true || this.arrange.isActive || this.fishing.isActive,
+      busy: () => this.bedtime.asleep || this.panel?.isOpen === true || this.arrange.isActive || this.fishing.isActive || this.viewing || this.noteOpen,
       spot: (position) => this.homes.spot(position),
       placing: () => this.homes.placing(),
       findAt: (col, row) => this.beach.findAt(col, row),
+      forageAt: (col, row) => this.forage.itemAt(col, row),
+      map: () => this.today.map,
+      built: () => this.today.built,
+      keeperTile: () => (this.homes.currentArea === VILLAGE ? this.villageView.keeperAt : null),
+      wanted: (itemId) => this.wanted(itemId),
       bugNear: (position) => this.meadow.bugNear(position),
       on: {
         catchBug: (id, bugId) => this.catchBug(id, bugId),
@@ -276,6 +353,10 @@ export class WorldScene extends Phaser.Scene {
         enter: (houseId, how) => this.homes.enter(houseId, how),
         leave: (houseId) => this.homes.leave(houseId),
         place: () => this.arrange.start(this.registry.get("selectedSlot") as number),
+        board: () => this.openBoard(),
+        give: (project, need, slot) => this.give(project, need, slot),
+        talk: () => this.talk(),
+        climb: () => this.startView(),
       },
       holding: () => this.ui.actionHeld(),
       acted: (kind) => {
@@ -283,6 +364,7 @@ export class WorldScene extends Phaser.Scene {
         if (kind === "water") this.tips.event("watered");
         if (kind === "harvest") this.tips.event("picked");
         if (kind === "pickUp") this.tips.event("pickedUp");
+        if (kind === "pickUpMaterial") this.tips.event("pickedUpMaterial");
       },
     });
     this.arrange = new Arrange(this, {
@@ -302,10 +384,12 @@ export class WorldScene extends Phaser.Scene {
       overHud: (pointer) => this.ui.input.hitTestPointer(pointer).length > 0,
       hudInput: this.ui.input,
       started: () => this.tips.event("arranging"),
+      today: () => this.today,
     });
     this.fishing = new Fishing(this, {
       me: this.me,
       room: () => this.room,
+      map: () => this.today.map,
       face: (facing) => {
         this.facing = facing;
         this.me.setMotion(facing, false);
@@ -325,6 +409,11 @@ export class WorldScene extends Phaser.Scene {
       if (item?.itemId === FISHING_ROD) this.tips.event("rod");
       // Putting the rod away reels in.
       else if (this.fishing.isActive) this.fishing.stop();
+      // Something the board wants: the name flash says so.
+      const itemId = item?.itemId;
+      if (itemId && Object.hasOwn(ITEMS, itemId) && wantedFor(this.villageNow(), itemId as ItemId)) {
+        this.ui.showToast(`${ITEMS[itemId as ItemId].name} · wanted on the board`);
+      }
     });
     this.ui.events.on("action", () => {
       if (this.fishing.isActive) this.fishing.press();
@@ -367,6 +456,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.bedtime.holdStill(input)) {
       // In bed you stay put; moving gets you up instead.
       move = { x: 0, y: 0 };
+    } else if (this.viewing) {
+      // Up the lighthouse: the stick looks round the village.
+      move = { x: 0, y: 0 };
+      const camera = this.cameras.main;
+      camera.scrollX += (input.x * VIEW_PAN_SPEED * delta) / 1000;
+      camera.scrollY += (input.y * VIEW_PAN_SPEED * delta) / 1000;
     } else if (this.fishing.isActive) {
       // Fishing: you stand still; walking off with the keys reels in.
       move = { x: 0, y: 0 };
@@ -401,8 +496,13 @@ export class WorldScene extends Phaser.Scene {
         this.panel === null &&
         this.room !== null &&
         !this.fishing.isActive &&
-        !this.celebrations.showing,
+        !this.celebrations.showing &&
+        !this.noteOpen &&
+        !this.viewing,
     );
+    // Marlow's first note, and a project's opening card, wait for a quiet moment.
+    if (this.canShowCard()) this.showVillageCards();
+    this.showGlow(time);
 
     const now = performance.now();
     const drawAt = now - REMOTE_DELAY_MS;
@@ -419,7 +519,7 @@ export class WorldScene extends Phaser.Scene {
       residents.push({ name: remote.name, farmerId: remote.farmerId, x: pose.x, y: pose.y, inBed: remote.inBed });
     }
     this.residents = residents;
-    this.homes.update(this.player, this.arrange.isActive ? { x: 0, y: 0 } : input, residents);
+    this.homes.update(this.player, this.arrange.isActive || this.viewing ? { x: 0, y: 0 } : input, residents);
     this.meadow.tick();
     const canArrange = !this.bedtime.asleep && this.room !== null && this.homes.placing() !== null;
     if (this.registry.get("canArrange") !== canArrange) this.registry.set("canArrange", canArrange);
@@ -436,15 +536,30 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Draws the Tiled map: every tile layer in Tiled's order, tree tops over the characters,
-   * the shipping crate, and ripples on the sea. Returns the hidden collision layer.
+   * the shipping crate, and ripples on the sea. Returns the hidden collision layer, and the layers
+   * that come and go as the village is built (art, and walls), for the village view to show and hide.
    */
-  private buildMap(map: Phaser.Tilemaps.Tilemap): Phaser.Tilemaps.TilemapLayer {
+  private buildMap(map: Phaser.Tilemaps.Tilemap): { collision: Phaser.Tilemaps.TilemapLayer; gated: GatedOnScreen[] } {
     const tilesets = map.tilesets.map((tileset) => map.addTilesetImage(tileset.name, tilesetKey(tileset.name))!);
+    const gates = new Map(VILLAGE_MAP.gates.layers.map((gate) => [gate.name, gate]));
+    const gated: GatedOnScreen[] = [];
+    const hidden = (name: string) =>
+      name === COLLISION_LAYER || name === FARMLAND_LAYER || name.startsWith(`${COLLISION_LAYER} `) || name.startsWith(`${FARMLAND_LAYER} `);
     map.layers.forEach((data, index) => {
-      if (data.name === COLLISION_LAYER || data.name === FARMLAND_LAYER) return;
-      // Always shown, even if it was hidden in Tiled while editing.
+      const gate = gates.get(data.name);
+      if (hidden(data.name)) {
+        // A wall that comes and goes (the brambles): its own hidden collision layer.
+        if (gate?.kind === "collision") {
+          const walls = map.createLayer(data.name, tilesets, 0, 0)!.setVisible(false);
+          walls.setCollisionByExclusion([-1]);
+          gated.push({ gate, layer: walls });
+        }
+        return;
+      }
+      // Always shown, even if it was hidden in Tiled while editing (unless it waits for something to be built).
       const layer = map.createLayer(data.name, tilesets, 0, 0)!.setVisible(true).setAlpha(1);
       layer.setDepth(isAboveCharacters(data) ? ABOVE_DEPTH + index : GROUND_DEPTH + index * 10);
+      if (gate) gated.push({ gate, layer });
     });
     const collision = map.createLayer(COLLISION_LAYER, tilesets, 0, 0)!.setVisible(false);
     collision.setCollisionByExclusion([-1]);
@@ -473,7 +588,7 @@ export class WorldScene extends Phaser.Scene {
         .setDepth(GROUND_DEPTH + 1)
         .play({ key: RIPPLE_ANIM, delay: Phaser.Math.Between(0, 2000), repeatDelay: Phaser.Math.Between(500, 3000) });
     }
-    return collision;
+    return { collision, gated };
   }
 
   /** The joystick wins while it's held; otherwise WASD or the arrow keys. */
@@ -487,6 +602,7 @@ export class WorldScene extends Phaser.Scene {
   private followSprites() {
     this.me.followSprite();
     for (const { character } of this.remotes.values()) character.followSprite();
+    this.villageView?.follow();
   }
 
   private sendPosition(time: number) {
@@ -542,6 +658,11 @@ export class WorldScene extends Phaser.Scene {
     });
     room.onMessage("castStarted", (message: CastStartedMessage) => this.fishing.started(message));
     room.onMessage("bookEvent", (message: BookEventMessage) => this.celebrate(message));
+    room.onMessage("villageEvent", (message: VillageEventMessage) => this.onVillageEvent(message));
+    // Where you were isn't somewhere you can stand any more: you're at the spawn point.
+    room.onMessage("placed", (message: PlacedMessage) => {
+      if (Number.isFinite(message?.x) && Number.isFinite(message?.y)) this.teleport(message.x, message.y, "down");
+    });
     room.onMessage("you", (message: YouMessage) => {
       if (!isFarmerId(message?.farmerId)) return;
       this.farmerId = message.farmerId;
@@ -563,6 +684,7 @@ export class WorldScene extends Phaser.Scene {
       this.bedtime.clock(clock);
       if (clock.minute >= EVENING_MINUTE) this.tips.event("evening");
     }
+    this.readVillage(state, clock);
     if (this.room) this.bedtime.readState(state, this.room.sessionId);
 
     const me = this.room ? state.players.get(this.room.sessionId) : undefined;
@@ -601,6 +723,293 @@ export class WorldScene extends Phaser.Scene {
       const free = VILLAGE_MAP.houses.some((plan) => !this.homes.houseViews[plan.id]);
       if (free) this.tips.event("homeless");
     }
+  }
+
+  // ---------- The village: Marlow, the board, the lighthouse (Milestone 6) ----------
+
+  /** The village as the server last said (Marlow, the projects, what's lying about), and the map as of today. */
+  private readVillage(state: FarmState, clock: GameClock) {
+    this.clock = clock;
+    const { village, helpers } = readVillage(state.village);
+    const changed = JSON.stringify([village, helpers]) !== JSON.stringify([this.village, this.helpers]);
+    if (changed) {
+      this.village = village;
+      this.helpers = helpers;
+    }
+    this.today = todayFor(VILLAGE_MAP, builtThings(this.villageNow()));
+    this.villageView.show(this.today, clock.minute, openProjects(this.villageNow()).length);
+    this.forage.update(readForage(state.forage));
+    if (changed) {
+      if (this.panel instanceof BoardPanel) this.refreshPanel();
+      if (this.panel instanceof BookPanel) this.panel.refreshVillage();
+    }
+  }
+
+  /** The village and the clock, as the rules want them. */
+  private villageNow(): { village: Village; clock: GameClock } {
+    return { village: this.village, clock: this.clock };
+  }
+
+  private boardState(): BoardState {
+    return { village: this.village, helpers: this.helpers, clock: this.clock };
+  }
+
+  /** At the board, holding something it wants: what the held stack would give to, and how many. */
+  private wanted(itemId: ItemId): { project: string; need: string; count: number } | null {
+    const wanted = wantedFor(this.villageNow(), itemId);
+    const bag = this.registry.get("bag") as Inventory | null;
+    const held = bag?.[this.registry.get("selectedSlot") as number];
+    if (!wanted || !held || held.itemId !== itemId) return null;
+    return { project: wanted.project.id, need: wanted.key, count: Math.min(held.count, wanted.left) };
+  }
+
+  /** The bag strip's line for something the board wants: "The lighthouse needs 3 more". */
+  private wantedLine(itemId: ItemId): string | null {
+    const wanted = wantedFor(this.villageNow(), itemId);
+    return wanted ? `${wanted.project.shortName} needs ${wanted.left} more` : null;
+  }
+
+  /** A project's picture as it stands: the lighthouse dark, scaffolded, mended or lit. */
+  private projectPicture(): string {
+    return iconUrl(this.textures, { key: LIGHTHOUSE_KEY, frame: lighthouseFrame(this.today.built) });
+  }
+
+  /** The picture of something built overnight: the lighthouse as that step left it. */
+  private builtPicture(built: BuiltStep): string {
+    const project = PROJECTS[built.project];
+    const names = new Set(project ? project.steps.slice(0, built.step + 1).map((_, i) => stepName(project, i)) : []);
+    return iconUrl(this.textures, { key: LIGHTHOUSE_KEY, frame: lighthouseFrame(names) });
+  }
+
+  /** The morning card's Look: the camera glides to what was built, and back. */
+  private lookAtBuilt(built: BuiltStep) {
+    const project = PROJECTS[built.project];
+    const at = project ? lookAt(VILLAGE_MAP, stepName(project, built.step), VILLAGE_MAP.lighthouse) : null;
+    if (at) this.glideTo(at);
+  }
+
+  /** The camera glides somewhere in the village and, after a moment, back to you (about three seconds). */
+  private glideTo(at: { x: number; y: number }) {
+    if (this.viewing || this.homes.currentArea !== VILLAGE) return;
+    const camera = this.cameras.main;
+    camera.stopFollow();
+    camera.pan(at.x, at.y, 900, "Sine.easeInOut", true, (_camera: Phaser.Cameras.Scene2D.Camera, out: number) => {
+      if (out < 1) return;
+      this.time.delayedCall(1300, () =>
+        camera.pan(this.player.x, this.player.y, 800, "Sine.easeInOut", true, (_c: Phaser.Cameras.Scene2D.Camera, back: number) => {
+          if (back >= 1 && !this.viewing) camera.startFollow(this.player, true);
+        }),
+      );
+    });
+  }
+
+  /** The Village Board's card (or one project's). */
+  private openBoard(project: string | null = null) {
+    const board = this.openPanel(
+      (onClose) =>
+        new BoardPanel({
+          icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+          coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
+          face: (character) => iconUrl(this.textures, { key: faceKey(character) }),
+          keeperFace: iconUrl(this.textures, { key: KEEPER_FACE_KEY }),
+          projectPicture: () => this.projectPicture(),
+          give: (id, need) => {
+            playSound(this, "tap");
+            this.room?.send("give", { project: id, need } satisfies GiveMessage);
+          },
+          giveAll: (id) => {
+            playSound(this, "tap");
+            this.room?.send("giveAll", { project: id } satisfies GiveAllMessage);
+          },
+          openNotes: () => this.openNotes(),
+          project,
+          onClose,
+        }),
+    );
+    board?.update(this.boardState(), this.registry.get("bag"), this.registry.get("coins"));
+  }
+
+  /** Every note Marlow has written, to read again. */
+  private openNotes() {
+    this.openPanel((onClose) => showNotesList(keeperNotes(this.village, this.clock), iconUrl(this.textures, { key: KEEPER_FACE_KEY }), onClose));
+  }
+
+  /** The Action button's "Give 7": from the held stack. */
+  private give(project: string, need: string, slot: number) {
+    this.me.swing(this.facing);
+    playSound(this, "tap");
+    this.room?.send("give", { project, need, slot } satisfies GiveMessage);
+  }
+
+  /**
+   * Talk to Marlow: his newest note if you haven't read it on this device (older ones are on the
+   * board, under his notes), otherwise a little small talk.
+   */
+  private talk() {
+    const newest = keeperNotes(this.village, this.clock).at(-1);
+    if (newest && !notesRead(this.noteReader()).has(newest.id)) {
+      this.showNote(newest, newest.id === "first");
+      return;
+    }
+    const lines = smallTalkFor(this.clock.minute, this.today.built);
+    if (lines.length === 0) return;
+    this.villageView.keeper.showHint(lines[(this.clock.day + this.talks++) % lines.length]);
+    playSound(this, "tap");
+  }
+
+  /** Whose notes are read: the farmer this device plays (or the device, until it knows). */
+  private noteReader(): string {
+    return this.farmerId ?? "device";
+  }
+
+  private showNote(note: KeeperNote, first: boolean) {
+    markNoteRead(this.noteReader(), note.id);
+    this.noteOpen = true;
+    this.releaseKeys();
+    playSound(this, "open");
+    const { done } = showKeeperNote(note, iconUrl(this.textures, { key: KEEPER_FACE_KEY }), first);
+    void done.then((choice) => {
+      this.noteOpen = false;
+      this.releaseKeys();
+      if (first) this.tips.event("metKeeper");
+      if (choice === "look") this.villageView.pointAtBoard();
+    });
+  }
+
+  /** Nothing's in the way of a card: awake, no panel or other card, not fishing, arranging or up the lighthouse. */
+  private canShowCard(): boolean {
+    return (
+      this.room !== null &&
+      !this.bedtime.asleep &&
+      !this.bedtime.cardOpen &&
+      this.panel === null &&
+      !this.noteOpen &&
+      !this.fishing.isActive &&
+      !this.arrange.isActive &&
+      !this.viewing
+    );
+  }
+
+  /**
+   * Marlow's first note, once on each device; then the opening card of any project opened since
+   * this device last looked. What's waiting is worked out again only when something's built (or
+   * someone else picks up the device), not every frame.
+   */
+  private showVillageCards() {
+    const key = `${this.noteReader()}|${[...this.today.built].sort().join(",")}`;
+    if (key !== this.cardsCheckedFor) {
+      this.cardsCheckedFor = key;
+      const first = this.today.built.has("keeper") && !notesRead(this.noteReader()).has("first");
+      const opened = PROJECT_IDS.find((id) => this.today.built.has(id) && !openingShown(id));
+      this.waitingCard = first ? "first" : (opened ?? null);
+    }
+    const waiting = this.waitingCard;
+    if (!waiting) return;
+    // Shown once: the next check finds it marked.
+    this.cardsCheckedFor = "";
+    this.waitingCard = null;
+    if (waiting === "first") this.showNote(keeperNotes(this.village, this.clock)[0], true);
+    else this.showOpening(waiting);
+  }
+
+  /** What showVillageCards last worked out, and for which reader and built things. */
+  private cardsCheckedFor = "";
+  private waitingCard: string | null = null;
+
+  /** A project's opening card, with a chime (the lighthouse: when the lamp comes on at dusk). */
+  private showOpening(projectId: string) {
+    const project = PROJECTS[projectId];
+    markOpeningShown(projectId);
+    // The card says his note, so it counts as read.
+    markNoteRead(this.noteReader(), projectId);
+    this.noteOpen = true;
+    this.releaseKeys();
+    playSound(this, "morning");
+    const lit = iconUrl(this.textures, { key: LIGHTHOUSE_KEY, frame: LIGHTHOUSE_FRAME.lit });
+    void showOpeningCard(project, { hero: lit, lines: [lit, iconUrl(this.textures, itemIcon("lanternfish")), lit] }).then((see) => {
+      this.noteOpen = false;
+      this.releaseKeys();
+      this.tips.event("lit");
+      const lighthouse = VILLAGE_MAP.lighthouse;
+      if (see && lighthouse) this.glideTo({ x: lighthouse.x + lighthouse.width / 2, y: lighthouse.y + lighthouse.height / 2 });
+    });
+  }
+
+  /** Something happened at the board: a gift floats up from it; a step's last thing in is cheered on every screen. */
+  private onVillageEvent(message: VillageEventMessage) {
+    const event = message?.event;
+    if (!event || typeof message.by !== "string") return;
+    if (event.type === "gift") {
+      this.villageView.floatFromBoard(`+${event.count.toLocaleString("en-GB")}`);
+      return;
+    }
+    const step = PROJECTS[event.project]?.steps[event.step];
+    if (!step) return;
+    this.celebrations.add({
+      title: step.cheer,
+      line: `${message.by} brought the last of it. ${step.tonight}`,
+      itemId: null,
+      big: true,
+      picture: iconUrl(this.textures, { key: KEEPER_FACE_KEY }),
+      tap: () => {
+        if (!(this.panel instanceof BoardPanel)) this.openBoard(event.project);
+      },
+    });
+    const giver = message.sessionId === this.room?.sessionId ? this.me : this.remotes.get(message.sessionId)?.character;
+    if (giver && !giver.hidden) {
+      playBurst(this, giver.sprite.x, giver.sprite.y - 10, "celebrate", giver.sprite.depth + 5);
+      giver.showEmote("heart");
+    }
+  }
+
+  /** The lit lighthouse's glow and beam, from dusk, over the evening tint. Every frame. */
+  private showGlow(time: number) {
+    const lamp = this.villageView.lamp;
+    const tint = eveningTint(this.clock.minute);
+    if (!lamp || !this.today.built.has("lighthouse") || tint <= 0 || this.homes.currentArea !== VILLAGE) {
+      this.ui.setGlow(null);
+      return;
+    }
+    const camera = this.cameras.main;
+    const view = camera.worldView;
+    this.ui.setGlow({
+      x: (lamp.x - view.x) * camera.zoom,
+      y: (lamp.y - view.y) * camera.zoom,
+      zoom: camera.zoom,
+      strength: Math.min(1, tint / FULL_GLOW_TINT),
+      angle: ((time % BEAM_TURN_MS) / BEAM_TURN_MS) * Math.PI * 2,
+    });
+  }
+
+  /** Climb: the camera pulls back over the whole village from the top of the lighthouse. The stick looks round; Down or Esc comes back. */
+  private startView() {
+    const lighthouse = VILLAGE_MAP.lighthouse;
+    if (this.viewing || !lighthouse || !this.today.built.has("lighthouse")) return;
+    this.closePanel();
+    this.arrange.stop();
+    this.fishing.stop();
+    this.viewing = true;
+    this.releaseKeys();
+    playSound(this, "open");
+    this.me.setHidden(true);
+    const camera = this.cameras.main;
+    camera.stopFollow();
+    this.applyZoom(1);
+    camera.centerOn(lighthouse.x + lighthouse.width / 2, lighthouse.y);
+    this.viewSea.setVisible(true);
+    this.ui.setViewing(true);
+  }
+
+  /** Back down the lighthouse. */
+  private stopView() {
+    if (!this.viewing) return;
+    this.viewing = false;
+    this.viewSea.setVisible(false);
+    this.me.setHidden(this.bedtime.asleep);
+    this.fitZoom();
+    this.cameras.main.startFollow(this.player, true);
+    this.ui.setViewing(false);
+    this.releaseKeys();
   }
 
   /** Catch: a gentle swish, and the bug's yours once the server agrees. */
@@ -726,6 +1135,7 @@ export class WorldScene extends Phaser.Scene {
             this.arrange.start(slot);
           },
           openBook: () => this.toggleBook(),
+          wanted: (itemId) => this.wantedLine(itemId),
           onClose,
         }),
     );
@@ -738,7 +1148,23 @@ export class WorldScene extends Phaser.Scene {
       this.closePanel();
       return;
     }
-    const book = this.openPanel((onClose) => new BookPanel({ icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)), onClose }));
+    const book = this.openPanel(
+      (onClose) =>
+        new BookPanel({
+          icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+          // The Village page: the board, to read, once Marlow is here.
+          village: {
+            state: () => (this.today.built.has("keeper") ? this.boardState() : null),
+            board: {
+              icon: (itemId) => iconUrl(this.textures, itemIcon(itemId)),
+              coinIcon: iconUrl(this.textures, { key: COIN_KEY }),
+              face: (character) => iconUrl(this.textures, { key: faceKey(character) }),
+              projectPicture: () => this.projectPicture(),
+            },
+          },
+          onClose,
+        }),
+    );
     book?.update(this.book);
   }
 
@@ -802,6 +1228,7 @@ export class WorldScene extends Phaser.Scene {
     const coins = this.registry.get("coins") as number | null;
     if (this.panel instanceof BagPanel || this.panel instanceof ShopPanel) this.panel.update(bag, coins);
     if (this.panel instanceof CratePanel) this.panel.update(bag, this.crate);
+    if (this.panel instanceof BoardPanel) this.panel.update(this.boardState(), bag, coins);
   }
 
   private emote(emote: EmoteId) {
@@ -859,9 +1286,16 @@ export class WorldScene extends Phaser.Scene {
   private fitZoom() {
     const shortSide = Math.min(this.scale.width, this.scale.height);
     this.zoom = Math.max(1, Math.round(shortSide / (TILE_SIZE * TARGET_VISIBLE_TILES)));
-    this.cameras.main.setZoom(this.zoom);
-    this.me?.setZoom(this.zoom);
-    for (const { character } of this.remotes.values()) character.setZoom(this.zoom);
-    this.homes?.setZoom(this.zoom);
+    // Up the lighthouse the view stays pulled back.
+    this.applyZoom(this.viewing ? 1 : this.zoom);
+  }
+
+  /** The camera's zoom (whole numbers only, so the pixels stay crisp), and everything that keeps a steady size on screen. */
+  private applyZoom(zoom: number) {
+    this.cameras.main.setZoom(zoom);
+    this.me?.setZoom(zoom);
+    for (const { character } of this.remotes.values()) character.setZoom(zoom);
+    this.homes?.setZoom(zoom);
+    this.villageView?.setZoom(zoom);
   }
 }

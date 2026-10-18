@@ -63,7 +63,7 @@ describe("chooseAction", () => {
   });
 
   it("picks up a beach find and catches a bug with anything in hand", () => {
-    const find = { findId: "starfish" as const, col: 20, row: 23 };
+    const find = { itemId: "starfish" as const, col: 20, row: 23 };
     const bug = { id: "3.1.0", bugId: "brimstone" as const };
     for (const held of [HOE, "fishing_rod", "fence", null] as (ItemId | null)[]) {
       expect(chooseAction(UNTILLED, false, held, null, "farm", { find })).toEqual({ kind: "pickUp", ...find });

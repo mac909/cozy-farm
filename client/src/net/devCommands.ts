@@ -8,9 +8,13 @@ export interface DevCommands {
   setTime(time: string | number): void;
   /** Add coins to the shared wallet. */
   addCoins(amount: number): void;
+  /** Fill the board's open step as if everything was given (the cheer comes on every screen). */
+  give(): void;
+  /** Build whatever's been gathered now, instead of overnight. */
+  build(): void;
   /**
    * Walk there in a blink (your own character only): dev.goTo("dock"), "dockEnd", "beach", "meadow",
-   * "tent", or dev.goTo(28, 30) for a tile.
+   * "tent", "board", "point", "pointEnd", or dev.goTo(28, 30) for a tile.
    */
   goTo(place: DevPlace | number, row?: number): void;
 }
@@ -22,6 +26,9 @@ export const DEV_PLACES = {
   beach: { col: 10, row: 25, facing: "down" },
   meadow: { col: 32, row: 10, facing: "down" },
   tent: { col: 7, row: 15, facing: "down" },
+  board: { col: 34, row: 16, facing: "up" },
+  point: { col: 60, row: 31, facing: "up" },
+  pointEnd: { col: 60, row: 32, facing: "down" },
 } as const;
 
 export type DevPlace = keyof typeof DEV_PLACES;
@@ -67,5 +74,7 @@ export function installDevCommands(
       else send({ command: "setTime", value });
     },
     addCoins: (amount) => send({ command: "addCoins", value: amount }),
+    give: () => send({ command: "fillStep" }),
+    build: () => send({ command: "build" }),
   };
 }

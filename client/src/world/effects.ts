@@ -31,6 +31,8 @@ export const COLLECT_BURSTS = {
   glint: { tints: [0xffffff, 0xfff4c2], count: 3, speed: { min: 4, max: 10 }, angle: { min: 240, max: 300 }, gravityY: -10, lifespan: 600 },
   // Sand flicked up as a find is picked up.
   sand: { tints: [0xeecf9b, 0xd2b37d, 0xffffff], count: 8, speed: { min: 16, max: 34 }, angle: { min: 210, max: 330 }, gravityY: 80, lifespan: 380 },
+  // Twigs and leaves as a branch is picked up (Milestone 6).
+  twigs: { tints: [0x985c40, 0x74a334, 0xadbc3a], count: 8, speed: { min: 16, max: 34 }, angle: { min: 210, max: 330 }, gravityY: 80, lifespan: 380 },
   // The bobber landing, a bite, or a fish leaping out.
   splash: { tints: [0xffffff, 0xbfeaff, 0x71ddee], count: 10, speed: { min: 14, max: 34 }, angle: { min: 210, max: 330 }, gravityY: 90, lifespan: 420 },
   // A bug caught: a twinkle.

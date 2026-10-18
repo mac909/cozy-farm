@@ -10,6 +10,7 @@ import type {
   LookMessage,
   MorningMessage,
   MoveMessage,
+  PlacedMessage,
   ReplacedMessage,
   YouMessage,
 } from "../../../shared/messages";
@@ -24,10 +25,16 @@ import {
   writeClock,
   writeCrate,
   writeFarm,
+  writeForage,
   writeHouses,
   writePieces,
+  writeVillage,
 } from "../../../shared/stateSync";
-import { tideIn } from "../../../shared/beachcombing/tide";
+import { makeRoom } from "../../../shared/decor/makeRoom";
+import { builtThings } from "../../../shared/village/built";
+import { startOfServer, type PlacesFor } from "../../../shared/world/night";
+import { canStandAt } from "../../../shared/world/places";
+import { todayFor, type Today } from "../../../shared/world/today";
 import { tickClock } from "../../../shared/time/clock";
 import { tileCenter } from "../../../shared/world/map";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
@@ -44,7 +51,7 @@ import {
 import { liveWorld } from "../world/liveWorld";
 import { registerBag } from "./bag";
 import { Meadow } from "./bugs";
-import { registerBeach, VILLAGE_SHORE } from "./beach";
+import { registerBeach } from "./beach";
 import { registerCrate } from "./crate";
 import { registerDecor } from "./decor";
 import { registerDevCommands } from "./dev";
@@ -53,6 +60,7 @@ import { registerFishing } from "./fishing";
 import { registerHouses } from "./houses";
 import { Bedtime } from "./night";
 import { registerShop } from "./shop";
+import { registerVillage } from "./village";
 
 const WORLD_WIDTH = VILLAGE_MAP.width * TILE_SIZE;
 const WORLD_HEIGHT = VILLAGE_MAP.height * TILE_SIZE;
@@ -78,9 +86,11 @@ export class FarmRoom extends Room<FarmState> {
 
   onCreate() {
     this.setState(new FarmState());
-    // A world whose beach has never had a tide (brand new, or saved before Milestone 5) gets its first now.
-    const tide = tideIn(this.world, VILLAGE_SHORE);
-    if (tide.world !== this.world) liveWorld().set(tide.world);
+    // Marlow arrives with a storm (the first start after Milestone 6, on a world past its first day),
+    // and the beach and the ground get today's tide and driftwood if they haven't yet.
+    const before = this.world;
+    const started = this.roomForBuilt(before, startOfServer(before, this.placesFor));
+    if (started !== before) liveWorld().set(started);
     this.syncWorld();
     this.onMessage("move", (client, message: MoveMessage) => this.movePlayer(client, message));
     this.onMessage("look", (client, message: LookMessage) => this.changeLook(client, message));
@@ -93,6 +103,7 @@ export class FarmRoom extends Room<FarmState> {
     registerHouses(this);
     registerDecor(this);
     registerBeach(this);
+    registerVillage(this);
     this.fishing = registerFishing(this);
     this.meadow = new Meadow(this);
     this.meadow.check();
@@ -113,8 +124,14 @@ export class FarmRoom extends Room<FarmState> {
     const spawn = tileCenter(VILLAGE_MAP.spawn.col, VILLAGE_MAP.spawn.row);
     player.x = spawn.x;
     player.y = spawn.y;
-    // Someone rejoining after a dropped connection carries on from where they were.
+    // Someone rejoining after a dropped connection carries on from where they were, if they can
+    // stand there on today's map; otherwise (a stale tab, a map edit) they start at the spawn point.
     this.place(player, options ?? {});
+    const moved = !canStandAt(this.today.map, player);
+    if (moved) {
+      player.x = spawn.x;
+      player.y = spawn.y;
+    }
     player.name = look.name;
     player.character = look.character;
     player.farmerId = farmerId;
@@ -123,6 +140,7 @@ export class FarmRoom extends Room<FarmState> {
     console.log(`${player.name} (${client.sessionId}) joined${known ? "" : " as someone new"} (${this.state.players.size} online)`);
 
     if (tellDevice) client.send("you", { farmerId } satisfies YouMessage);
+    if (moved) client.send("placed", { x: spawn.x, y: spawn.y } satisfies PlacedMessage);
     this.bedtime.joined(farmerId);
     this.replaceOlderDevices(client, farmerId);
     // Whoever missed the last morning catches up; the device knows if it already showed it.
@@ -185,6 +203,27 @@ export class FarmRoom extends Room<FarmState> {
     return liveWorld().world;
   }
 
+  /** The village as of today: the map with what's built, and where things can turn up on it. */
+  get today(): Today {
+    return todayFor(VILLAGE_MAP, builtThings(this.world));
+  }
+
+  /** Where the morning brings finds, driftwood and branches, given what's built by then. */
+  readonly placesFor: PlacesFor = (built) => {
+    const today = todayFor(VILLAGE_MAP, built);
+    return { shore: today.shore, grounds: today.grounds };
+  };
+
+  /**
+   * A world that has just had something built (overnight, or Marlow arriving): any decoration now
+   * in the way of something new (the Village Board) moves to the nearest free spot.
+   */
+  roomForBuilt(before: World, after: World): World {
+    const was = todayFor(VILLAGE_MAP, builtThings(before)).map;
+    const now = todayFor(VILLAGE_MAP, builtThings(after)).map;
+    return was === now ? after : makeRoom(after, was, now);
+  }
+
   /** Replaces the world, copies what changed into the network state, and saves soon. */
   change(next: World, options?: { save?: boolean }) {
     liveWorld().set(next, options);
@@ -202,6 +241,8 @@ export class FarmRoom extends Room<FarmState> {
     writePieces(this.state.decorations, world.decorations);
     writeBeach(this.state.beach, world.beach.finds);
     writeBook(this.state.book, world.book);
+    writeVillage(this.state.village, world.village, world.farmers);
+    writeForage(this.state.forage, world.forage.items);
     this.state.players.forEach((player) => {
       const farmer = farmerOf(world, player.farmerId);
       if (farmer) writeBag(player.bag, farmer.bag);

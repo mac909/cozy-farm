@@ -1,4 +1,4 @@
-import { FISH, FISH_IDS, bitesAt, isFishingSpot, type FishId, type FishingSpot } from "../content/fish";
+import { FISH, FISH_IDS, POINT_NIGHT_FROM, bitesAt, isFishingSpot, type FishId, type FishingSpot } from "../content/fish";
 import { RARITY_WEIGHTS, type Rarity } from "../content/rarity";
 import {
   pickWeighted,
@@ -77,9 +77,13 @@ export function reelFeel(fishId: FishId): ReelFeel {
   return REEL_FEEL[FISH[fishId].rarity];
 }
 
-/** Fish biting at `spot` at `minute` (game minutes after midnight), in FISH order. */
+/**
+ * Fish biting at `spot` at `minute` (game minutes after midnight), in FISH order. By day the point
+ * fishes like the shore; from POINT_NIGHT_FROM its own night fish bite there.
+ */
 export function fishAvailable(spot: FishingSpot, minute: number): FishId[] {
-  return FISH_IDS.filter((id) => FISH[id].spots.includes(spot) && bitesAt(FISH[id], minute));
+  const fishesLike = spot === "point" && minute < POINT_NIGHT_FROM ? "shore" : spot;
+  return FISH_IDS.filter((id) => FISH[id].spots.includes(fishesLike) && bitesAt(FISH[id], minute));
 }
 
 /** Picks a fish biting at `spot` at `minute`, rarer ones less often. null if nothing is biting. */

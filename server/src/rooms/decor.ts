@@ -1,6 +1,6 @@
 import type { Client } from "colyseus";
 import { isFurnitureId } from "../../../shared/content/furniture";
-import { farmBoard, farmKeepClear, houseBoard } from "../../../shared/decor/boards";
+import { farmBoard, houseBoard } from "../../../shared/decor/boards";
 import { dugIn, movePiece, placeFromBag, putAway, type DecorResult, type DecorTarget } from "../../../shared/decor/decorate";
 import { isTileNumber } from "../../../shared/decor/pieces";
 import type { MovePieceMessage, PlacePieceMessage, TakePieceMessage } from "../../../shared/messages";
@@ -10,9 +10,6 @@ import type { TilePos } from "../../../shared/world/map";
 import { feetTile } from "../../../shared/world/places";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import type { FarmRoom } from "./FarmRoom";
-
-/** The farm's tiles that always stay clear: worked out once, from the map. */
-const KEEP_CLEAR = farmKeepClear(VILLAGE_MAP);
 
 const isTurn = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) < 8;
 
@@ -34,7 +31,8 @@ function whereIs(room: FarmRoom, player: Player): { target: DecorTarget; local: 
     return { target: { kind: "house", houseId: plan.id, board: houseBoard(plan, occupied) }, local: (at) => mapToFloor(plan, at) };
   }
   const occupied = (col: number, row: number) => standing.some((feet) => feet.col === col && feet.row === row);
-  return { target: { kind: "farm", board: farmBoard(VILLAGE_MAP, dugIn(room.world), occupied, KEEP_CLEAR) }, local: (at) => at };
+  const { map, keepClear } = room.today;
+  return { target: { kind: "farm", board: farmBoard(map, dugIn(room.world), occupied, keepClear) }, local: (at) => at };
 }
 
 /**

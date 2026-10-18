@@ -12,7 +12,7 @@ import { FURNITURE, FURNITURE_IDS, FURNITURE_SELL_FRACTION, type FurnitureId } f
  * store doesn't sell it); its `sellPrice` is what the shipping crate pays
  * (no `sellPrice`: it can't be sold).
  */
-export type ItemCategory = "seed" | "crop" | "tool" | "beach" | "fish" | "bug" | "furniture";
+export type ItemCategory = "seed" | "crop" | "tool" | "beach" | "material" | "fish" | "bug" | "furniture";
 
 interface BaseItemDef {
   /** Same as its key in ITEMS. Saves hold these, so renaming one needs a save migration. */
@@ -25,6 +25,8 @@ interface BaseItemDef {
   buyPrice?: number;
   /** Coins for one in the shipping crate. Missing if it can't be sold. */
   sellPrice?: number;
+  /** Its name when there are several, where that isn't just the name (the board's "Branches"). */
+  plural?: string;
 }
 
 export interface SeedItemDef extends BaseItemDef {
@@ -45,6 +47,11 @@ export interface ToolItemDef extends BaseItemDef {
 
 export interface BeachItemDef extends BaseItemDef {
   category: "beach";
+}
+
+/** Building materials for the village's projects, picked up off the ground (Milestone 6). */
+export interface MaterialItemDef extends BaseItemDef {
+  category: "material";
 }
 
 export interface FishItemDef extends BaseItemDef {
@@ -70,6 +77,7 @@ export type ItemDef =
   | CropItemDef
   | ToolItemDef
   | BeachItemDef
+  | MaterialItemDef
   | FishItemDef
   | BugItemDef
   | FurnitureItemDef;
@@ -185,6 +193,16 @@ const beachData = {
   starfish: { id: "starfish", name: "Starfish", category: "beach", maxStack: STACK, sellPrice: 60 },
 } satisfies Record<string, BeachItemDef>;
 
+/**
+ * Lying about: driftwood washes up on the beach and branches fall under the meadow's trees each
+ * morning (shared/content/forage.ts). The Village Board wants them, so they sell for very little,
+ * but the crate still takes them so nothing's ever stuck.
+ */
+const materialData = {
+  driftwood: { id: "driftwood", name: "Driftwood", category: "material", maxStack: STACK, sellPrice: 5 },
+  branch: { id: "branch", name: "Branch", plural: "Branches", category: "material", maxStack: STACK, sellPrice: 5 },
+} satisfies Record<string, MaterialItemDef>;
+
 /** Caught, never bought. */
 const fishItems = Object.fromEntries(
   FISH_IDS.map((fishId): [FishId, FishItemDef] => {
@@ -238,16 +256,18 @@ export type ItemId =
   | CropId
   | keyof typeof toolData
   | keyof typeof beachData
+  | keyof typeof materialData
   | FishId
   | BugId
   | FurnitureId;
 
-/** Every item, grouped seeds, crops, tools, beach finds, fish, bugs, furniture. Shop and bag listings follow this order. */
+/** Every item, grouped seeds, crops, tools, beach finds, materials, fish, bugs, furniture. Shop and bag listings follow this order. */
 export const ITEMS: Readonly<Record<ItemId, ItemDef>> = {
   ...seedItems,
   ...cropItems,
   ...toolData,
   ...beachData,
+  ...materialData,
   ...fishItems,
   ...bugItems,
   ...furnitureItems,
@@ -268,3 +288,12 @@ export const STARTER_ITEMS: readonly { itemId: ItemId; count: number }[] = [
 
 /** The fishing rod: hold it facing the water to fish (shared/fishing/spots.ts). */
 export const FISHING_ROD: ItemId = "fishing_rod";
+
+/** A building material: driftwood or a branch. */
+export type MaterialId = keyof typeof materialData;
+
+/** An item's name for "several of it": "Branches", "Driftwood", "Sea Glass". */
+export function pluralName(itemId: ItemId): string {
+  const item = ITEMS[itemId];
+  return item.plural ?? item.name;
+}

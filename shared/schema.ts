@@ -89,6 +89,43 @@ export class BookEntryState extends Schema {
   @type("string") biggestBy = "";
 }
 
+/** Someone who has given to a project: their face goes on its card (never how much they gave). */
+export class HelperState extends Schema {
+  @type("string") farmerId = "";
+  @type("string") name = "";
+  /** A CharacterId, for their face. */
+  @type("string") character = "";
+}
+
+/** How far one project has got. Keyed by project id in VillageState.projects. */
+export class ProjectState extends Schema {
+  /** Steps whose needs are all in. */
+  @type("uint8") gathered = 0;
+  /** Steps built. */
+  @type("uint8") built = 0;
+  /** What's in for the step being gathered, by need key ("driftwood", "any:fish", "coins"). */
+  @type({ map: "uint32" }) given = new MapSchema<number>();
+  /** Everyone who has helped, in the order they first did. */
+  @type([HelperState]) helpers = new ArraySchema<HelperState>();
+  /** The day it was finished; 0 until then. */
+  @type("uint32") doneDay = 0;
+}
+
+/** Marlow and the village's projects. */
+export class VillageState extends Schema {
+  /** The day Marlow arrived; 0 before he has. */
+  @type("uint32") keeperDay = 0;
+  @type({ map: ProjectState }) projects = new MapSchema<ProjectState>();
+}
+
+/** Driftwood or a branch lying on one tile. */
+export class ForageState extends Schema {
+  /** A ForageId: also the item it gives. */
+  @type("string") itemId = "";
+  @type("uint16") col = 0;
+  @type("uint16") row = 0;
+}
+
 /** One person in the world. Positions are in world pixels. */
 export class Player extends Schema {
   @type("number") x = 0;
@@ -129,4 +166,8 @@ export class FarmState extends Schema {
   @type({ map: BugState }) bugs = new MapSchema<BugState>();
   /** The shared collection book: everything found so far, keyed "section:id". */
   @type({ map: BookEntryState }) book = new MapSchema<BookEntryState>();
+  /** Marlow and the village's projects. */
+  @type(VillageState) village = new VillageState();
+  /** Driftwood and branches lying about, in the order they turned up. */
+  @type([ForageState]) forage = new ArraySchema<ForageState>();
 }

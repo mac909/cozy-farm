@@ -3,7 +3,8 @@ import { coveredTiles } from "../decor/pieces";
 import type { TilePos, WorldMap } from "../world/map";
 import { beachSand } from "../world/terrain";
 import type { World } from "../world/world";
-import { washUpFinds, type BeachFind } from "./beachcombing";
+import { wantedFinds } from "../village/projects";
+import { MARLOWS_LUCK, washUpFinds, type BeachFind } from "./beachcombing";
 
 /**
  * The tide on the village's beach: once a day, a few finds wash up on the sand (the merged rules in
@@ -26,18 +27,20 @@ export function shoreOf(map: WorldMap): Shore {
 }
 
 /**
- * If the tide hasn't come yet today, it brings a few finds: never onto a decoration, never more
- * than the beach holds. Returns the world (with the day of this tide) and what washed up.
+ * If the tide hasn't come yet today, it brings a few finds: never onto a decoration or driftwood,
+ * never more than the beach holds. A find the board is waiting for comes more often (Marlow's
+ * luck). Returns the world (with the day of this tide) and what washed up.
  */
 export function tideIn(world: World, shore: Shore): { world: World; washedUp: BeachFind[] } {
   if (world.beach.day >= world.clock.day) return { world, washedUp: [] };
-  const blocked = world.decorations.flatMap(coveredTiles);
+  const blocked = [...world.decorations.flatMap(coveredTiles), ...world.forage.items];
   const { beach, washedUp } = washUpFinds({
     day: world.clock.day,
     worldSeed: world.worldSeed,
     sandTiles: shore.sand,
     blocked,
     beach: world.beach.finds,
+    luck: { finds: wantedFinds(world), times: MARLOWS_LUCK },
   });
   return { world: { ...world, beach: { day: world.clock.day, finds: beach } }, washedUp };
 }

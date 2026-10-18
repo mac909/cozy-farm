@@ -4,8 +4,11 @@ import type { BeachFind } from "../../../shared/beachcombing/beachcombing";
 import type { BugId } from "../../../shared/content/bugs";
 import { CROPS } from "../../../shared/content/crops";
 import type { FishingSpot } from "../../../shared/content/fish";
-import { cropItemId, FISHING_ROD, type ItemId } from "../../../shared/content/items";
+import { cropItemId, FISHING_ROD, ITEMS, type ItemId } from "../../../shared/content/items";
 import { fishingSpot } from "../../../shared/fishing/spots";
+import type { ForageItem } from "../../../shared/foraging/forage";
+import { closedHintAt } from "../../../shared/world/gates";
+import type { WorldMap } from "../../../shared/world/map";
 import {
   HOE,
   WATERING_CAN,
@@ -13,11 +16,13 @@ import {
   chooseAction,
   hintFor,
   hintText,
+  isHint,
   seedCrop,
   type Action,
   type DoorKind,
   type FarmActionKind,
   type Hint,
+  type HintReason,
   type Spot,
 } from "../../../shared/farming/actions";
 import type { FurnitureId, PlaceKind } from "../../../shared/content/furniture";
@@ -28,11 +33,19 @@ import { facingFor, type Facing } from "../../../shared/movement";
 import type { FarmState } from "../../../shared/schema";
 import { readFarm } from "../../../shared/stateSync";
 import type { TilePos } from "../../../shared/world/map";
-import { CLIENT_NEAR_TILES, feetTile, isNeighbour, placeNear, targetTile, type Point } from "../../../shared/world/places";
-import { VILLAGE_MAP } from "../../../shared/world/villageMap";
+import { CLIENT_NEAR_TILES, feetTile, isNeighbour, nearLighthouseDoor, placeNear, targetTile, type Point } from "../../../shared/world/places";
 import { tileKey, type TileKey } from "../../../shared/world/world";
 import { TILE_SIZE } from "../../../shared/constants";
-import { CAMP_KEY, HOUSE_SHEET_KEY, SHIPPING_CRATE_KEY, TENT_FRAME } from "../art/assets";
+import {
+  BOARD_KEY,
+  CAMP_KEY,
+  HOUSE_SHEET_KEY,
+  KEEPER_FACE_KEY,
+  LIGHTHOUSE_FRAME,
+  LIGHTHOUSE_KEY,
+  SHIPPING_CRATE_KEY,
+  TENT_FRAME,
+} from "../art/assets";
 import { DOOR_FRAME } from "../art/houseArt";
 import { iconScale, itemIcon } from "../art/itemIcons";
 import { playSound, type SoundId } from "../audio/sounds";
@@ -87,6 +100,14 @@ export interface ActionHandlers {
   enter(houseId: string, how: DoorKind): void;
   leave(houseId: string): void;
   place(itemId: FurnitureId): void;
+  /** The Village Board's card. */
+  board(): void;
+  /** Gives from a bag slot to a project's need, at the board. */
+  give(project: string, need: string, slot: number): void;
+  /** Talks to Marlow. */
+  talk(): void;
+  /** Climbs the lit lighthouse for the view. */
+  climb(): void;
 }
 
 export interface FarmingOptions {
@@ -109,6 +130,15 @@ export interface FarmingOptions {
   placing(): PlaceKind | null;
   /** The beach find lying on a tile, if any. */
   findAt(col: number, row: number): BeachFind | undefined;
+  /** The driftwood or branch lying on a tile, if any. */
+  forageAt(col: number, row: number): ForageItem | undefined;
+  /** The map as of today (what's built opens and closes things), and what's built. */
+  map(): WorldMap;
+  built(): ReadonlySet<string>;
+  /** Where Marlow stands right now, if he's about. */
+  keeperTile(): TilePos | null;
+  /** At the board: what the item you're holding would give to, and how many. */
+  wanted(itemId: ItemId): { project: string; need: string; count: number } | null;
   /** The bug close enough to catch from where you stand, if any. */
   bugNear(position: Point): { id: string; bugId: BugId } | null;
   /** What tapping the Action button does, beyond farming. */
@@ -116,7 +146,7 @@ export interface FarmingOptions {
   /** Whether the Action button or Space is being held down (hold to repeat). */
   holding(): boolean;
   /** You dug, planted, watered, picked or picked something up (asked the server to): for the first-day tips. */
-  acted?(kind: FarmActionKind | "pickUp"): void;
+  acted?(kind: FarmActionKind | "pickUp" | "pickUpMaterial"): void;
 }
 
 /** Whether an action changes a farm tile (the ones hold-to-repeat repeats). */
@@ -254,6 +284,17 @@ export class Farming {
         return on.fish(action.spot, action.col, action.row);
       case "pickUp":
         return this.pickUp(action);
+      case "board":
+        return on.board();
+      case "give":
+        return on.give(action.project, action.need, this.options.selectedSlot());
+      case "talk":
+        return on.talk();
+      case "climb":
+        return on.climb();
+      case "closed":
+        this.hint({ reason: action.reason });
+        return;
     }
     // Even if it's refused below, holding the button doesn't try this tile again every frame.
     this.repeatFrom = tileKey(target.col, target.row);
@@ -284,7 +325,7 @@ export class Farming {
   private pickUp(action: Extract<Action, { kind: "pickUp" }>) {
     this.repeatFrom = tileKey(action.col, action.row);
     const bag = this.options.bag();
-    if (bag && roomFor(bag, action.findId) < 1) {
+    if (bag && roomFor(bag, action.itemId) < 1) {
       this.hint({ reason: "bag-full" });
       return;
     }
@@ -293,8 +334,9 @@ export class Farming {
     room.send("pickUp", { col: action.col, row: action.row } satisfies PickUpMessage);
     this.options.me.swing(this.options.facing());
     playSound(this.scene, "pick");
-    playBurst(this.scene, action.col * TILE_SIZE + TILE_SIZE / 2, action.row * TILE_SIZE + TILE_SIZE / 2 + 2, "sand");
-    this.options.acted?.("pickUp");
+    const burst = action.itemId === "branch" ? "twigs" : "sand";
+    playBurst(this.scene, action.col * TILE_SIZE + TILE_SIZE / 2, action.row * TILE_SIZE + TILE_SIZE / 2 + 2, burst);
+    this.options.acted?.(ITEMS[action.itemId].category === "material" ? "pickUpMaterial" : "pickUp");
   }
 
   /** The tile an aim acts on: where the find lies when picking up, otherwise the tile in front. */
@@ -325,20 +367,43 @@ export class Farming {
     const feet = feetTile(position);
     const target = this.hover ?? targetTile(feet, this.options.facing());
     const tile = this.view.tileAt(target.col, target.row);
-    const farmland = VILLAGE_MAP.farmland[target.row]?.[target.col] ?? false;
+    const map = this.options.map();
+    const built = this.options.built();
+    const farmland = map.farmland[target.row]?.[target.col] ?? false;
     const bag = this.options.bag();
     const held = bag?.[this.options.selectedSlot()]?.itemId ?? null;
-    // Places win even with the mouse over a tile (they're never next to the farm field).
-    const place = placeNear(VILLAGE_MAP, position, CLIENT_NEAR_TILES);
-    const spot: Spot | null = place ? { kind: "place", place } : this.options.spot(position);
+    // Places win even with the mouse over a tile (they're never next to the farm field). Facing
+    // Marlow you talk to him, even by the board; standing right by him otherwise, too.
+    const place = placeNear(map, position, CLIENT_NEAR_TILES);
+    const keeper = this.options.keeperTile();
+    const facingKeeper = keeper !== null && keeper.col === target.col && keeper.row === target.row;
+    let spot: Spot | null = facingKeeper ? { kind: "keeper" } : place ? { kind: "place", place } : this.options.spot(position);
+    if (!spot && keeper && (isNeighbour(feet, keeper) || (feet.col === keeper.col && feet.row === keeper.row))) spot = { kind: "keeper" };
+    // The lighthouse's door: Climb once it's lit, otherwise a hint.
+    if (!spot && nearLighthouseDoor(map, position, CLIENT_NEAR_TILES)) {
+      spot = built.has("lighthouse") ? { kind: "climb" } : { kind: "closed", reason: "lighthouse-dark" };
+    }
+    // Something closed in front (the brambles): its hint.
+    if (!spot) {
+      const closed = closedHintAt(map, built, target);
+      if (closed && isHint({ reason: closed })) spot = { kind: "closed", reason: closed as HintReason };
+    }
     const placing = this.options.placing();
-    // A find in front, or underfoot; a bug close by; water in front to fish.
-    const found = this.options.findAt(target.col, target.row) ?? this.options.findAt(feet.col, feet.row);
-    const find = found ? { findId: found.findId, col: found.col, row: found.row } : null;
+    // A find, driftwood or a branch in front, or underfoot; a bug close by; water in front to fish.
+    const lying = (col: number, row: number) => {
+      const find = this.options.findAt(col, row);
+      if (find) return { itemId: find.findId as ItemId, col, row };
+      const item = this.options.forageAt(col, row);
+      return item ? { itemId: item.itemId as ItemId, col, row } : null;
+    };
+    const find = lying(target.col, target.row) ?? lying(feet.col, feet.row);
     const bug = this.options.bugNear(position);
-    const water = held === FISHING_ROD ? fishingSpot(VILLAGE_MAP, feet, target) : null;
+    const water = held === FISHING_ROD ? fishingSpot(map, feet, target) : null;
     const fishing = water ? { spot: water, col: target.col, row: target.row } : null;
-    const action = chooseAction(tile, farmland, held, spot, placing, { find, bug, fishing });
+    // At the board, holding something it wants: Give.
+    const wanted = place === "board" && held ? this.options.wanted(held) : null;
+    const give = wanted && held ? { ...wanted, itemId: held } : null;
+    const action = chooseAction(tile, farmland, held, spot, placing, { find, bug, fishing, give });
     return { action, target, tile, farmland, held, spot, placing };
   }
 
@@ -369,7 +434,17 @@ export class Farming {
       case "place":
         return { ...this.heldView(action.itemId), word, faded: false };
       case "pickUp":
-        return { icon: itemIcon(action.findId), iconScale: 3, word, faded: false };
+        return { icon: itemIcon(action.itemId), iconScale: 3, word, faded: false };
+      case "board":
+        return { icon: { key: BOARD_KEY, frame: 1 }, iconScale: 1, word, faded: false };
+      case "give":
+        return { icon: itemIcon(action.itemId), iconScale: 3, word, faded: false };
+      case "talk":
+        return { icon: { key: KEEPER_FACE_KEY }, iconScale: 1, word, faded: false };
+      case "climb":
+        return { icon: { key: LIGHTHOUSE_KEY, frame: LIGHTHOUSE_FRAME.lit }, iconScale: 0.5, word, faded: false };
+      case "closed":
+        return { ...this.heldView(held), word: null, faded: true };
       case "catch":
         return { icon: itemIcon(action.bugId), iconScale: 3, word, faded: false };
       case "fish":

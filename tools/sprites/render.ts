@@ -23,6 +23,8 @@ import { FRAME, SEASIDE, SEASIDE_FRAMES } from "./seaside";
 import { SAND_GRASS, SAND_WATER, recolourBlock } from "./sand";
 import { soilTile } from "./soil";
 import { UI_ICONS } from "./ui";
+import { MATERIAL_ART, MATERIAL_LEGEND } from "./materials";
+import { BOARD_FRAMES, BRAMBLE_TILES, LIGHTHOUSE_FRAMES, LIGHTHOUSE_SIZE, board, bramble, lighthouse } from "./village";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PACK = path.join(ROOT, "client/public/assets/ninja-adventure");
@@ -199,6 +201,36 @@ function renderFishing(): void {
   });
 }
 
+function renderMaterials(): void {
+  const names = Object.keys(MATERIAL_ART) as (keyof typeof MATERIAL_ART)[];
+  save("materials", packRows([names.map((n) => outline(fromGrid(MATERIAL_ART[n], MATERIAL_LEGEND)))], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    frames: Object.fromEntries(names.map((n, i) => [n, i])),
+    note: "Building materials: the bag's icon and what lies on the ground. Frame names are item ids.",
+  });
+}
+
+function renderVillage(): void {
+  const { w, h } = LIGHTHOUSE_SIZE;
+  save("lighthouse", packRows([LIGHTHOUSE_FRAMES.map((f) => lighthouse(f))], w, h), {
+    frameWidth: w,
+    frameHeight: h,
+    frames: Object.fromEntries(LIGHTHOUSE_FRAMES.map((f, i) => [f, i])),
+    note: "Three tiles wide and six tall, standing on the bottom of the frame; the door is the middle of the bottom row.",
+  });
+  save("village-board", packRows([Array.from({ length: BOARD_FRAMES }, (_, n) => board(n))], 32, 32), {
+    frameWidth: 32,
+    frameHeight: 32,
+    layout: "Frame n has n notes pinned on: one per open project.",
+  });
+  save("brambles", packRows([Array.from({ length: BRAMBLE_TILES }, (_, i) => bramble(i))], T, T), {
+    frameWidth: T,
+    frameHeight: T,
+    note: "A tileset in the village map: the Brambles layer across the old path to the point.",
+  });
+}
+
 console.log(`Rendering sprites into ${path.relative(ROOT, OUT)}${path.sep}`);
 renderCrops();
 renderSoil();
@@ -213,5 +245,7 @@ renderSeaside();
 renderFish();
 renderBugs();
 renderFishing();
+renderMaterials();
+renderVillage();
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log("  manifest.json");

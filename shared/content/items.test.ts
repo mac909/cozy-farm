@@ -38,6 +38,7 @@ describe("item data", () => {
       CROP_IDS.length * 2 +
       inCategory("tool").length +
       inCategory("beach").length +
+      inCategory("material").length +
       inCategory("fish").length +
       inCategory("bug").length +
       inCategory("furniture").length;

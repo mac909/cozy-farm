@@ -9,7 +9,7 @@ import { sleepersText, waitingText } from "../../../shared/world/bedtime";
 import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import type { MorningReport } from "../../../shared/world/world";
 import { CAMP_KEY, TENT_FRAME, ZZZ_KEY } from "../art/assets";
-import { showMorningCard } from "../ui/MorningCard";
+import { showMorningCard, type MorningVillage } from "../ui/MorningCard";
 import { loadMorningShown, saveMorningShown } from "../ui/morningText";
 import { button, el, openPanel, type Panel } from "../ui/panel";
 import type { Character } from "./Character";
@@ -41,6 +41,8 @@ export interface BedtimeOptions {
   morningShown?(report: MorningReport): void;
   /** The morning card was closed (keys let go while it was open are forgotten). */
   cardClosed?(): void;
+  /** The village's part of the morning card: what was built, and Look. */
+  village?(report: MorningReport): MorningVillage;
 }
 
 /**
@@ -174,7 +176,7 @@ export class Bedtime {
     saveMorningShown(report.day);
     this.morningOpen = true;
     this.options.morningShown?.(report);
-    void showMorningCard(report, this.options.coinIcon(), this.options.itemIcon).then(() => {
+    void showMorningCard(report, this.options.coinIcon(), this.options.itemIcon, this.options.village?.(report)).then(() => {
       this.morningOpen = false;
       this.options.cardClosed?.();
     });

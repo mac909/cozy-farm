@@ -1,4 +1,7 @@
 import { ITEMS } from "../../../shared/content/items";
+import { keeperWords } from "../../../shared/content/keeper";
+import { PROJECTS } from "../../../shared/content/projects";
+import type { BuiltStep } from "../../../shared/village/village";
 import type { MorningReport } from "../../../shared/world/world";
 
 /** The words on the morning card. */
@@ -6,6 +9,10 @@ export interface MorningWords {
   title: string;
   /** What grew and what's ripe, or null after a quiet night. */
   growth: string | null;
+  /** The morning Marlow arrives: the boat at the dock and last night's storm. Null otherwise. */
+  storm: string | null;
+  /** What was built overnight: the line and Marlow's note for each. */
+  village: { built: BuiltStep; line: string; note: string }[];
   /** "Something washed up on the beach!", or null if nothing did. */
   beach: string | null;
   /** One line per thing the crate sold: "Radish 4 × 35" and its total. */
@@ -13,6 +20,9 @@ export interface MorningWords {
   /** "+260 coins" and the wallet after it, or null if the crate was empty. */
   earned: { text: string; coins: string } | null;
 }
+
+/** The morning Marlow arrives. */
+export const STORM_LINE = "A little boat is tied up at the dock, and last night's storm has washed driftwood all over the beach.";
 
 const crops = (n: number) => `${n} crop${n === 1 ? "" : "s"}`;
 
@@ -25,7 +35,8 @@ export function growthLine(grew: number, ready: number): string | null {
   return null;
 }
 
-export function morningWords(report: MorningReport): MorningWords {
+/** The morning card's words. `keeperArrived`: Marlow came this morning (his first). */
+export function morningWords(report: MorningReport, keeperArrived = false): MorningWords {
   const sales = report.sale.lines.map((line) => ({
     text: `${ITEMS[line.itemId]?.name ?? line.itemId} ${line.count} × ${line.priceEach}`,
     total: String(line.total),
@@ -33,7 +44,12 @@ export function morningWords(report: MorningReport): MorningWords {
   return {
     title: `Good morning! Day ${report.day}`,
     growth: growthLine(report.grew, report.ready),
-    beach: (report.washedUp?.length ?? 0) > 0 ? "Something washed up on the beach!" : null,
+    storm: keeperArrived ? STORM_LINE : null,
+    village: (report.built ?? []).flatMap((built) => {
+      const step = PROJECTS[built.project]?.steps[built.step];
+      return step ? [{ built, line: step.builtLine, note: keeperWords(step.note) }] : [];
+    }),
+    beach: (report.washedUp?.length ?? 0) + (report.foraged?.length ?? 0) > 0 ? "Something washed up on the beach!" : null,
     sales,
     earned: sales.length > 0 ? { text: `+${report.sale.total} coins`, coins: String(report.coins) } : null,
   };

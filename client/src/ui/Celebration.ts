@@ -7,6 +7,14 @@ import { el, openPanel, picture, type Panel } from "./panel";
 const BIG_MS = 4500;
 const SMALL_MS = 3000;
 
+/** A card to cheer: something new in the book, or a village step all in (with Marlow's face, and its own tap). */
+export interface CelebrationCard extends Celebration {
+  /** A picture instead of the item's (Marlow's face). */
+  picture?: string;
+  /** What tapping it does, instead of opening the book. */
+  tap?: () => void;
+}
+
 export interface CelebrationOptions {
   icon(itemId: ItemId): string;
   /** Tapping the card opens the book. */
@@ -21,7 +29,7 @@ export interface CelebrationOptions {
  * themselves, and come one after another; tapping one opens the book.
  */
 export class Celebrations {
-  private readonly queue: Celebration[] = [];
+  private readonly queue: CelebrationCard[] = [];
   private shown: Panel | null = null;
   private timer: number | undefined;
 
@@ -32,7 +40,7 @@ export class Celebrations {
     return this.shown?.isOpen === true;
   }
 
-  add(celebration: Celebration) {
+  add(celebration: CelebrationCard) {
     this.queue.push(celebration);
     if (!this.showing) this.next();
   }
@@ -43,13 +51,15 @@ export class Celebrations {
     const panel = openPanel({ cardClass: `celebrate${celebration.big ? "" : " small"}`, passThrough: true, position: "top" });
     // Over any card that opens after it (the book, the bag), not dimmed behind it.
     panel.card.parentElement?.classList.add("over");
-    if (celebration.itemId) panel.card.append(picture(this.options.icon(celebration.itemId), "celebrate-icon"));
+    if (celebration.picture) panel.card.append(picture(celebration.picture, "celebrate-icon face"));
+    else if (celebration.itemId) panel.card.append(picture(this.options.icon(celebration.itemId), "celebrate-icon"));
     const words = el("div");
     words.append(el("div", "celebrate-title", celebration.title), el("div", "celebrate-line", celebration.line));
     panel.card.append(words);
     panel.card.addEventListener("click", () => {
       this.close();
-      this.options.openBook();
+      if (celebration.tap) celebration.tap();
+      else this.options.openBook();
     });
     this.shown = panel;
     this.options.shown?.(celebration);

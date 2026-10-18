@@ -38,6 +38,32 @@ const GAP = 12;
 /** How long an item's name shows above the hotbar after picking its slot. */
 const TOAST_MS = 1500;
 
+/**
+ * The lit lighthouse's glow and beam (Milestone 6), drawn over the evening tint and under the HUD:
+ * the lamp's position on the screen, the world's zoom, how strong it is (0 to 1, with the dusk), and
+ * which way the beam points (radians).
+ */
+export interface GlowView {
+  x: number;
+  y: number;
+  zoom: number;
+  strength: number;
+  angle: number;
+}
+
+/** The glow's colour, and its flat bands: halo rings (radius in world pixels, alpha) and the beam (half-width in radians, alpha). */
+const GLOW_COLOR = 0xffd678;
+const HALO_BANDS: readonly [number, number][] = [
+  [58, 0.07],
+  [38, 0.09],
+  [20, 0.13],
+];
+const BEAM_BANDS: readonly [number, number][] = [
+  [0.17, 0.06],
+  [0.09, 0.08],
+];
+const BEAM_LENGTH = 1600;
+
 /** Where everything goes on this screen. Computed from the screen size, so it follows rotation. */
 interface Layout {
   upright: boolean;
@@ -80,6 +106,11 @@ export class UIScene extends Phaser.Scene {
   private fishingStrip!: FishingStrip;
   private stopButton!: RoundButton;
   private fishing = false;
+  /** The view from the top of the lighthouse: Down in the bag's place, and no hotbar or Action button. */
+  private downButton!: RoundButton;
+  private viewing = false;
+  /** The lighthouse's glow, just over the tint. */
+  private glow!: Phaser.GameObjects.Graphics;
   private toast!: Phaser.GameObjects.Text;
   private toastTimer?: Phaser.Time.TimerEvent;
   /** The evening tint over the world (deeper while you're in bed), under the HUD. */
@@ -101,6 +132,7 @@ export class UIScene extends Phaser.Scene {
   create() {
     // First, so it's under everything else in the HUD.
     this.tint = this.add.rectangle(0, 0, 1, 1, EVENING_COLOR, 1).setOrigin(0, 0).setAlpha(0);
+    this.glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
     this.joystick = new Joystick(this);
     // Key hints only make sense where there's a keyboard.
     this.keyHints = !this.sys.game.device.input.touch;
@@ -198,6 +230,15 @@ export class UIScene extends Phaser.Scene {
       iconScale: 2,
       hint: hint("Esc"),
       label: "Stop",
+      onPress: () => this.events.emit("escape"),
+    });
+    this.downButton = new RoundButton(this, {
+      size: SMALL_BUTTON_SIZE,
+      icon: UI_ICONS_KEY,
+      iconFrame: UI_ICON.stop,
+      iconScale: 2,
+      hint: hint("Esc"),
+      label: "Down",
       onPress: () => this.events.emit("escape"),
     });
     this.fishingStrip = new FishingStrip(this);
@@ -367,6 +408,7 @@ export class UIScene extends Phaser.Scene {
     this.turnButton.setPosition(second.x + s / 2, second.y + s / 2);
     this.doneButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
     this.stopButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
+    this.downButton.setPosition(L.bag.x + BAG_BUTTON_SIZE / 2, L.bag.y + BAG_BUTTON_SIZE / 2);
     // At the top, under the clock card when upright (between it and the buttons when sideways),
     // so it never covers you on the dock, low on the screen where the camera stops.
     this.fishingStrip.setPosition(Math.round(width / 2), Math.round(top + (L.upright ? 70 : 0) + FishingStrip.HEIGHT));
@@ -392,6 +434,41 @@ export class UIScene extends Phaser.Scene {
     this.joystick?.setEnabled(!fishing);
     if (fishing) this.toast.setVisible(false);
     this.showArrangeMode(this.arrangeHud);
+  }
+
+  /**
+   * The view from the top of the lighthouse: Down instead of the bag, and the hotbar, the Action
+   * button and the emotes put away. The stick looks round.
+   */
+  setViewing(viewing: boolean) {
+    if (viewing === this.viewing) return;
+    this.viewing = viewing;
+    if (viewing) this.toast.setVisible(false);
+    this.showArrangeMode(this.arrangeHud);
+  }
+
+  /** The lighthouse's glow and beam, or null for none. Cheap to call every frame. */
+  setGlow(view: GlowView | null) {
+    const g = this.glow;
+    if (!g) return;
+    g.clear();
+    if (!view || view.strength <= 0) return;
+    const { x, y, zoom, strength, angle } = view;
+    for (const [radius, alpha] of HALO_BANDS) {
+      g.fillStyle(GLOW_COLOR, alpha * strength);
+      g.fillCircle(x, y, radius * zoom);
+    }
+    for (const [spread, alpha] of BEAM_BANDS) {
+      g.fillStyle(GLOW_COLOR, alpha * strength);
+      g.fillTriangle(
+        x,
+        y,
+        x + Math.cos(angle - spread) * BEAM_LENGTH,
+        y + Math.sin(angle - spread) * BEAM_LENGTH,
+        x + Math.cos(angle + spread) * BEAM_LENGTH,
+        y + Math.sin(angle + spread) * BEAM_LENGTH,
+      );
+    }
   }
 
   /** Whether the Action button, Space or Enter is being held down (hold to repeat). */
@@ -454,10 +531,14 @@ export class UIScene extends Phaser.Scene {
     const inBed = this.registry.get("inBed") === true;
     const arranging = view !== null && !inBed;
     const fishing = this.fishing && !inBed;
-    for (const button of this.emoteButtons) button.setVisible(!inBed && !arranging && !fishing);
-    this.bagButton.setVisible(!inBed && !arranging && !fishing);
+    const viewing = this.viewing && !inBed;
+    for (const button of this.emoteButtons) button.setVisible(!inBed && !arranging && !fishing && !viewing);
+    this.bagButton.setVisible(!inBed && !arranging && !fishing && !viewing);
     this.stopButton.setVisible(fishing);
-    this.arrangeButton.setVisible(!inBed && !arranging && !fishing && this.registry.get("canArrange") === true);
+    this.downButton.setVisible(viewing);
+    this.hotbar.setVisible(!inBed && !viewing);
+    this.actionButton.setVisible(!inBed && !viewing);
+    this.arrangeButton.setVisible(!inBed && !arranging && !fishing && !viewing && this.registry.get("canArrange") === true);
     this.turnButton.setVisible(arranging).setAlpha(view?.canTurn ? 1 : 0.4);
     this.putAwayButton.setVisible(arranging).setAlpha(view?.canPutAway ? 1 : 0.4);
     this.doneButton.setVisible(arranging);

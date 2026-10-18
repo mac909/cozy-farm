@@ -4,14 +4,14 @@ import { type Rect, tileAt, type TilePos, type WorldMap } from "./map";
 
 /**
  * Where things are in the village: which tile is under your feet and in front of you, what you can
- * reach, and which place (tent, crate, seed stand, store) you're standing next to.
+ * reach, and which place (tent, crate, seed stand, store, the Village Board) you're standing next to.
  */
 
 /** The places that take over the Action button when you're next to them. */
-export type PlaceId = "tent" | "crate" | "seedStand" | "store";
+export type PlaceId = "tent" | "crate" | "seedStand" | "store" | "board";
 
 /** Every place, in the order the Action button checks them. */
-export const PLACES: readonly PlaceId[] = ["tent", "crate", "seedStand", "store"];
+export const PLACES: readonly PlaceId[] = ["tent", "crate", "seedStand", "store", "board"];
 
 /** The Action button switches to a place this close to it, in tiles. */
 export const CLIENT_NEAR_TILES = 1.5;
@@ -73,9 +73,10 @@ export function nearPlace(point: Point, rect: Rect, tiles: number): boolean {
 /**
  * The part of a place you walk up to. For the tent and the store that's their bottom row, where the
  * door is, so farming the field's bottom row on the other side of the fence doesn't turn the button
- * into Sleep, and walking past the store's roof doesn't open it. The crate and stand count all over.
+ * into Sleep, and walking past the store's roof doesn't open it. The crate, the stand and the
+ * board count all over. Null for a place that isn't there (yet): the board before Marlow arrives.
  */
-export function placeArea(map: WorldMap, place: PlaceId): Rect {
+export function placeArea(map: WorldMap, place: PlaceId): Rect | null {
   switch (place) {
     case "tent": {
       const { x, y, width, height } = map.tent;
@@ -89,6 +90,8 @@ export function placeArea(map: WorldMap, place: PlaceId): Rect {
       return map.shippingCrate;
     case "seedStand":
       return map.seedStand;
+    case "board":
+      return map.board;
   }
 }
 
@@ -100,7 +103,35 @@ export function placeNear(
   places: readonly PlaceId[] = PLACES,
 ): PlaceId | null {
   const feet = { x: position.x, y: position.y + FEET_OFFSET };
-  return places.find((place) => nearPlace(feet, placeArea(map, place), tiles)) ?? null;
+  return (
+    places.find((place) => {
+      const area = placeArea(map, place);
+      return area !== null && nearPlace(feet, area, tiles);
+    }) ?? null
+  );
+}
+
+/** The lighthouse's door: the middle of its bottom row. */
+export function lighthouseDoor(lighthouse: Rect): TilePos {
+  return tileAt(lighthouse.x + lighthouse.width / 2, lighthouse.y + lighthouse.height - 1);
+}
+
+/** Whether a character's feet are by the lighthouse's door (in front of it, or beside that). */
+export function nearLighthouseDoor(map: WorldMap, position: Point, tiles: number): boolean {
+  if (!map.lighthouse) return false;
+  const door = lighthouseDoor(map.lighthouse);
+  const feet = { x: position.x, y: position.y + FEET_OFFSET };
+  return distanceToRect(feet, { x: door.col * TILE_SIZE, y: door.row * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE }) <= tiles * TILE_SIZE;
+}
+
+/**
+ * Whether a player rejoining can carry on where they say they were: their feet are on a tile you
+ * can walk on in today's map. If not (a stale tab, a map edit, somewhere since built over), the
+ * room puts them at the spawn point instead.
+ */
+export function canStandAt(map: WorldMap, at: Point): boolean {
+  const feet = feetTile(at);
+  return feet.col >= 0 && feet.row >= 0 && feet.col < map.width && feet.row < map.height && !map.blocked[feet.row][feet.col];
 }
 
 /**

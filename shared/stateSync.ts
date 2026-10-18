@@ -8,11 +8,31 @@ import { isFishId } from "./content/fish";
 import { isCropId } from "./content/crops";
 import { isFurnitureId } from "./content/furniture";
 import { isItemId } from "./content/items";
+import { isForageId } from "./content/forage";
+import { isProjectId } from "./content/projects";
+import type { CharacterId } from "./content/characters";
+import type { Forage } from "./foraging/forage";
+import { lookFrom } from "./player";
+import type { ProjectProgress, Village } from "./village/village";
 import type { PlacedPiece } from "./decor/pieces";
 import type { FarmTile } from "./farming/farming";
 import type { Inventory, Slot } from "./inventory/inventory";
 import type { Crate } from "./economy/shop";
-import { BagSlot, BeachFindState, BookEntryState, BugState, type Clock, CrateEntry, FarmPlot, HouseState, PieceState } from "./schema";
+import {
+  BagSlot,
+  BeachFindState,
+  BookEntryState,
+  BugState,
+  type Clock,
+  CrateEntry,
+  FarmPlot,
+  ForageState,
+  HelperState,
+  HouseState,
+  PieceState,
+  ProjectState,
+  type VillageState,
+} from "./schema";
 import type { Farmer, FarmerId, House, TileKey } from "./world/world";
 import { HUD_MINUTE_STEP, type GameClock } from "./time/clock";
 
@@ -270,4 +290,76 @@ export function readBook(source: MapSchema<BookEntryState>): CollectionBook {
     }
   });
   return { ...EMPTY_BOOK, fish, finds, bugs } as CollectionBook;
+}
+
+/** Copies what's lying about in, item by item, writing only what changed. */
+export function writeForage(target: ArraySchema<ForageState>, items: Forage): void {
+  while (target.length > items.length) target.pop();
+  items.forEach((item, i) => {
+    let cell = target[i];
+    if (!cell) {
+      cell = new ForageState();
+      target.push(cell);
+    }
+    if (cell.itemId !== item.itemId) cell.itemId = item.itemId;
+    if (cell.col !== item.col) cell.col = item.col;
+    if (cell.row !== item.row) cell.row = item.row;
+  });
+}
+
+/** What's lying about as the rules see it. Anything that doesn't make sense is left out. */
+export function readForage(source: Iterable<ForageState>): Forage {
+  return Array.from(source).flatMap((cell) => (isForageId(cell.itemId) ? [{ itemId: cell.itemId, col: cell.col, row: cell.row }] : []));
+}
+
+/** Someone who helped with a project, as the card shows them: their face and name. */
+export interface HelperView {
+  readonly farmerId: string;
+  readonly name: string;
+  readonly character: CharacterId;
+}
+
+/** Copies the village in: Marlow's day, and each project's steps, gifts and helpers (with their looks). */
+export function writeVillage(target: VillageState, village: Village, farmers: Readonly<Record<FarmerId, Farmer>>): void {
+  if (target.keeperDay !== village.keeperDay) target.keeperDay = village.keeperDay;
+  for (const id of [...target.projects.keys()]) if (!Object.hasOwn(village.projects, id)) target.projects.delete(id);
+  for (const [id, progress] of Object.entries(village.projects)) {
+    let cell = target.projects.get(id);
+    const isNew = !cell;
+    if (!cell) cell = new ProjectState();
+    if (cell.gathered !== progress.gathered) cell.gathered = progress.gathered;
+    if (cell.built !== progress.built) cell.built = progress.built;
+    const doneDay = progress.doneDay ?? 0;
+    if (cell.doneDay !== doneDay) cell.doneDay = doneDay;
+    for (const key of [...cell.given.keys()]) if (!Object.hasOwn(progress.given, key)) cell.given.delete(key);
+    for (const [key, count] of Object.entries(progress.given)) if (cell.given.get(key) !== count) cell.given.set(key, count);
+    while (cell.helpers.length > progress.helpers.length) cell.helpers.pop();
+    progress.helpers.forEach((farmerId, i) => {
+      let helper = cell.helpers[i];
+      if (!helper) {
+        helper = new HelperState();
+        cell.helpers.push(helper);
+      }
+      const farmer = Object.hasOwn(farmers, farmerId) ? farmers[farmerId] : undefined;
+      if (helper.farmerId !== farmerId) helper.farmerId = farmerId;
+      if (helper.name !== (farmer?.name ?? "")) helper.name = farmer?.name ?? "";
+      if (helper.character !== (farmer?.character ?? "")) helper.character = farmer?.character ?? "";
+    });
+    if (isNew) target.projects.set(id, cell);
+  }
+}
+
+/** The village as the rules see it, and who has helped with each project (for their faces). */
+export function readVillage(source: VillageState): { village: Village; helpers: Record<string, HelperView[]> } {
+  const projects: Record<string, ProjectProgress> = {};
+  const helpers: Record<string, HelperView[]> = {};
+  source.projects.forEach((cell, id) => {
+    if (!isProjectId(id)) return;
+    const given: Record<string, number> = {};
+    cell.given.forEach((count, key) => (given[key] = count));
+    const faces = Array.from(cell.helpers, (h) => ({ farmerId: h.farmerId, name: h.name, character: lookFrom({ name: h.name, character: h.character }).character }));
+    projects[id] = { gathered: cell.gathered, built: cell.built, given, helpers: faces.map((h) => h.farmerId), doneDay: cell.doneDay > 0 ? cell.doneDay : null };
+    helpers[id] = faces;
+  });
+  return { village: { keeperDay: source.keeperDay, projects }, helpers };
 }

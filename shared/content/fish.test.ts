@@ -1,3 +1,4 @@
+import { fishAvailable } from "../fishing/fishing";
 import { describe, expect, it } from "vitest";
 import { DAY_END_MINUTE, DAY_START_MINUTE } from "../time/clock";
 import { FISH, FISH_IDS, FISHING_SPOTS, bitesAt, isFishId, isFishingSpot } from "./fish";
@@ -11,9 +12,9 @@ function isWholeAbove(n: number, min: number): boolean {
 }
 
 describe("fish data", () => {
-  it("has 8–12 fish", () => {
+  it("has 8–15 fish (12, and three night fish at the point)", () => {
     expect(FISH_IDS.length).toBeGreaterThanOrEqual(8);
-    expect(FISH_IDS.length).toBeLessThanOrEqual(12);
+    expect(FISH_IDS.length).toBeLessThanOrEqual(15);
   });
 
   for (const [key, def] of fish) {
@@ -38,7 +39,8 @@ describe("fish data", () => {
   it("always has something biting at every spot, all day", () => {
     for (const spot of FISHING_SPOTS) {
       for (let minute = DAY_START_MINUTE; minute < DAY_END_MINUTE; minute += 10) {
-        const biting = FISH_IDS.filter((id) => FISH[id].spots.includes(spot) && bitesAt(FISH[id], minute));
+        // The point fishes like the shore by day (fishing.ts).
+        const biting = fishAvailable(spot, minute);
         expect(biting.length, `${spot} at minute ${minute}`).toBeGreaterThanOrEqual(1);
       }
     }

@@ -3,19 +3,12 @@ import { bugSlot, MEADOW, meadowBugs, type MeadowBug } from "../../../shared/bug
 import { collectBug } from "../../../shared/collection/collect";
 import { blocksWalking } from "../../../shared/content/furniture";
 import { FEET_OFFSET, TILE_SIZE } from "../../../shared/constants";
-import { farmKeepClear } from "../../../shared/decor/boards";
 import { coveredTiles } from "../../../shared/decor/pieces";
 import type { CatchBugMessage } from "../../../shared/messages";
 import { writeBugs } from "../../../shared/stateSync";
 import { tileCenter } from "../../../shared/world/map";
-import { meadowGrass } from "../../../shared/world/terrain";
-import { VILLAGE_MAP } from "../../../shared/world/villageMap";
 import { applyCollected } from "./collection";
 import type { FarmRoom } from "./FarmRoom";
-
-/** Where bugs flutter: the meadow's open grass, minus the paths and doorsteps kept clear. Read from the map once. */
-const KEEP_CLEAR = farmKeepClear(VILLAGE_MAP);
-const MEADOW_TILES = meadowGrass(VILLAGE_MAP).filter(({ col, row }) => !KEEP_CLEAR.has(`${col},${row}`));
 
 /**
  * Bugs in the meadow: a new lot every couple of game hours (shared/bugs/meadow.ts picks them from
@@ -47,7 +40,8 @@ export class Meadow {
         .flatMap(coveredTiles)
         .map(({ col, row }) => `${col},${row}`),
     );
-    this.bugs = meadowBugs({ day, slot, worldSeed: this.room.world.worldSeed, tiles: MEADOW_TILES, blocked });
+    // Where they flutter: the meadow's open grass you can get to today, minus the paths and doorsteps kept clear.
+    this.bugs = meadowBugs({ day, slot, worldSeed: this.room.world.worldSeed, tiles: this.room.today.meadow, blocked });
     this.sync();
   }
 

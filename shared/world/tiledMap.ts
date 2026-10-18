@@ -1,5 +1,6 @@
 import { TILE_SIZE } from "../constants";
-import { type HousePlan, type Rect, type Terrain, tileAt, type WorldMap } from "./map";
+import { KEEPER_POINTS, mapFor, NOTHING_BUILT, objectFields } from "./gates";
+import { type GatedLayer, type HousePlan, type MapGates, type MapObject, type Rect, type Terrain, tileAt, type WorldMap } from "./map";
 
 /**
  * Reads a map saved by Tiled (JSON format, see "Editing the map" in CLAUDE.md).
@@ -44,6 +45,28 @@ export interface TiledObject {
   width?: number;
   height?: number;
   point?: boolean;
+  properties?: { name: string; type: string; value: unknown }[];
+}
+
+/** A layer's string property: `shownFrom: lighthouse/path` says it's drawn (and in effect) once that's built. */
+export const SHOWN_FROM_PROPERTY = "shownFrom";
+/** `shownUntil: lighthouse/path`: drawn (and in effect) until that's built. */
+export const SHOWN_UNTIL_PROPERTY = "shownUntil";
+/** An object's string property: `needs: lighthouse` means it does nothing until that's built. */
+export const NEEDS_PROPERTY = "needs";
+/** A gated Collision layer's string property: the hint the Action button gives facing it ("brambles"). */
+export const HINT_PROPERTY = "hint";
+
+/** A layer's or object's string property, or null. */
+export function stringProperty(thing: { properties?: unknown }, name: string): string | null {
+  const properties: { name?: unknown; value?: unknown }[] = Array.isArray(thing.properties) ? thing.properties : [];
+  const value = properties.find((p) => p?.name === name)?.value;
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+/** Whether a tile layer comes and goes as things are built. */
+export function isGatedLayer(layer: { properties?: unknown }): boolean {
+  return stringProperty(layer, SHOWN_FROM_PROPERTY) !== null || stringProperty(layer, SHOWN_UNTIL_PROPERTY) !== null;
 }
 
 export interface TiledTileset {
@@ -132,15 +155,37 @@ export function parseTiledMap(input: unknown): WorldMap {
 
   const terrainOf = terrainReader(json.tilesets);
   const clutter = CLUTTER_LAYERS.filter(hasLayer).map(tiles);
-  const deepWater = (objectLayer.objects ?? [])
-    .filter((o) => o.name === "deepWater")
-    .map(({ x, y, width: w = 0, height: h = 0 }): Rect => ({ x, y, width: w, height: h }));
 
-  return {
+  // Layers that come and go as the village is built (Milestone 6).
+  const layers: GatedLayer[] = json.layers
+    .filter((l) => l.type === "tilelayer" && l.name !== COLLISION_LAYER && l.name !== FARMLAND_LAYER)
+    .filter((l) => isGatedLayer(l) || l.name.startsWith(`${COLLISION_LAYER} `) || l.name.startsWith(`${FARMLAND_LAYER} `))
+    .map((l) => ({
+      name: l.name,
+      kind: l.name.startsWith(`${COLLISION_LAYER} `) ? "collision" : l.name.startsWith(`${FARMLAND_LAYER} `) ? "farmland" : "art",
+      from: stringProperty(l, SHOWN_FROM_PROPERTY),
+      until: stringProperty(l, SHOWN_UNTIL_PROPERTY),
+      tiles: painted(l.name),
+      hint: stringProperty(l, HINT_PROPERTY),
+    }));
+  const objects: MapObject[] = (objectLayer.objects ?? [])
+    .filter((o) => GATED_OBJECTS.includes(o.name) || Object.hasOwn(KEEPER_POINTS, o.name))
+    .map((o) => ({
+      name: o.name,
+      rect: { x: o.x, y: o.y, width: o.width ?? 0, height: o.height ?? 0 },
+      point: o.point === true,
+      needs: stringProperty(o, NEEDS_PROPERTY),
+      props: Object.fromEntries(
+        (o.properties ?? []).filter((p) => p.name !== NEEDS_PROPERTY && typeof p.value === "string").map((p) => [p.name, p.value as string]),
+      ),
+    }));
+  const gates: MapGates = { layers, objects, baseBlocked: painted(COLLISION_LAYER), baseFarmland: painted(FARMLAND_LAYER) };
+
+  const base: WorldMap = {
     width,
     height,
-    blocked: painted(COLLISION_LAYER),
-    farmland: painted(FARMLAND_LAYER),
+    blocked: gates.baseBlocked,
+    farmland: gates.baseFarmland,
     spawn,
     shippingCrate: area("shippingCrate"),
     tent: area("tent"),
@@ -152,9 +197,15 @@ export function parseTiledMap(input: unknown): WorldMap {
       empty.map((_, i) => (clutter.some((layer) => layer[i] !== 0) ? 1 : 0)),
       (any) => any !== 0,
     ),
-    deepWater,
+    ...objectFields(objects, NOTHING_BUILT),
+    gates,
   };
+  // As it starts, with nothing built.
+  return mapFor(base, NOTHING_BUILT);
 }
+
+/** Objects that can come and go (or there can be several of), read into the map's gates. */
+const GATED_OBJECTS = ["board", "lighthouse", "pointWater", "woods", "deepWater"];
 
 /**
  * Reads the ground's terrain from the tileset painted with the terrain brush: the first terrain
