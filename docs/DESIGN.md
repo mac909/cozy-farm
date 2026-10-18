@@ -58,9 +58,11 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ## Money and shops
 
-- One shared wallet.
-- A shipping crate on the dock: whatever's in it sells overnight. **(proposed)**
-- A general store for seeds, tools, and furniture.
+- One shared wallet, starting at 500 coins.
+- Each player has their own bag of 24 slots; the first 8 are the hotbar. Everyone starts with a hoe, a watering can and 10 radish seeds.
+- A shipping crate on the dock: whatever's in it sells overnight, at that night's prices, and a morning message says what sold. It has no size limit, and you can take things back out before night.
+- A general store for seeds, tools, and furniture. Seeds and furniture sell back for about half price, so a mistake isn't a total loss. Tools can't be sold.
+- All prices and amounts live in `shared/content/items.ts` and `shared/content/crops.ts`. They're first guesses, to be tuned by playing.
 
 ## Decorating
 

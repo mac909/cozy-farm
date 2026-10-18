@@ -39,6 +39,7 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 | `npm test` | Unit tests |
 | `npm run typecheck` | TypeScript check across client, server, and shared |
 | `npm run build` | Builds the client into `dist/client` |
+| `npm run sprites` | Checks `tools/sprites/` and re-renders our own sprites into `client/public/assets/custom/` |
 | `npm run farm:up` | Rebuilds and (re)starts the **real farm** container on :8080 |
 | `npm run farm:logs` / `npm run farm:down` | Follow its logs / stop it |
 | `npm run farm:backup` | Copies the real farm's save into `%OneDrive%\CozyFarm\backups`, keeping the newest 14. `scripts/backup-farm.ps1` has the nightly scheduled-task command. |
@@ -50,7 +51,7 @@ Read [docs/DESIGN.md](docs/DESIGN.md) (what the game is and the decisions so far
 - **Game rules are pure functions in `shared/`**, with tests and no Phaser or Colyseus imports. Rooms and scenes call them.
 - **Content is data.** Define crops, items, furniture, critters, and maps in data files under `shared/`, never inline in logic.
 - **Touch first.** Every action must work with one thumb on a phone as well as with a keyboard. HUD and controls go in `UIScene` (camera zoom 1). The world goes in `WorldScene` (integer zoom only, so the pixels stay crisp).
-- **Pixel art:** 16×16 tiles, `pixelArt: true`. Until the art pack is chosen, placeholder art is drawn in code in `client/src/art/placeholderArt.ts`; its frame order must match `shared/world/tiles.ts`.
+- **Pixel art:** 16×16 tiles, `pixelArt: true`. The art is the Ninja Adventure pack (CC0) in `client/public/assets/ninja-adventure/`, plus our own sprites in `client/public/assets/custom/`, drawn as data in `tools/sprites/` (see its README for style rules and sheet layouts). Until the art is wired in, the game still draws placeholder art in code in `client/src/art/placeholderArt.ts`; its frame order must match `shared/world/tiles.ts`. The dev-only page `/art-preview.html` shows the sprites next to the pack.
 - **Protect the real farm.** It runs in Docker on :8080, with saves in the `farm-data` volume. Never run `docker compose down -v`, never delete that volume, and never point dev at it. Dev uses its own ports and, from Milestone 2, its own `data-dev/` folder. Test the farm scripts by pointing their `-Container`, `-Volume` and `-Image` options at throwaway ones.
 - **Saves are versioned** (from Milestone 2). Every save carries a `version`. Changing the format means adding a migration, never breaking old saves. The save layer is `server/src/persistence/`: SQLite through Node's built-in `node:sqlite`, in the folder named by `DATA_DIR` (`data-dev/` in dev, the farm-data volume in Docker). The world's save format and its migrations are in `worldSave.ts`. If a save won't load, the server must stop rather than start a fresh world over it.
 - **Two trusted players.** No accounts, passwords, or anti-cheat. Validate messages only enough to avoid crashes or corrupt state (types, bounds).

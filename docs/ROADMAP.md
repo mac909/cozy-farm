@@ -17,7 +17,9 @@ Every milestone ends with something playable. Tick items off as they land.
 - [x] Name and look picked on first join, remembered on that device
 - [x] Emotes (wave, heart)
 - [x] Reconnect automatically after Wi-Fi blips or a server restart
-- [ ] Pick the art pack; move the map into Tiled
+- [x] Pick the art pack: Ninja Adventure plus our own crop, soil, beach and crate sprites (in `client/public/assets/`)
+- [x] HTTPS address and home-screen install on phones
+- [ ] Use the new art in the game and move the map into Tiled
 
 ## Milestone 2: Farming (the first version to show her)
 
@@ -26,7 +28,7 @@ Every milestone ends with something playable. Tick items off as they land.
 - [ ] Crops grow day by day; harvest
 - [ ] World saved to SQLite (versioned) and restored after restarts
 - [ ] Separate dev save, so testing never touches the real farm
-- [ ] Nightly backup of the save to OneDrive
+- [ ] Nightly backup of the save to OneDrive (the script is ready: `npm run farm:backup`; the scheduled task comes once saving is wired in)
 
 ## Milestone 3: Shop and coins
 
