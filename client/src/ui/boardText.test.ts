@@ -123,7 +123,7 @@ describe("the Your home tab (Milestone 7)", () => {
     ]);
     expect(words.cottages[0].rows.map((r) => [r.name, r.state, r.sub])).toEqual([
       ["A porch", "later", "After the lighthouse"],
-      ["A garden", "later", "After the garden shop"],
+      ["A garden", "later", "Marlow's still drawing it up"],
       ["A bedroom", "later", "After the bridge"],
       ["A kitchen", "later", "After the café"],
       ["A loft", "later", "After the tailor's"],

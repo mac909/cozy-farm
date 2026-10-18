@@ -154,6 +154,11 @@
         <h2>Skills, badges and porches (Milestone 7): a porch, the level gifts, golden crops</h2>
       </section>
 
+      <section id="garden">
+        <h2>The garden shop and the seasons (Milestone 8): the shop, the tool upgrades, the seasons' trees and grass</h2>
+        <p>The ten new crops are with the others above.</p>
+      </section>
+
       <section id="sand">
         <h2>Beach sand (recoloured from the pack's own autotiles)</h2>
         <p>Same tile layout as the source blocks, so the pack's autotile rules apply unchanged.</p>
@@ -201,6 +206,12 @@
         porch: CU + "porch.png",
         rewards: CU + "reward-furniture.png",
         golden: CU + "golden-crops.png",
+        gardenShop: CU + "garden-shop.png",
+        tools: CU + "tools.png",
+        seasonalTrees: CU + "seasonal-trees.png",
+        terrain: CU + "beach-terrain.png",
+        terrainAutumn: CU + "beach-terrain-autumn.png",
+        terrainWinter: CU + "beach-terrain-winter.png",
         fish: CU + "fish.png",
         keeper: NA + "Actor/Character/OldMan3/SpriteSheet.png",
         sandGrass: CU + "sand-grass.png",
@@ -563,9 +574,46 @@
         for (let x = 0; x < 12; x++) for (let y = 0; y < 2; y++) piece(ctx, img.sandGrass, 16, 16, x * T, y * T);
         for (let i = 0; i < 6; i++) frame(ctx, img.rewards, 32, 32, i, i * 32, 0);
       });
-      figure(progressRow, "ours", "golden crops (Farming level 10)", 6 * T, T, (ctx) => {
-        for (let i = 0; i < 6; i++) frame(ctx, img.golden, T, T, i, i * T, 0);
+      const goldenCount = img.golden.width / T;
+      figure(progressRow, "ours", "golden crops (Farming level 10)", goldenCount * T, T, (ctx) => {
+        for (let i = 0; i < goldenCount; i++) frame(ctx, img.golden, T, T, i, i * T, 0);
       }, 3, "#d2b37d");
+
+      // ---------- the garden shop and the seasons ----------
+
+      const gardenSection = document.getElementById("garden");
+      const shopRow = row(gardenSection);
+      figure(shopRow, "ours", "the garden shop: boarded up, patched, open, its opening day; and the boardwalk", 16 * T, 5 * T, (ctx) => {
+        for (let x = 0; x < 16; x++) for (let y = 0; y < 5; y++) piece(ctx, img.sandGrass, 16, 16, x * T, y * T);
+        for (let x = 0; x < 16; x++) {
+          const col = x === 0 ? 0 : x === 15 ? 32 : 16;
+          piece(ctx, img.water, col, 192, x * T, 3 * T);
+          piece(ctx, img.water, col, 224, x * T, 4 * T);
+        }
+        for (let i = 0; i < 4; i++) frame(ctx, img.gardenShop, 64, 48, i, i * 64, 0);
+      }, 3);
+      const toolsRow = row(gardenSection);
+      figure(toolsRow, "ours", "tool upgrades: big watering can, wide hoe, good rod, bug net, shell basket", 5 * T, T, (ctx) => {
+        for (let i = 0; i < 5; i++) frame(ctx, img.tools, T, T, i, i * T, 0);
+      }, 4, "#d2b37d");
+      figure(toolsRow, "pack", "the watering can, hoe and rod they're made from", 3 * T, T, (ctx) => {
+        ctx.drawImage(img.can, 0, 0);
+        ctx.drawImage(img.hoe, T, 0);
+        ctx.drawImage(img.rod, 2 * T + 3, 1);
+      }, 4, "#d2b37d");
+      const seasonsRow = row(gardenSection);
+      for (const [name, terrain, tree] of [
+        ["spring", img.terrain, [224, 0]],
+        ["summer", img.terrain, [0, 0]],
+        ["autumn", img.terrainAutumn, null],
+        ["winter", img.terrainWinter, [192, 0]],
+      ]) {
+        figure(seasonsRow, tree ? "pack" : "ours", `${name}: the grass and a round tree`, 4 * T, 3 * T, (ctx) => {
+          for (let x = 0; x < 4; x++) for (let y = 0; y < 3; y++) ctx.drawImage(terrain, 16, 16, T, T, x * T, y * T, T, T);
+          if (tree) piece(ctx, img.nature, tree[0], tree[1], T, T / 2, 2 * T, 2 * T);
+          else piece(ctx, img.seasonalTrees, 0, 0, T, T / 2, 2 * T, 2 * T);
+        }, 3);
+      }
 
       // ---------- crate ----------
 

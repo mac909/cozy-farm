@@ -17,8 +17,11 @@ export interface DevCommands {
   xp(skill: "farming" | "fishing" | "foraging", amount: number): void;
   /** Build whatever's been gathered now, instead of overnight. */
   build(): void;
-  /** Make today the first day of a season: dev.season("winter") (Milestone 8). The seasons begin if they haven't. */
-  season(season: "spring" | "summer" | "autumn" | "winter"): void;
+  /**
+   * Make today the first day of a season, dev.season("winter"), or another day of it,
+   * dev.season("spring", 14) (Milestone 8). The seasons begin if they haven't.
+   */
+  season(season: "spring" | "summer" | "autumn" | "winter", day?: number): void;
   /** Put things in your bag: dev.item("driftwood", 10), dev.item("melon_seeds", 5). */
   item(itemId: string, count?: number): void;
   /**
@@ -88,7 +91,7 @@ export function installDevCommands(
     give: (project) => send({ command: "fillStep", ...(typeof project === "string" ? { project } : {}) }),
     xp: (skill, amount) => send({ command: "xp", skill, value: amount }),
     build: () => send({ command: "build" }),
-    season: (season) => send({ command: "season", season }),
+    season: (season, day = 1) => send({ command: "season", season, value: day }),
     item: (itemId, count = 1) => send({ command: "item", item: itemId, value: count }),
   };
 }

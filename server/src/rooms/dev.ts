@@ -89,8 +89,9 @@ export function registerDevCommands(room: FarmRoom, startNight: () => void) {
       case "season": {
         const season = message.season;
         if (!isSeasonId(season)) return;
-        console.log(`[dev] ${client.sessionId}: today is the first day of ${season}`);
-        room.change({ ...room.world, yearStart: yearStartFor(room.world.clock.day, season) });
+        const day = typeof value === "number" && Number.isFinite(value) ? value : 1;
+        console.log(`[dev] ${client.sessionId}: today is day ${day} of ${season}`);
+        room.change({ ...room.world, yearStart: yearStartFor(room.world.clock.day, season, day) });
         break;
       }
     }

@@ -70,7 +70,7 @@ export const HOUSE_UPGRADE_IDS: readonly string[] = Object.keys(HOUSE_UPGRADES);
  * needs) in its milestone.
  */
 export const LATER_UPGRADES: readonly { readonly name: string; readonly afterHint: string; readonly icon: ItemId }[] = [
-  { name: "A garden", afterHint: "After the garden shop", icon: "sunflower" },
+  { name: "A garden", afterHint: "Marlow's still drawing it up", icon: "sunflower" },
   { name: "A bedroom", afterHint: "After the bridge", icon: "red_bed" },
   { name: "A kitchen", afterHint: "After the café", icon: "clay_pot" },
   { name: "A loft", afterHint: "After the tailor's", icon: "wide_shelf" },

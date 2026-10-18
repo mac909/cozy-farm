@@ -73,10 +73,10 @@ answers to the open questions are approved (2026-10-18).
 
 ## Milestone 8: The garden shop and the seasons
 
-- [ ] The boardwalk and the garden shop project
-- [ ] Ten new crops and gentle seasons (save v6)
-- [ ] Tool upgrades: big and sprinkling cans, wide hoe, good rod, bug net, shell basket
-- [ ] The garden upgrade for houses
+- [x] The boardwalk and the garden shop project
+- [x] Ten new crops and gentle seasons (save v6)
+- [x] Tool upgrades: big can, wide hoe, good rod, bug net, shell basket (the sprinkling can waits for stone from the cove, Milestone 9)
+- [ ] The garden upgrade for houses (not started: moved to Milestone 9, see docs/reports/milestone-8.md)
 
 ## Milestone 9: The bridge and the cove
 

@@ -67,10 +67,11 @@ export function inSeason(cropId: CropId, date: SeasonDate | null): boolean {
 }
 
 /**
- * A `yearStart` that makes `day` the first day of `season` (the dev command), from 1 up: it may
- * come after `day` early in a world, which seasonOn copes with.
+ * A `yearStart` that makes `day` day `dayOfSeason` (1 to SEASON_DAYS) of `season` (the dev
+ * command), from 1 up: it may come after `day` early in a world, which seasonOn copes with.
  */
-export function yearStartFor(day: number, season: SeasonId): number {
-  const start = day - SEASON_IDS.indexOf(season) * SEASON_DAYS;
+export function yearStartFor(day: number, season: SeasonId, dayOfSeason = 1): number {
+  const into = Math.min(SEASON_DAYS, Math.max(1, Math.floor(dayOfSeason))) - 1;
+  const start = day - SEASON_IDS.indexOf(season) * SEASON_DAYS - into;
   return start >= 1 ? start : start + YEAR_DAYS * Math.ceil((1 - start) / YEAR_DAYS);
 }

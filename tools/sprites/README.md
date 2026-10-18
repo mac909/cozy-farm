@@ -10,7 +10,8 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | File | What it draws |
 |---|---|
 | `palette.ts` | Named colours, almost all sampled from the pack |
-| `crops.ts` | Growth stages, harvested item and seed packet for each starter crop |
+| `crops.ts` | Growth stages, harvested item and seed packet for each starter crop (and the sheet's shared bits) |
+| `gardenCrops.ts` | The same for the garden shop's ten crops (Milestone 8) |
 | `soil.ts` | Tilled soil, dry and watered, as a 16-tile autotile set |
 | `beach.ts` | Shells, sea glass, starfish |
 | `fish.ts` | Fifteen fish icons, one per fish in `shared/content/fish.ts` (three night fish from Milestone 6) |
@@ -26,6 +27,9 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | `rewards.ts` | The six gifts a skill's levels bring: a straw hat on a stand, a mounted fish, a shell wreath, a golden can planter, a lobster pot, a butterfly jar (Milestone 7) |
 | `porch.ts` | A cottage's porch: decking, a bench, and a lantern dark and lit (Milestone 7) |
 | `golden.ts` | Golden crops: each crop's harvested item recoloured in gold (Milestone 7) |
+| `tools.ts` | Tool upgrades (Milestone 8): the pack's can, hoe and rod in better metal, and our bug net and shell basket |
+| `gardenShop.ts` | The garden shop (Milestone 8): the pack's little shop recoloured, with our sign, boards, flower boxes, a potting bench and bunting |
+| `seasons.ts` | The seasons' looks (Milestone 8): autumn round trees, and the grass in autumn and winter |
 | `markers.ts` | Marker tiles for the map's hidden Collision and Farmland layers |
 | `render.ts` | Puts it all together and writes the PNGs |
 | `lib/image.ts` | Tiny image helpers on top of `pngjs` |
@@ -47,9 +51,9 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
 
 ## Sheet layouts
 
-- `crops.png`: one row per crop (in `crops.ts` order). Columns 0..n−1 are the growth stages from seed to ripe,
-  column 5 is the harvested item, column 6 the seed packet. Stage counts must match `stages` in
-  `shared/content/crops.ts`.
+- `crops.png`: one row per crop (in `shared/content/crops.ts` order: `CROP_ART` keeps the same order). Columns
+  0..n−1 are the growth stages from seed to ripe (room for `MAX_STAGES`, 6, since Milestone 8), column 6 is the
+  harvested item, column 7 the seed packet. Stage counts must match `stages` in `shared/content/crops.ts`.
 - `soil.png`: row 0 dry, row 1 watered. Frame = mask (+16 when watered), where the mask adds 1, 2, 4, 8 for a
   tilled neighbour to the north, east, south, west.
 - `beach-items.png`: one row, frame order in `manifest.json`.
@@ -71,3 +75,7 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
 - `reward-furniture.png`: 32×32 frames in `REWARD_FRAMES` order, each picture at its rectangle (the render checks every pixel is inside it).
 - `porch.png`: 64×48, cut out by `PORCH_FRAMES`: the decking along the top (64×16), the bench (32×32) and the lantern dark and lit (16×32 each) below.
 - `golden-crops.png`: one row of 16×16 icons in `crops.ts` order.
+- `tools.png`: one row of 16×16 icons, named by item id in `manifest.json` (big_watering_can, wide_hoe, good_rod, bug_net, shell_basket).
+- `garden-shop.png`: 64×48 frames, boarded, patched, open, opening (with bunting); it stands on the bottom of the frame, the door in its second column.
+- `seasonal-trees.png`: a tileset in the village map (4 × 2 tiles): the two round trees in autumn, side by side. `client/src/art/seasonArt.ts` swaps the map's trees to them.
+- `beach-terrain-autumn.png`, `beach-terrain-winter.png`: `beach-terrain.png` with that season's grass, same layout; the game swaps them in for the Ground layer's tileset.

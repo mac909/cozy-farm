@@ -25,6 +25,12 @@ describe("seasons", () => {
     expect(seasonLabel({ season: "autumn", day: 3, year: 1 })).toBe("Autumn 3");
   });
 
+  it("can be set to any day of a season today (the dev command)", () => {
+    expect(seasonOn(30, yearStartFor(30, "spring", 13))).toEqual({ season: "spring", day: 13, year: 1 });
+    expect(seasonOn(32, yearStartFor(30, "spring", 13))?.season).toBe("summer");
+    expect(seasonOn(3, yearStartFor(3, "winter", 14))).toMatchObject({ season: "winter", day: 14 });
+  });
+
   it("can be set to start any season today (the dev command), early in a world too", () => {
     for (const season of SEASON_IDS) {
       for (const day of [1, 5, 30, 200]) {
