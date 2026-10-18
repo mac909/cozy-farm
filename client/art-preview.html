@@ -146,6 +146,10 @@
         <h2>Shipping crate</h2>
       </section>
 
+      <section id="village">
+        <h2>The village (Milestone 6): the lighthouse, the board, brambles, materials, night fish</h2>
+      </section>
+
       <section id="sand">
         <h2>Beach sand (recoloured from the pack's own autotiles)</h2>
         <p>Same tile layout as the source blocks, so the pack's autotile rules apply unchanged.</p>
@@ -186,6 +190,12 @@
         soil: CU + "soil.png",
         beach: CU + "beach-items.png",
         crate: CU + "shipping-crate.png",
+        lighthouse: CU + "lighthouse.png",
+        board: CU + "village-board.png",
+        brambles: CU + "brambles.png",
+        materials: CU + "materials.png",
+        fish: CU + "fish.png",
+        keeper: NA + "Actor/Character/OldMan3/SpriteSheet.png",
         sandGrass: CU + "sand-grass.png",
         sandWater: CU + "sand-water.png",
         floor: NA + "Backgrounds/Tilesets/TilesetFloor.png",
@@ -506,6 +516,26 @@
         piece(ctx, img.floorDetail, 16, 0, 4 * T, 0);
         piece(ctx, img.floorDetail, 240, 0, 5 * T, 0);
       });
+
+      // ---------- the village ----------
+
+      const villageRow = row(document.getElementById("village"));
+      figure(villageRow, "ours", "the lighthouse: dark, scaffolded, mended, lit", 12 * T, 6 * T, (ctx) => {
+        for (let x = 0; x < 12; x++) for (let y = 0; y < 6; y++) piece(ctx, img.sandGrass, 16, 16, x * T, y * T);
+        for (let i = 0; i < 4; i++) frame(ctx, img.lighthouse, 48, 96, i, i * 48, 0);
+      });
+      figure(villageRow, "ours", "the board (0, 1, 2 notes), Marlow, brambles", 9 * T, 2 * T, (ctx) => {
+        for (let x = 0; x < 9; x++) for (let y = 0; y < 2; y++) piece(ctx, img.sandGrass, 16, 16, x * T, y * T);
+        for (let i = 0; i < 3; i++) frame(ctx, img.board, 32, 32, i, i * 32, 0);
+        frame(ctx, img.keeper, T, T, 2, 6 * T, T);
+        frame(ctx, img.brambles, T, T, 0, 7 * T, T);
+        frame(ctx, img.brambles, T, T, 1, 8 * T, T);
+      });
+      figure(villageRow, "ours", "driftwood, branch; lanternfish, cuttlefish, conger eel", 5 * T, T, (ctx) => {
+        frame(ctx, img.materials, T, T, 0, 0, 0);
+        frame(ctx, img.materials, T, T, 1, T, 0);
+        for (let i = 0; i < 3; i++) frame(ctx, img.fish, T, T, 12 + i, (2 + i) * T, 0);
+      }, 3, "#d2b37d");
 
       // ---------- crate ----------
 

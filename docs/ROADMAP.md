@@ -53,17 +53,17 @@ Every milestone ends with something playable. Tick items off as they land.
 ## Restoring the village (Milestones 6–12)
 
 Planned in [docs/plans/progression.md](plans/progression.md), with mockups in
-[progression-mockups.html](plans/progression-mockups.html). Each milestone is playable on its own; numbers and order
-are suggestions until the plan's open questions are answered.
+[progression-mockups.html](plans/progression-mockups.html). Each milestone is playable on its own. The plan and its
+answers to the open questions are approved (2026-10-18).
 
 ## Milestone 6: The keeper and the lighthouse
 
-- [ ] Rules: projects in steps, giving, building overnight, built names and the map as of today, Marlow's day (save v4)
-- [ ] The map grows east: the point, the lighthouse, the board's spot, brambles, a broken bridge to tease the cove
-- [ ] Driftwood on the beach and branches under the trees each morning, and the storm when Marlow arrives
-- [ ] Marlow (Talk, his notes), the Village Board, Give from the hotbar, the board and project cards
-- [ ] Light the lighthouse in three steps: the cheer on both screens, building overnight, the morning's village lines, the opening card at dusk, the glow every night
-- [ ] Night fishing at the point (three fish) and the view from the top
+- [x] Rules: projects in steps, giving, building overnight, built names and the map as of today, Marlow's day (save v4)
+- [x] The map grows east: the point, the lighthouse, the board's spot, brambles, a broken bridge to tease the cove
+- [x] Driftwood on the beach and branches under the trees each morning, and the storm when Marlow arrives
+- [x] Marlow (Talk, his notes), the Village Board, Give from the hotbar, the board and project cards, and the book's Village page
+- [x] Light the lighthouse in three steps: the cheer on both screens, building overnight, the morning's village lines, the opening card at dusk, the glow every night
+- [x] Night fishing at the point (three fish) and the view from the top
 
 ## Milestone 7: Skills, badges and porches
 

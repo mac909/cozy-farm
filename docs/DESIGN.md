@@ -55,13 +55,18 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Celebrations | A first discovery puts a card at the top of both screens ("New in the collection book! Sea Bream, caught by Pip") with the pack's success jingle, confetti and a heart over the finder. A bigger fish than ever gets a smaller card; a full page and a full book get their own. Tapping a card opens the book. Decided by Claude (Milestone 5). | 2026-10-18 |
 | Fish pictures | Our own 12 fish icons, drawn in `tools/sprites/fish.ts`: the pack has only three small fish, all one shape, and the book needs each fish to look like itself. Decided by Claude (Milestone 5). | 2026-10-18 |
 | Progression | Restore the seaside village together: big shared projects guided by one old lighthouse keeper, fed by everything you already do, plus personal skills, badges, house upgrades and outfits. Details under Restoring the village; the plan is `docs/plans/progression.md`. | 2026-10-18 |
+| The plan's open questions | The developer approved the progression plan and every suggested answer in its section 7 (the keeper is Marlow, the board by the seed stand, built overnight, one project at a time, gentle seasons with the garden shop, the map growing east, and the rest). They're written into Restoring the village below, no longer "proposed". | 2026-10-18 |
+| The village's name | Still open, like the game's. It lives in one constant, `VILLAGE_NAME` in `shared/content/keeper.ts` ("the village" for now), and Marlow's lines say `{village}` where it goes, always mid-sentence, so picking a name is a one-line change. | 2026-10-18 |
+| Marlow's arrival | On the real farm, the first time the server starts after Milestone 6 on a world past its first day; in a new world, the morning of day 2. He comes with a storm: 10 driftwood on the beach and 6 branches under the trees instead of that morning's usual few, so the first step can be done on the first evening. Nothing lies about before he comes. The morning card the day he arrives says a little boat is tied up at the dock; his first note greets each farmer once on each device. Decided by Claude (Milestone 6). | 2026-10-18 |
+| Giving | Only the step being gathered takes gifts, and once its last thing is in, nothing more goes in until it's built that night: at most one step a night. The Action button's **Give 7** gives the held stack (only as many as are wanted, so holding a rare fish and tapping Give gives that fish); the card's **Give** buttons give from the whole bag, cheapest first for "any of a kind". No "Choose" link: holding the one you want and tapping Give does the same. Decided by Claude (Milestone 6). | 2026-10-18 |
+| The lighthouse's look | Our own sprite in four states (dark and boarded up, scaffolded with the door open once the stairs are mended, mended with a dark lamp, lit), drawn in code at its spot rather than as Tiled layers, like the store and the seed stand. The brambles are a Tiled layer. Decided by Claude (Milestone 6). | 2026-10-18 |
 
 ## Controls
 
 One way of playing on every device: an Action button for the tile in front of you (like Animal Crossing or Stardew on a controller).
 
 - **Hotbar:** the first 8 slots of your bag along the bottom. Tap a slot (or 1–8, Q/E, the mouse wheel) to hold what's in it; its name shows for a moment. The choice is remembered on the device, and a slot stays picked when it empties.
-- **Action button** (bottom right, the biggest thing on screen; Space or Enter): it says what it will do for the tile in front of your feet, which gets a pulsing outline: **Dig** (hoe on farm-field grass), **Plant** (seeds on bare dug soil), **Water** (can on dry soil), **Pick** (a ripe crop, whatever you're holding). Next to a place it takes over: **Sleep** at the tent or a bed, **Crate** at the shipping crate, **Seeds** at the seed stand, **Shop** at the general store, **Home**, **Visit** or **Move in** at a cottage's door, **Leave** on a room's mat. Facing a beach find (or standing on it) it says **Pick up**, and next to a bug **Catch**, whatever you're holding. With the fishing rod, facing water, it says **Fish**. Holding furniture where it can go, it says **Place** (see Arrange mode). When nothing would happen it fades, and tapping it gives a hint over your head instead ("Dig it with the hoe first."). These hints are the tutorial.
+- **Action button** (bottom right, the biggest thing on screen; Space or Enter): it says what it will do for the tile in front of your feet, which gets a pulsing outline: **Dig** (hoe on farm-field grass), **Plant** (seeds on bare dug soil), **Water** (can on dry soil), **Pick** (a ripe crop, whatever you're holding). Next to a place it takes over: **Sleep** at the tent or a bed, **Crate** at the shipping crate, **Seeds** at the seed stand, **Shop** at the general store, **Board** at the Village Board (or **Give 7** holding something it wants), **Talk** facing Marlow, **Climb** at the lit lighthouse's door, **Home**, **Visit** or **Move in** at a cottage's door, **Leave** on a room's mat. Facing a beach find, driftwood or a branch (or standing on it) it says **Pick up**, and next to a bug **Catch**, whatever you're holding. Facing something closed (the brambles, the dark lighthouse) it fades and its hint says Marlow has a plan for it on the board. With the fishing rod, facing water, it says **Fish**. Holding furniture where it can go, it says **Place** (see Arrange mode). When nothing would happen it fades, and tapping it gives a hint over your head instead ("Dig it with the hoe first."). These hints are the tutorial.
 - **Hold to repeat:** keep Action (or Space) held after a press and walk: each new tile you face gets dug, planted, watered or picked, so a row is one stroke. On a phone, steer with one thumb and hold Action with the other.
 - **Turn on the spot:** a light push on the joystick turns you without walking, so lining up on one tile is easy; push further to walk.
 - On a laptop, clicking one of the 8 tiles around you acts there. Tapping a tile on a phone doesn't: a touch steers the joystick, and telling a tap from the start of a walk would make the stick flicker. Revisit if it's missed on a real phone.
@@ -71,14 +76,16 @@ One way of playing on every device: an Action button for the tile in front of yo
 - **Emotes:** wave and heart next to Action (Z and X).
 - **Fishing:** see Collecting. While fishing, the button says **Wait…**, **Now!**, **Reel** and **Let go**; a touch anywhere on the screen works as the button; **Stop** (Esc) reels in.
 - **The collection book:** the book button at the top right, left of the music (key C), or **Book** in the bag.
-- **First-day tips:** small cards near the top of the screen, each shown once per device, that don't stop play (OK, or they go by themselves after 10 seconds): how to dig (on first joining), plant and water (after your first dig), the tent ends the day (after your first watering, or at 6 pm), and the crate (after your first pick). Later ones: the cottages, arranging, and for collecting: how to fish (the first time you pick the rod), where the fish are (after your first catch), the beach (after your first pick-up), bugs (after your first catch), and the book (after the first discovery). No tips while fishing. The words are in `client/src/ui/tipRules.ts`.
+- **The view from the lighthouse:** **Down** (Esc) in the bag's place, the stick or the keys look round; the hotbar and the Action button go while you're up there.
+- **Wanted on the board:** picking a slot with something the board needs says so with its name ("Driftwood · wanted on the board"), and the bag's strip says how many more ("The lighthouse needs 3 more").
+- **First-day tips:** small cards near the top of the screen, each shown once per device, that don't stop play (OK, or they go by themselves after 10 seconds): how to dig (on first joining), plant and water (after your first dig), the tent ends the day (after your first watering, or at 6 pm), and the crate (after your first pick). Later ones: the cottages, arranging, and for collecting: how to fish (the first time you pick the rod), where the fish are (after your first catch), the beach (after your first pick-up), bugs (after your first catch), and the book (after the first discovery); and for the village: the board (after Marlow's first note), driftwood and branches (after your first pick-up of one), and the point and the view (after the lighthouse's opening card). No tips while fishing. The words are in `client/src/ui/tipRules.ts`.
 - **Esc** closes whatever card is open, and gets you out of bed.
 - Time never stops while a card is open: it's shared time.
 - The watering can never runs dry and there's no energy bar ("no stress").
 
 ## Setting
 
-A small seaside village: a farm on the grassy bluff, a path down to the beach, a wooden dock out over the water. Later (see Restoring the village): a lighthouse on a point, a boardwalk with shops, a hidden cove with tide pools, an orchard and a greenhouse.
+A small seaside village: a farm on the grassy bluff, a path down to the beach, a wooden dock out over the water, and (from Milestone 6) the beach running on east to an old lighthouse on a rocky point, with a hidden cove past a broken bridge. Later (see Restoring the village): a boardwalk with shops, the cove with tide pools, an orchard and a greenhouse.
 
 ## Together
 
@@ -164,7 +171,7 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 - Everyone has a **fishing rod** (a tool: it never wears out). Hold it in the hotbar, face the water from the dock, the beach, or the end of the dock, and the Action button says **Fish**.
 - Tap it: you cast, and the bobber lands a tile or two out. **Wait for a bite** (the bobber bobs, and now and then nibbles, which isn't a bite yet). When it **dips and a "!" pops up**, tap (the strip at the top says "Tap now!", and phones buzz where they can). Then **hold** to reel it in, and **let go while it pulls** (the bar turns red). Holding through a pull only loses a little. Landed: the fish leaps into your hands, "A Sea Bream! 34 cm", and it's in your bag and the book.
 - A miss is never a loss: "Too soon!", "It got away. Cast again!", "It slipped off the hook!", and you cast again. No bait, no breaking line, no energy.
-- What bites depends on **where** (dock, shore, the deep water off the dock's end) and **when** (12 fish, some all day, some only mornings, afternoons, evenings or late at night; rarer ones less often and livelier on the line). The list and numbers are `shared/content/fish.ts`; the minigame's timings are `FISHING` and `REEL_FEEL` in `shared/fishing/fishing.ts`. All first guesses.
+- What bites depends on **where** (dock, shore, the deep water off the dock's end, and the point once the lighthouse is lit) and **when** (15 fish, some all day, some only mornings, afternoons, evenings or late at night; rarer ones less often and livelier on the line). By day the point fishes like the shore; from 6 pm its light draws in three night fish (lanternfish, cuttlefish from 8 pm, the rare conger eel from 9 pm) and squid. The list and numbers are `shared/content/fish.ts`; the minigame's timings are `FISHING` and `REEL_FEEL` in `shared/fishing/fishing.ts`. All first guesses.
 - You see each other fish: the other player's rod, line and bobber show while they're at it.
 
 ### Beachcombing
@@ -179,7 +186,7 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ### The collection book
 
-- One book for both of you, three pages: **Fish** (12), **Beach** (5) and **Bugs** (6), 23 in all. Found things in colour, with how many, who found the first and on which day, and for fish the biggest and who caught it; what's still out there is a silhouette with a hint ("Try the end of the dock.", "Out in the meadow after dark."). Tap one to read about it.
+- One book for both of you, three pages: **Fish** (15), **Beach** (5) and **Bugs** (6), 26 in all, and once Marlow is here a fourth, **Village**: the board as it stands, to read from anywhere (giving happens at the board). Found things in colour, with how many, who found the first and on which day, and for fish the biggest and who caught it; what's still out there is a silhouette with a hint ("Try the end of the dock.", "Out in the meadow after dark."). Tap one to read about it.
 - A first discovery is cheered on both screens: a card at the top, the jingle, confetti and a heart over whoever found it. Bigger-than-ever fish get a smaller card, and a finished page or the whole book get their own.
 - Later: a museum or aquarium that shows what you've found. For now there's a decorative fish tank at the store.
 
@@ -208,16 +215,69 @@ and build order, is [docs/plans/progression.md](plans/progression.md) (mockups:
 - **Pace:** little wins every session: something finishes or unlocks most times you play (a session is roughly 2–4
   game days, at about 15 real minutes each). Bigger milestones every week or two. Never grindy. The cozy pillars hold:
   nothing dies, nothing is lost, no punishing timers.
-- **(proposed)** Claude's suggestions, waiting for a yes (each is an open question in the plan): the keeper is
-  Marlow, the pack's OldMan3; the Village Board stands right of the seed stand; each project has three steps, built
-  overnight, with a cheer on both screens when the last thing goes in; the order is lighthouse, garden shop, bridge,
-  café, tailor's, orchard, greenhouse; driftwood and branches wash up and fall each morning, and stone comes from the
-  cove; gentle 14-day seasons arrive with the garden shop; the map grows east only, so nothing saved moves.
+- **Decided with the plan** (its section 7, every suggested answer approved): the keeper is Marlow, the pack's OldMan3;
+  the Village Board stands right of the seed stand; each project has three steps, built overnight, with a cheer on
+  both screens when the last thing goes in (the lighthouse is lit at dusk the evening after); one village project at a
+  time, plus home upgrades, the next ones shown as silhouettes once they're built; only the current step takes gifts;
+  "any of a kind" gives the cheapest first; who helped shows as faces, never counts; the order is lighthouse, garden
+  shop, bridge, café, tailor's, orchard, greenhouse; driftwood and branches wash up and fall each morning, and stone
+  comes from the cove, all picked up with whatever you're holding (no axe or pickaxe); a project never asks for
+  anything seasonal or a crop slower than 6 days; gentle 14-day seasons arrive with the garden shop; anyone gives to
+  either house's upgrades; skills are personal and start at level 1; eating a dish gives one small treat; hats and
+  looks first, dyes last; the view from the lighthouse at zoom 1; tool upgrades are personal; a storage chest waits to
+  see whether the bag feels tight; the map grows east only, by 32 columns, so nothing saved moves; the book gets a
+  read-only Village page; after the greenhouse, Marlow's "last" note and ideas for later.
+
+### Marlow and the board (Milestone 6)
+
+- **Marlow** stands beside the Village Board from 6 am, fishes off the end of the dock from 6 pm, and sits in his boat
+  by the dock from 10 pm. Once the lighthouse is lit he fishes on the rocks at the point in the evening and goes up to
+  the lamp room at night (out of sight). Where he is is a rule on the clock (`shared/world/keeper.ts`, his spots are
+  points in Tiled), so both screens agree. He doesn't block the way.
+- **Talk** (facing him, or standing right by him away from the board): his newest note in a paper card, if you
+  haven't read it on this device, otherwise a line of small talk in a bubble over his head, picked by the time of day
+  and what's built (`shared/content/keeper.ts`). Every note he's written is on the board, under **Marlow's notes**.
+- **The board** has one note pinned on for each open project. **Board** opens its card: Marlow's line, what's up
+  now (a picture, "Step 2 of 3 · Mend the stairs", a bar of how much is in, the helpers' faces), what's finished
+  (with the day), and his notes. A project's card lists each need (how many are in, what you have and a **Give**
+  button, a tick when it's all in, or where to find it), **Give everything I can** (never coins), who's helping,
+  the next step faded, and what finishing it brings. "Your home" comes with Milestone 7.
+- **Materials:** driftwood (3–5 a morning on the beach's sand, the tiles shells wash up on) and branches (3–5 a
+  morning on open grass inside the map's `woods` rectangles, round the meadow's trees), at most 8 of each lying
+  about, never anywhere you can't walk to yet. They stack to 99 and sell for 5, so the board is the place for them.
+- **Marlow's luck:** while a step still asks for a particular beach find (sea glass for the lamp), it washes up about
+  twice as often. Invisible, and it can't be gamed.
+- **A step's last thing:** a card at the top of both screens with Marlow's face ("That's everything for the path! Pip
+  brought the last of it. Marlow will clear it tonight."), the jingle, confetti and a heart over the giver. Every
+  gift also floats "+3" up from the board on both screens.
+- **Overnight** the step is built: the morning card's **In the village** shows each built step with Marlow's note and
+  **Look**, which closes the card and glides the camera there and back. Anything built that stands in a decoration's
+  way moves the decoration to the nearest free spot (nothing is lost).
+- **The lighthouse** (10 driftwood, 6 branches, 300 coins; then 12 driftwood, 8 branches, 5 fish, 600 coins; then 2
+  sea glass, 4 beach finds, 6 crops, 900 coins): the brambles across the path to the point go with the first step;
+  scaffolding goes up and the door opens with the second; the third mends the lamp, and Marlow lights it at 6 pm that
+  day. Then each device shows the opening card once (bunting, "The lighthouse is lit!", what's new, **Let's go see**).
+  From then on it glows from dusk with a warm halo and a slow beam sweeping round over the sea, drawn over the
+  evening tint. **Climb** at its door pulls the camera back to zoom 1 over the whole village; the stick looks round,
+  **Down** or Esc comes back. At night the cottages' windows aren't lit yet (a later touch).
+- **After the lighthouse** the board says Marlow is still drawing up the next plan, until Milestone 8 brings the
+  garden shop.
+
+### The map grows east (Milestone 6)
+
+- 32 new columns (48 → 80), the same height, so no saved tile moves (a test holds the farm field, the places, the
+  rooms and everywhere walkable in place). The old line of trees on the east edge opens at rows 8–13 onto a new
+  meadow with a grove in its far corner; the beach runs on east to a sandy point with the lighthouse at its foot
+  (columns 57–64), its neck walled by brambles until the path is cleared; past it an inlet with a broken bridge (its
+  gap blocked until the bridge is mended in Milestone 9) and the hidden cove, closed off by a row of palms.
+- Layers that come and go (`shownFrom`, `shownUntil`), objects that need something built (`needs`), and the `hint`
+  on a gated wall are explained in CLAUDE.md under "Editing the map".
+- A player rejoining somewhere they can't stand on today's map starts at the spawn point instead.
 
 ## Art and sound
 
 - Ninja Adventure (pixel-boy, CC0) for tiles, characters, critters, items, UI and music. One artist, so styles don't clash.
-- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, the seed stand, a wave emote, the arrange/turn/done/book/stop icons, five seaside pieces for the store (a ship in a bottle, a life ring on a post, an anchor, a beach umbrella, a fish tank), twelve fish, a red and white bobber, and a firefly. Three butterflies are recolours of the pack's (a cabbage white, a brimstone, a luna moth); the red admiral and the common blue are the pack's own, and the rod is the pack's on a 16×16 frame. The tent is the pack's own camp tent; the store and the cottages are the pack's houses; the rooms are its interior walls and floors; furniture is its beds, furniture and house props.
+- Our own sprites in its style for what it lacks: crop stages, tilled soil, beach sand, shells and sea glass, the shipping crate, the seed stand, a wave emote, the arrange/turn/done/book/stop icons, five seaside pieces for the store (a ship in a bottle, a life ring on a post, an anchor, a beach umbrella, a fish tank), twelve fish, a red and white bobber, a firefly, and for the village: the lighthouse in four states, the Village Board, brambles, driftwood, a branch and three night fish. Three butterflies are recolours of the pack's (a cabbage white, a brimstone, a luna moth); the red admiral and the common blue are the pack's own, and the rod is the pack's on a 16×16 frame. The tent is the pack's own camp tent; the store and the cottages are the pack's houses; the rooms are its interior walls and floors; furniture is its beds, furniture and house props.
 - Characters walk in four directions; you can walk behind tree tops.
 - Music: "Calm Village" on a soft loop. The pack's "Peaceful", "Sunny" and "Aquatic" are imported too, for later (other times of day or places).
 - Sound effects from the pack (see Controls). The waves sound is imported for later, for the beach.

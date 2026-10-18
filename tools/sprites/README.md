@@ -13,7 +13,7 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | `crops.ts` | Growth stages, harvested item and seed packet for each starter crop |
 | `soil.ts` | Tilled soil, dry and watered, as a 16-tile autotile set |
 | `beach.ts` | Shells, sea glass, starfish |
-| `fish.ts` | Twelve fish icons, one per fish in `shared/content/fish.ts` |
+| `fish.ts` | Fifteen fish icons, one per fish in `shared/content/fish.ts` (three night fish from Milestone 6) |
 | `bugs.ts` | The meadow's bugs: the pack's butterflies, three recolours, and a firefly |
 | `fishing.ts` | The pack's fishing rod on a 16×16 frame, and the bobber |
 | `crate.ts` | The shipping crate, closed and open |
@@ -21,6 +21,8 @@ To see the result next to the pack, run `npm run dev:client` and open <http://lo
 | `sand.ts` | Beach sand: recolours of the pack's floor and water autotiles |
 | `emotes.ts` | Emote bubbles: the pack's heart, and our wave in the pack's bubble |
 | `ui.ts` | HUD icons the pack lacks: music on and off |
+| `materials.ts` | Building materials: driftwood and a branch (Milestone 6) |
+| `village.ts` | The lighthouse in four states, the Village Board with its notes, and brambles, drawn in code (Milestone 6) |
 | `markers.ts` | Marker tiles for the map's hidden Collision and Farmland layers |
 | `render.ts` | Puts it all together and writes the PNGs |
 | `lib/image.ts` | Tiny image helpers on top of `pngjs` |
@@ -59,3 +61,7 @@ wrong if not). Crop frames can be given bottom-up with `tile(...)`, which pads e
   sea) covers both.
 - `emotes.png`: 14×13 frames (the pack's bubble size), in `EMOTES` order from `shared/content/emotes.ts`.
 - `ui-icons.png`, `map-markers.png`: one row of 16×16 frames, names in `manifest.json`.
+- `materials.png`: one row of 16×16 icons, named by item id in `manifest.json` (driftwood, branch); also what lies on the ground.
+- `lighthouse.png`: 48×96 frames, dark, scaffold, ready, lit; it stands on the bottom of the frame.
+- `village-board.png`: 32×32 frames; frame n has n notes pinned on.
+- `brambles.png`: two 16×16 tiles, a tileset in the village map (the `Brambles` layer).

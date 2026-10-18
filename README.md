@@ -24,7 +24,7 @@ The first time you open it from the home screen, it asks **Who's playing?**, bec
 | | Phone | Laptop |
 |---|---|---|
 | Walk | Put a thumb down anywhere and drag (a light push just turns you) | W A S D or the arrow keys |
-| Do what the round button says (Dig, Plant, Water, Pick, Pick up, Catch, Fish, Sleep, Crate, Seeds, Shop, Home, Visit, Move in, Leave, Place) | Tap the big round button; hold it while walking to do a whole row | Space or Enter (hold to repeat), or click a tile next to you |
+| Do what the round button says (Dig, Plant, Water, Pick, Pick up, Catch, Fish, Sleep, Crate, Seeds, Shop, Board, Give, Talk, Climb, Home, Visit, Move in, Leave, Place) | Tap the big round button; hold it while walking to do a whole row | Space or Enter (hold to repeat), or click a tile next to you |
 | Fish | With the rod, face the water and tap Fish. When the bobber dips, tap anywhere; then hold to reel, and let go while it pulls. Stop reels in | The same with Space; Esc or walking off reels in |
 | The collection book | The book at the top right, or Book in the bag | C |
 | Go in or out of a house | Walk into its door, or off the mat inside (or tap Home, Visit, Leave) | The same, with the keys |
@@ -32,6 +32,7 @@ The first time you open it from the home screen, it asks **Who's playing?**, bec
 | Pick what's in your hand | Tap a slot along the bottom | 1–8, Q / E, or the mouse wheel |
 | Open your bag | The bag button | B or Tab |
 | Wave / heart | The two small buttons | Z / X |
+| Look round from the top of the lighthouse | Drag to look round; Down comes back | The arrow keys; Esc |
 | Close a card, get out of bed, stop arranging or fishing | The ×, Get up, Done or Stop | Esc |
 
 Dig in the farm field, plant seeds, water them, and go to bed in the tent by the farm gate: watered crops grow overnight. Pick what's ripe, put it in the shipping crate on the dock, and it sells overnight for coins you share. Buy more seeds at the stand by the beach path.
@@ -39,6 +40,8 @@ Dig in the farm field, plant seeds, water them, and go to bed in the tent by the
 Move into one of the two cottages in the meadow above the farm, visit each other, and sleep in your own bed. Buy furniture and decorations at the little green shop by the path, and arrange them in your house or out on the farm.
 
 Fish off the dock, the beach and the end of the dock (different fish at different spots and times of day), pick up the shells and sea glass that wash up on the beach each morning, and catch butterflies in the meadow (fireflies after dark). Everything new goes in the collection book you share; it all sells in the crate too.
+
+Marlow, the old lighthouse keeper, stands by the Village Board next to the seed stand. Driftwood washes up on the beach and branches fall under the meadow's trees each morning: pick them up, walk up to the board holding something it wants and tap **Give** (or tap **Board** to see what's wanted and give from there). When a step's last thing goes in, it's built overnight. **Talk** to Marlow for his notes. Once the lighthouse on the point is lit, it shines every night, night fish bite off the point after dark, and you can **Climb** it for the view. The book's **Village** page shows the board from anywhere.
 
 ## Develop
 
