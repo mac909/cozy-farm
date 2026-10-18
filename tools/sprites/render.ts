@@ -30,6 +30,7 @@ import { UI_ICONS } from "./ui";
 import { MATERIAL_ART, MATERIAL_LEGEND } from "./materials";
 import { GARDEN_SHOP_FRAMES, GARDEN_SHOP_SIZE, PACK_SHOP, gardenShop } from "./gardenShop";
 import { toolIcons } from "./tools";
+import { TERRAIN_SEASONS, autumnTrees, seasonalTerrain } from "./seasons";
 import { BOARD_FRAMES, BRAMBLE_TILES, LIGHTHOUSE_FRAMES, LIGHTHOUSE_SIZE, board, bramble, lighthouse } from "./village";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -297,6 +298,23 @@ function renderGardenShop(): void {
   });
 }
 
+/** The seasons' looks (Milestone 8): autumn round trees, and the grass in autumn and winter. Run after renderSand. */
+function renderSeasons(): void {
+  save("seasonal-trees", autumnTrees(Img.read(path.join(PACK, "Backgrounds/Tilesets/TilesetNature.png"))), {
+    frameWidth: T,
+    frameHeight: T,
+    note: "A tileset in the village map: the pack's two green round trees (TilesetNature.png, 2 × 2 tiles each) recoloured for autumn, side by side.",
+  });
+  const terrain = Img.read(path.join(OUT, "beach-terrain.png"));
+  for (const season of TERRAIN_SEASONS) {
+    save(`beach-terrain-${season}`, seasonalTerrain(terrain, season), {
+      frameWidth: T,
+      frameHeight: T,
+      layout: `beach-terrain.png with ${season}'s grass: the game swaps it in for the Ground layer's tileset in ${season}.`,
+    });
+  }
+}
+
 console.log(`Rendering sprites into ${path.relative(ROOT, OUT)}${path.sep}`);
 renderCrops();
 renderSoil();
@@ -317,5 +335,6 @@ renderMaterials();
 renderVillage();
 renderTools();
 renderGardenShop();
+renderSeasons();
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log("  manifest.json");

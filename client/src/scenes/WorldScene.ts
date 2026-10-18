@@ -9,6 +9,7 @@ import { toolOfKind } from "../../../shared/farming/tools";
 import { lyingAround } from "../../../shared/collection/collect";
 import { seasonOn, type SeasonDate } from "../../../shared/time/seasons";
 import { GardenShopPanel } from "../ui/GardenShopPanel";
+import { SeasonView } from "../world/Seasons";
 import { isHint } from "../../../shared/farming/actions";
 import { PositionBuffer, REMOTE_DELAY_MS } from "../../../shared/interpolation";
 import type {
@@ -212,6 +213,8 @@ export class WorldScene extends Phaser.Scene {
   private clock: GameClock = { day: 1, minute: 360 };
   /** The day spring first came (Milestone 8), as the server last said: 0 before the seasons begin. */
   private yearStart = 0;
+  /** The village's look in each season (Milestone 8). */
+  private seasonView!: SeasonView;
   /** What's lying about, as the server last said (the shell basket's sweep). */
   private lying: { beach: ReturnType<typeof readBeach>; forage: ReturnType<typeof readForage> } = { beach: [], forage: [] };
   /** The map as of today, with what's built. */
@@ -237,7 +240,8 @@ export class WorldScene extends Phaser.Scene {
 
   create() {
     const map = this.make.tilemap({ key: VILLAGE_KEY });
-    const { collision, gated } = this.buildMap(map);
+    const { collision, gated, drawn } = this.buildMap(map);
+    this.seasonView = new SeasonView(this, map, drawn);
 
     const savedLook = loadLook();
     this.farmerId = loadFarmerId();
@@ -549,6 +553,7 @@ export class WorldScene extends Phaser.Scene {
     // Marlow's first note, and a project's opening card, wait for a quiet moment.
     if (this.canShowCard()) this.showVillageCards();
     this.showGlow(time);
+    this.seasonView.tick(time, this.homes.currentArea === VILLAGE && !this.bedtime.asleep);
 
     const now = performance.now();
     const drawAt = now - REMOTE_DELAY_MS;
@@ -585,10 +590,15 @@ export class WorldScene extends Phaser.Scene {
    * the shipping crate, and ripples on the sea. Returns the hidden collision layer, and the layers
    * that come and go as the village is built (art, and walls), for the village view to show and hide.
    */
-  private buildMap(map: Phaser.Tilemaps.Tilemap): { collision: Phaser.Tilemaps.TilemapLayer; gated: GatedOnScreen[] } {
+  private buildMap(map: Phaser.Tilemaps.Tilemap): {
+    collision: Phaser.Tilemaps.TilemapLayer;
+    gated: GatedOnScreen[];
+    drawn: Phaser.Tilemaps.TilemapLayer[];
+  } {
     const tilesets = map.tilesets.map((tileset) => map.addTilesetImage(tileset.name, tilesetKey(tileset.name))!);
     const gates = new Map(VILLAGE_MAP.gates.layers.map((gate) => [gate.name, gate]));
     const gated: GatedOnScreen[] = [];
+    const drawn: Phaser.Tilemaps.TilemapLayer[] = [];
     const hidden = (name: string) =>
       name === COLLISION_LAYER || name === FARMLAND_LAYER || name.startsWith(`${COLLISION_LAYER} `) || name.startsWith(`${FARMLAND_LAYER} `);
     map.layers.forEach((data, index) => {
@@ -606,6 +616,7 @@ export class WorldScene extends Phaser.Scene {
       const layer = map.createLayer(data.name, tilesets, 0, 0)!.setVisible(true).setAlpha(1);
       layer.setDepth(isAboveCharacters(data) ? ABOVE_DEPTH + index : GROUND_DEPTH + index * 10);
       if (gate) gated.push({ gate, layer });
+      drawn.push(layer);
     });
     const collision = map.createLayer(COLLISION_LAYER, tilesets, 0, 0)!.setVisible(false);
     collision.setCollisionByExclusion([-1]);
@@ -634,7 +645,7 @@ export class WorldScene extends Phaser.Scene {
         .setDepth(GROUND_DEPTH + 1)
         .play({ key: RIPPLE_ANIM, delay: Phaser.Math.Between(0, 2000), repeatDelay: Phaser.Math.Between(500, 3000) });
     }
-    return { collision, gated };
+    return { collision, gated, drawn };
   }
 
   /** The joystick wins while it's held; otherwise WASD or the arrow keys. */
@@ -730,6 +741,8 @@ export class WorldScene extends Phaser.Scene {
       this.yearStart = state.clock.yearStart;
       this.registry.set("yearStart", this.yearStart);
     }
+    // The trees and the grass as the season has them (the season only turns overnight).
+    this.seasonView.show(seasonOn(clock.day, this.yearStart)?.season ?? null);
     if (!shown || shown.day !== clock.day || shown.minute !== clock.minute) {
       this.registry.set("clock", clock);
       this.bedtime.clock(clock);
@@ -1014,7 +1027,7 @@ export class WorldScene extends Phaser.Scene {
       this.showNote(newest, newest.id === "first");
       return;
     }
-    const lines = smallTalkFor(this.clock.minute, this.today.built);
+    const lines = smallTalkFor(this.clock.minute, this.today.built, this.season()?.season ?? null);
     if (lines.length === 0) return;
     this.villageView.keeper.showHint(lines[(this.clock.day + this.talks++) % lines.length]);
     playSound(this, "tap");

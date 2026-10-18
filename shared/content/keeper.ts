@@ -1,3 +1,5 @@
+import type { SeasonId } from "./seasons";
+
 /**
  * Marlow, the old lighthouse keeper (Milestone 6): his name, his notes and his small talk. The
  * village's story comes out in these lines and nowhere else. Notes are short, two or three
@@ -40,6 +42,8 @@ export interface SmallTalk {
   readonly needs?: string;
   /** Only until this is built. */
   readonly until?: string;
+  /** Only in this season (Milestone 8). */
+  readonly season?: SeasonId;
 }
 
 /** What he says when there's no new note: picked by the time of day and what's open. */
@@ -60,6 +64,15 @@ export const SMALL_TALK: readonly SmallTalk[] = [
   { line: "Nothing's biting. Never mind: it's the sitting that counts.", from: KEEPER_HOURS.evening },
   { line: "Grand evening for it. The sea's like glass.", from: KEEPER_HOURS.evening },
   { line: "Off to bed soon. Mind how you go in the dark.", from: KEEPER_HOURS.night },
+  // The garden shop and the seasons (Milestone 8).
+  { line: "Mrs Penhallow's shop has been boarded up since she went to live with her daughter. Shame, that.", needs: "lighthouse", until: "gardenShop" },
+  { line: "Plant what the season wants, and it'll thank you. Mrs Penhallow's words, not mine.", needs: "gardenShop" },
+  { line: "Seeds keep in the bag till their season comes round again. Nothing goes to waste.", needs: "gardenShop" },
+  { line: "Blossom on the trees again. That never gets old.", season: "spring" },
+  { line: "Warm enough for a swim, if my knees allowed it.", season: "summer" },
+  { line: "Leaves all over the boardwalk. I'll sweep them tomorrow. Probably.", season: "autumn" },
+  { line: "Mind the frost on the boards this morning.", season: "winter", to: 12 * 60 },
+  { line: "Nothing like a winter sea. Wrap up warm, you two.", season: "winter" },
 ];
 
 /** A line with the village's name in it. */
@@ -67,13 +80,14 @@ export function keeperWords(line: string): string {
   return line.replaceAll("{village}", VILLAGE_NAME);
 }
 
-/** The small talk he might say at `minute` with `built` done, in list order. */
-export function smallTalkFor(minute: number, built: ReadonlySet<string>): string[] {
+/** The small talk he might say at `minute` with `built` done, in `season` (null before the seasons begin), in list order. */
+export function smallTalkFor(minute: number, built: ReadonlySet<string>, season: SeasonId | null = null): string[] {
   return SMALL_TALK.filter(
     (talk) =>
       (talk.from === undefined || minute >= talk.from) &&
       (talk.to === undefined || minute < talk.to) &&
       (talk.needs === undefined || built.has(talk.needs)) &&
-      (talk.until === undefined || !built.has(talk.until)),
+      (talk.until === undefined || !built.has(talk.until)) &&
+      (talk.season === undefined || talk.season === season),
   ).map((talk) => keeperWords(talk.line));
 }

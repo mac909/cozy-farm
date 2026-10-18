@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { SEASON_TERRAIN } from "./seasonArt";
 import { BUGS, BUG_IDS, type BugId } from "../../../shared/content/bugs";
 import { CHARACTERS, type CharacterId } from "../../../shared/content/characters";
 import { EMOTES, type EmoteId } from "../../../shared/content/emotes";
@@ -155,6 +156,8 @@ export function loadArt(scene: Phaser.Scene): void {
   load.image(PORCH_KEY, `${CUSTOM}porch.png`);
   load.spritesheet(GARDEN_SHOP_KEY, `${CUSTOM}garden-shop.png`, { frameWidth: 64, frameHeight: 48 });
   load.spritesheet(TOOLS_KEY, `${CUSTOM}tools.png`, { frameWidth: 16, frameHeight: 16 });
+  // The grass in autumn and winter (Milestone 8): swapped in for the Ground layer's tileset.
+  for (const key of Object.values(SEASON_TERRAIN)) if (key) load.image(key, `${CUSTOM}${key}.png`);
   load.spritesheet(EMOTES_KEY, `${CUSTOM}emotes.png`, { frameWidth: 14, frameHeight: 13 });
   load.spritesheet(UI_ICONS_KEY, `${CUSTOM}ui-icons.png`, { frameWidth: 16, frameHeight: 16 });
   load.spritesheet(SHIPPING_CRATE_KEY, `${CUSTOM}shipping-crate.png`, { frameWidth: 32, frameHeight: 32 });

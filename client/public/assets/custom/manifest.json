@@ -563,5 +563,29 @@
       "opening": 3
     },
     "note": "Four tiles wide (the shop and its potting bench) and three tall, standing on the bottom of the frame; the door is in the second column. Boarded up, patched, open, and its opening day with bunting."
+  },
+  "seasonal-trees": {
+    "file": "seasonal-trees.png",
+    "width": 64,
+    "height": 32,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "note": "A tileset in the village map: the pack's two green round trees (TilesetNature.png, 2 × 2 tiles each) recoloured for autumn, side by side."
+  },
+  "beach-terrain-autumn": {
+    "file": "beach-terrain-autumn.png",
+    "width": 176,
+    "height": 208,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "layout": "beach-terrain.png with autumn's grass: the game swaps it in for the Ground layer's tileset in autumn."
+  },
+  "beach-terrain-winter": {
+    "file": "beach-terrain-winter.png",
+    "width": 176,
+    "height": 208,
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "layout": "beach-terrain.png with winter's grass: the game swaps it in for the Ground layer's tileset in winter."
   }
 }
