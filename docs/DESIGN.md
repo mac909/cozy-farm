@@ -54,6 +54,7 @@ A cozy seaside village the two of us build together in the evenings: farming, de
 | Collection book | One shared book: Fish, Beach and Bugs pages. Found things in colour with how many, who found the first and (fish) the biggest; the rest are silhouettes with a hint of where to look. "9 of 23 found" at the top. Opens from a book button at the top right (key C) and a Book button in the bag. Decided by Claude (Milestone 5). | 2026-10-18 |
 | Celebrations | A first discovery puts a card at the top of both screens ("New in the collection book! Sea Bream, caught by Pip") with the pack's success jingle, confetti and a heart over the finder. A bigger fish than ever gets a smaller card; a full page and a full book get their own. Tapping a card opens the book. Decided by Claude (Milestone 5). | 2026-10-18 |
 | Fish pictures | Our own 12 fish icons, drawn in `tools/sprites/fish.ts`: the pack has only three small fish, all one shape, and the book needs each fish to look like itself. Decided by Claude (Milestone 5). | 2026-10-18 |
+| Progression | Restore the seaside village together: big shared projects guided by one old lighthouse keeper, fed by everything you already do, plus personal skills, badges, house upgrades and outfits. Details under Restoring the village; the plan is `docs/plans/progression.md`. | 2026-10-18 |
 
 ## Controls
 
@@ -77,7 +78,7 @@ One way of playing on every device: an Action button for the tile in front of yo
 
 ## Setting
 
-A small seaside village: a farm on the grassy bluff, a path down to the beach, a wooden dock out over the water. Later: tide pools, a lighthouse, a boardwalk with shops.
+A small seaside village: a farm on the grassy bluff, a path down to the beach, a wooden dock out over the water. Later (see Restoring the village): a lighthouse on a point, a boardwalk with shops, a hidden cove with tide pools, an orchard and a greenhouse.
 
 ## Together
 
@@ -182,6 +183,37 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 - A first discovery is cheered on both screens: a card at the top, the jingle, confetti and a heart over whoever found it. Bigger-than-ever fish get a smaller card, and a finished page or the whole book get their own.
 - Later: a museum or aquarium that shows what you've found. For now there's a decorative fish tank at the store.
 
+## Restoring the village
+
+The next big feature, decided by the developer on 2026-10-18. The plan, with the content, pacing, map, save design
+and build order, is [docs/plans/progression.md](plans/progression.md) (mockups:
+[progression-mockups.html](plans/progression-mockups.html)).
+
+- **What it is:** big shared projects that restore the village, Stardew's community centre or Animal Crossing's
+  island upgrades in spirit. Not villager requests, daily checklists or a heavy storyline.
+- **Contributions:** a mix of items and coins. Each project asks for a few kinds of things: crops, fish, beach finds
+  and bugs, building materials, and coins, so everything you already do feeds in.
+- **Guide:** one warm character only, an old lighthouse keeper. He tells the village's story in short notes and
+  celebrates each finished project. No full villagers.
+- **Projects (all wanted):**
+  - Light the lighthouse: it glows at night, unlocks night fishing on the point, and gives a view of the village.
+  - Rebuild the bridge to a hidden cove: tide pools, new fish, new shells, a little beach to decorate.
+  - Reopen the boardwalk shops one by one: a tailor (outfits), a café (cooking), a garden shop (new seeds and tools).
+  - Restore the greenhouse (year-round crops) and plant an orchard (fruit trees that grow over time).
+- **Unlocks:** new places, bigger homes, better tools and crops, and new things to make (cooking, crafting, outfits
+  and customization).
+- **Sharing:** shared goals with personal touches. The projects and the village's progress are shared. Each player
+  also has personal progress: house upgrades (more rooms, porch, garden); skills that level up (farming, fishing,
+  foraging) with small perks, personal and never compared; achievements and badges; outfits and customization.
+- **Pace:** little wins every session: something finishes or unlocks most times you play (a session is roughly 2–4
+  game days, at about 15 real minutes each). Bigger milestones every week or two. Never grindy. The cozy pillars hold:
+  nothing dies, nothing is lost, no punishing timers.
+- **(proposed)** Claude's suggestions, waiting for a yes (each is an open question in the plan): the keeper is
+  Marlow, the pack's OldMan3; the Village Board stands right of the seed stand; each project has three steps, built
+  overnight, with a cheer on both screens when the last thing goes in; the order is lighthouse, garden shop, bridge,
+  café, tailor's, orchard, greenhouse; driftwood and branches wash up and fall each morning, and stone comes from the
+  cove; gentle 14-day seasons arrive with the garden shop; the map grows east only, so nothing saved moves.
+
 ## Art and sound
 
 - Ninja Adventure (pixel-boy, CC0) for tiles, characters, critters, items, UI and music. One artist, so styles don't clash.
@@ -192,7 +224,7 @@ A small seaside village: a farm on the grassy bluff, a path down to the beach, a
 
 ## Later ideas
 
-Seasons, weather, day/night lighting, cooking, animals (chickens, our own pets), villagers and friendship, festivals, restoring the lighthouse.
+Weather, day/night lighting, animals (chickens, our own pets), villagers and friendship, festivals, a museum for the collection. (Seasons, cooking and the lighthouse are now planned under Restoring the village.)
 
 ## Open questions
 

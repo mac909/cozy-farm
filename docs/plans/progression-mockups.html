@@ -1,0 +1,1758 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Progression Mockups</title>
+    <!--
+      Mockups for docs/plans/progression.md (restoring the village). Open this file straight from the
+      repo: it draws the market with the real map tiles (a slice of shared/world/village.json, copied in
+      below) and the real sprites from client/public/assets/ (relative paths), and the cards in HTML at
+      the game's sizes. The lighthouse, the board and the materials don't exist yet: they're drawn here
+      as placeholders. Nothing here is game code.
+    -->
+    <style>
+      :root {
+        --page: #f3eee3;
+        --ink: #3a3024;
+        --muted: #7b6d59;
+        --rule: #ded2b8;
+        --accent: #e8765f;
+        --hud: rgba(29, 47, 59, 0.62);
+        --hud-line: rgba(255, 255, 255, 0.6);
+        --card: #fff8e7;
+        --card-ink: #4a3b2a;
+        --card-soft: #efe2c4;
+        --card-line: #dcc79c;
+        --go: #ef7d6d;
+        --done: #6a9a3a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --page: #1f1c18;
+          --ink: #efe6d6;
+          --muted: #b3a58e;
+          --rule: #3d362c;
+        }
+      }
+      :root[data-theme="dark"] {
+        --page: #1f1c18;
+        --ink: #efe6d6;
+        --muted: #b3a58e;
+        --rule: #3d362c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 1260px;
+        margin: 0 auto;
+        padding: 32px 16px 80px;
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 6px;
+      }
+      h2 {
+        font-size: 22px;
+        margin: 52px 0 4px;
+        padding-top: 20px;
+        border-top: 1px solid var(--rule);
+      }
+      a {
+        color: inherit;
+      }
+      .lede,
+      .sub {
+        color: var(--muted);
+        max-width: 78ch;
+        margin: 0;
+      }
+      .sub + .sub {
+        margin-top: 8px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px 28px;
+        align-items: flex-start;
+        margin-top: 22px;
+      }
+      figure {
+        margin: 0;
+        width: min-content;
+        max-width: 100%;
+      }
+      figcaption {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 10px;
+        min-width: 200px;
+      }
+      figcaption b {
+        color: var(--ink);
+      }
+      .num {
+        display: inline-grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      }
+
+      /* A phone shown smaller than life; click to see it at full size. */
+      .scale {
+        zoom: var(--z, 0.55);
+        cursor: zoom-in;
+      }
+      .scale.big {
+        zoom: 1;
+        cursor: zoom-out;
+      }
+      @media (max-width: 480px) {
+        .row {
+          gap: 22px 14px;
+        }
+        .scale {
+          zoom: 0.39;
+        }
+        .scale.big {
+          zoom: 0.86;
+        }
+      }
+      .device {
+        position: relative;
+        background: #121214;
+        border-radius: 56px;
+        padding: 12px;
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+        width: max-content;
+      }
+      .screen {
+        position: relative;
+        overflow: hidden;
+        border-radius: 44px;
+        background: #1f2b2e;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .screen canvas.world {
+        position: absolute;
+        inset: 0;
+        image-rendering: pixelated;
+      }
+      .island {
+        position: absolute;
+        background: #000;
+        border-radius: 20px;
+        z-index: 20;
+      }
+      .homebar {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 3px;
+        z-index: 20;
+      }
+
+      /* ---------- HUD, at the sizes in the Milestone 2 plan ---------- */
+      .hud {
+        position: absolute;
+        inset: 0;
+        color: #fff;
+      }
+      .hud > * {
+        position: absolute;
+      }
+      .spr {
+        display: inline-block;
+        background-repeat: no-repeat;
+        image-rendering: pixelated;
+        vertical-align: middle;
+        flex: none;
+      }
+      img.px {
+        image-rendering: pixelated;
+        vertical-align: middle;
+      }
+      canvas.pix {
+        image-rendering: pixelated;
+        vertical-align: middle;
+        flex: none;
+      }
+      .clock {
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        border-radius: 14px;
+        padding: 5px 12px 6px;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.3;
+        white-space: nowrap;
+      }
+      .clock .coins {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+      }
+      .round {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        display: grid;
+        place-items: center;
+      }
+      .round .dot {
+        position: absolute;
+        right: -2px;
+        top: -2px;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: #ffd36b;
+        border: 2px solid #1d2f3b;
+      }
+      .face {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        image-rendering: pixelated;
+      }
+      .action {
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        background: rgba(29, 47, 59, 0.72);
+        border: 3px solid rgba(255, 255, 255, 0.85);
+        display: grid;
+        place-items: center;
+      }
+      .tag {
+        position: absolute;
+        left: 50%;
+        bottom: -9px;
+        transform: translateX(-50%);
+        background: var(--card);
+        color: var(--card-ink);
+        border: 2px solid #1d2f3b;
+        border-radius: 8px;
+        padding: 0 8px;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 17px;
+        white-space: nowrap;
+      }
+      .bagbtn {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        display: grid;
+        place-items: center;
+      }
+      .hotbar {
+        display: flex;
+      }
+      .slot {
+        position: relative;
+        display: grid;
+        place-items: center;
+        background: var(--hud);
+        border: 2px solid var(--hud-line);
+        border-radius: 8px;
+      }
+      .slot.sel {
+        transform: translateY(-4px);
+        border-color: #ffd36b;
+        background: rgba(29, 47, 59, 0.82);
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+      }
+      .slot .n {
+        position: absolute;
+        right: 3px;
+        bottom: 0;
+        font-size: 11px;
+        font-weight: 800;
+        text-shadow:
+          1px 1px 0 #000,
+          -1px 1px 0 #000,
+          1px -1px 0 #000,
+          -1px -1px 0 #000;
+      }
+      .slot .want {
+        position: absolute;
+        left: 2px;
+        top: 1px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #ffd36b;
+        border: 1.5px solid #1d2f3b;
+      }
+      .toast {
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.55);
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .float {
+        transform: translateX(-50%);
+        font-size: 18px;
+        font-weight: 900;
+        color: #fff6c9;
+        text-shadow:
+          1px 1px 0 #1d2f3b,
+          -1px 1px 0 #1d2f3b,
+          1px -1px 0 #1d2f3b,
+          -1px -1px 0 #1d2f3b;
+      }
+      .confetti {
+        width: 6px;
+        height: 6px;
+        border-radius: 1px;
+      }
+
+      /* ---------- Cards, in the look of client/src/ui/panel.css ---------- */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 63px 12px 50px;
+        background: rgba(20, 36, 48, 0.55);
+        z-index: 10;
+      }
+      .overlay.top {
+        justify-content: flex-start;
+        padding-top: 143px;
+        background: none;
+      }
+      .overlay.bottom {
+        justify-content: flex-end;
+        padding-bottom: 58px;
+        background: rgba(10, 16, 40, 0.22);
+      }
+      .overlay.over {
+        z-index: 15;
+        background: none;
+        justify-content: flex-start;
+        padding-top: 63px;
+      }
+      .card {
+        width: min(100%, 380px);
+        max-height: 100%;
+        overflow: hidden;
+        background: var(--card);
+        color: var(--card-ink);
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        padding: 16px;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 21px;
+        line-height: 1.2;
+      }
+      .card small {
+        display: block;
+        color: #8a7556;
+        font-size: 13px;
+        line-height: 1.3;
+      }
+      .center {
+        text-align: center;
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .xbtn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--card-soft);
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+        font-weight: 700;
+        flex: none;
+      }
+      .ring {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #d9c49a;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        flex: none;
+        border: 2px solid #b89b68;
+      }
+      .ring img {
+        width: 38px;
+        height: 38px;
+        image-rendering: pixelated;
+      }
+      .mini {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #d9c49a;
+        border: 1.5px solid #b89b68;
+        image-rendering: pixelated;
+        vertical-align: middle;
+        margin-right: -6px;
+      }
+      .label {
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #9b8664;
+        margin: 12px 0 5px;
+      }
+      .btn {
+        display: inline-grid;
+        place-items: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 12px;
+        background: var(--go);
+        color: #fff;
+        font-weight: 800;
+        font-size: 16px;
+        white-space: nowrap;
+      }
+      .btn.soft {
+        background: #e4d3ad;
+        color: var(--card-ink);
+      }
+      .btn.small {
+        min-height: 34px;
+        padding: 0 12px;
+        font-size: 14px;
+        border-radius: 17px;
+      }
+      .btn.wide {
+        display: grid;
+        width: 100%;
+        margin-top: 12px;
+      }
+      .btnrow {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .btnrow .btn {
+        flex: 1;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        padding: 3px;
+        border-radius: 12px;
+        background: var(--card-soft);
+        margin-bottom: 10px;
+      }
+      .tab {
+        flex: 1;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 800;
+        padding: 7px 0;
+        border-radius: 9px;
+        color: #8a7556;
+      }
+      .tab.on {
+        background: #fffdf5;
+        color: var(--card-ink);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+      }
+      .tab.off {
+        opacity: 0.5;
+      }
+      .says {
+        position: relative;
+        background: #fffdf5;
+        border: 2px solid var(--card-line);
+        border-radius: 12px;
+        padding: 8px 12px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-style: italic;
+        font-size: 15px;
+      }
+      .sig {
+        font-style: normal;
+        font-weight: 700;
+        color: #9b8664;
+        white-space: nowrap;
+      }
+      .quiet {
+        margin: 0;
+        color: #8a7556;
+        font-size: 14px;
+      }
+
+      /* the board's rows */
+      .proj {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px;
+        border-radius: 14px;
+        background: var(--card-soft);
+        border: 2px solid var(--card-line);
+      }
+      .proj + .proj {
+        margin-top: 6px;
+      }
+      .proj.later {
+        background: transparent;
+        border-style: dashed;
+      }
+      .proj.later b {
+        color: #8a7556;
+      }
+      .pic {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        background: #e6d4ab;
+        display: grid;
+        place-items: center;
+        flex: none;
+        overflow: hidden;
+      }
+      .later .pic {
+        background: #efe5cc;
+      }
+      .sil {
+        filter: brightness(0);
+        opacity: 0.22;
+      }
+      .bar {
+        height: 10px;
+        border-radius: 5px;
+        background: #e0cc9f;
+        margin: 6px 0 5px;
+        overflow: hidden;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        background: var(--go);
+        border-radius: 5px;
+      }
+      .bar.green i {
+        background: var(--done);
+      }
+      .chev {
+        font-size: 26px;
+        font-weight: 700;
+        color: #9b8664;
+      }
+      .helpers {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 13px;
+        color: #8a7556;
+      }
+      .helpers small {
+        display: inline;
+        margin-left: 12px;
+      }
+
+      /* the project card's needs */
+      .stephead {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+      .dots {
+        font-size: 11px;
+        letter-spacing: 3px;
+        color: var(--go);
+      }
+      .need {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 0;
+        border-top: 1px solid #ead9b4;
+      }
+      .need:last-child {
+        border-bottom: 1px solid #ead9b4;
+      }
+      .need .ic {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--card-soft);
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .need .count {
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .need.done {
+        opacity: 0.55;
+      }
+      .tick {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--done);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        flex: none;
+      }
+      .nextline {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        font-size: 14px;
+        color: #8a7556;
+      }
+      .nextline span.q {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-weight: 700;
+      }
+      ul.opens {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 14px;
+      }
+
+      /* Marlow's note: paper */
+      .note {
+        background: #fffcf1;
+        background-image: repeating-linear-gradient(#fffcf1 0 25px, #e9e1cc 25px 26px);
+        border: 2px solid #e2cfa6;
+        position: relative;
+      }
+      .note::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: -7px;
+        width: 14px;
+        height: 14px;
+        margin-left: -7px;
+        border-radius: 50%;
+        background: #e8765f;
+        box-shadow: inset -2px -2px 0 #b5503d;
+      }
+      .note-head {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .facebox {
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        background: #d9c49a;
+        border: 3px solid #8a5a32;
+        border-radius: 6px;
+        flex: none;
+      }
+      .facebox img {
+        width: 38px;
+        height: 38px;
+        image-rendering: pixelated;
+      }
+      .letter {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 17px;
+        line-height: 26px;
+        margin: 0 0 0;
+      }
+      .letter + .letter {
+        margin-top: 8px;
+      }
+      .note .sig {
+        display: block;
+        text-align: right;
+        margin-top: 2px;
+      }
+
+      /* the cheer at the top of the screen (Celebration.ts) */
+      .cheer {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+      }
+      .cheer .t {
+        font-weight: 800;
+        font-size: 17px;
+      }
+
+      /* morning card */
+      .morning p {
+        margin: 6px 0;
+      }
+      .vline {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 12px;
+        background: #f4ead2;
+        border: 2px solid var(--card-line);
+      }
+      .sale {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+      }
+      .earned {
+        font-weight: 800;
+        margin-top: 4px;
+      }
+
+      /* the opening card */
+      .opening {
+        padding-top: 0;
+        position: relative;
+      }
+      .bunting {
+        height: 26px;
+        margin: 0 -16px 6px;
+        background:
+          linear-gradient(135deg, transparent 50%, var(--card) 50%) 0 0 / 16px 14px repeat-x,
+          linear-gradient(225deg, transparent 50%, var(--card) 50%) 0 0 / 16px 14px repeat-x,
+          repeating-linear-gradient(90deg, #e8765f 0 16px, #ffd36b 16px 32px, #7ab3d1 32px 48px, #8fbf5a 48px 64px);
+        background-position: 0 12px, 0 12px, 0 0;
+        border-top: 3px solid #8a5a32;
+      }
+      .hero {
+        display: grid;
+        place-items: center;
+        margin: 4px 0 8px;
+      }
+      .newline {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 0;
+        font-size: 15px;
+      }
+      .newline .ic {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--card-soft);
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+
+      /* the You card */
+      .skill {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 8px 0;
+        border-top: 1px solid #ead9b4;
+      }
+      .skill .ic {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--card-soft);
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .skill .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 6px;
+      }
+      .skill .lv {
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .today {
+        display: inline-block;
+        margin-left: 6px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #fff;
+        background: var(--done);
+        border-radius: 8px;
+        padding: 0 6px;
+        vertical-align: 1px;
+      }
+      ul.perks {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 13.5px;
+        line-height: 1.4;
+      }
+      .badges {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px 6px;
+      }
+      .badge {
+        text-align: center;
+        font-size: 11.5px;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+      .medal {
+        width: 58px;
+        height: 58px;
+        margin: 0 auto 4px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at 35% 30%, #fff2b8, #f2c64e 55%, #c98f22);
+        border: 3px solid #8a5a1c;
+        box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+      }
+      .badge.sel .medal {
+        outline: 3px solid var(--go);
+        outline-offset: 2px;
+      }
+      .badge.no {
+        color: #a9977a;
+      }
+      .badge.no .medal {
+        background: #e6d9bc;
+        border-color: #cdb98f;
+        box-shadow: none;
+        color: #b9a57f;
+        font-size: 24px;
+        font-weight: 900;
+      }
+      .info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 12px;
+        background: var(--card-soft);
+      }
+
+      /* the map */
+      .mapfig {
+        width: 100%;
+        max-width: 980px;
+      }
+      .mapwrap {
+        overflow-x: auto;
+        border-radius: 12px;
+      }
+      @media (max-width: 640px) {
+        .mapwrap svg {
+          min-width: 760px;
+        }
+      }
+      .mapfig svg {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend i {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Restoring the village</h1>
+      <p class="lede">
+        Mockups for <a href="progression.md">progression.md</a>, all at iPhone size (390 × 844 CSS px, the notch and
+        home bar drawn in). The market is drawn from the real map and sprites; the board, the lighthouse and the
+        materials are placeholders until they're drawn in <code>tools/sprites/</code>. Click a phone to see it at full
+        size. Names (Pip, Juno, Marlow) are stand-ins.
+      </p>
+
+      <h2>Marlow, the board, and giving</h2>
+      <p class="sub">
+        The board stands right of the seed stand, on the path everyone already walks. Holding something a project
+        needs, the Action button says <b>Give</b>; otherwise <b>Board</b>, which opens the card. Faces show who
+        helped; never counts.
+      </p>
+      <div class="row">
+        <figure id="m1"></figure>
+        <figure id="m2"></figure>
+        <figure id="m3"></figure>
+        <figure id="m4"></figure>
+      </div>
+
+      <h2>Celebrations</h2>
+      <p class="sub">
+        The last thing in cheers on both screens at once. The work happens overnight, so the morning shows what
+        changed. A finished project gets its own card; the lighthouse waits for dusk.
+      </p>
+      <div class="row">
+        <figure id="m5"></figure>
+        <figure id="m6"></figure>
+        <figure id="m7"></figure>
+      </div>
+
+      <h2>You, and your home</h2>
+      <p class="sub">
+        Nothing new on the HUD: your face (top right) opens the You card, with a gold dot when something's new there.
+        Level-ups show only on your own screen. House upgrades are given at the board's second tab, by either of you.
+      </p>
+      <div class="row">
+        <figure id="m8"></figure>
+        <figure id="m9"></figure>
+        <figure id="m10"></figure>
+      </div>
+
+      <h2>The finished village</h2>
+      <p class="sub">
+        The map grows 32 columns east (48 → 80), so nothing saved moves. Today's village is drawn from the real map;
+        the new land to the right is the plan. Colours say which milestone builds each place.
+      </p>
+      <figure class="mapfig" id="map"></figure>
+    </main>
+
+    <script>
+      (async function () {
+        const NA = "../../client/public/assets/ninja-adventure/";
+        const CU = "../../client/public/assets/custom/";
+        const T = 16;
+        /** A slice of shared/world/village.json (columns 22–41, rows 0–35): the market, the dock, the cottages. */
+        const REGION = {"c0":22,"r0":0,"w":20,"h":36,"tilesets":[{"first":1,"cols":11,"img":"../../client/public/assets/custom/beach-terrain.png"},{"first":144,"cols":24,"img":"../../client/public/assets/ninja-adventure/Backgrounds/Tilesets/TilesetNature.png"},{"first":648,"cols":16,"img":"../../client/public/assets/ninja-adventure/Backgrounds/Tilesets/TilesetFloorDetail.png"},{"first":728,"cols":20,"img":"../../client/public/assets/ninja-adventure/Backgrounds/Tilesets/TilesetDesert.png"},{"first":968,"cols":28,"img":"../../client/public/assets/ninja-adventure/Backgrounds/Tilesets/TilesetWater.png"},{"first":2203,"cols":5,"img":"../../client/public/assets/ninja-adventure/Backgrounds/Vehicles/Boat.png"}],"layers":{"Ground":["56,56,56,56,56,56,56,56,56,56,56,56,56,56,56,56,56,58,56,56","60,56,58,56,59,56,56,56,56,56,56,56,56,56,56,47,56,56,56,56","48,56,58,56,47,58,56,56,56,56,56,56,56,56,60,57,56,60,56,56","56,56,47,56,48,56,60,47,56,56,56,56,56,56,56,58,48,56,56,56","57,56,58,56,56,56,56,47,56,56,56,56,57,56,47,56,57,47,56,59","57,47,56,56,56,56,56,60,56,56,56,56,48,56,60,48,56,56,59,56","56,56,58,56,57,47,56,56,59,56,57,56,56,56,58,56,56,59,56,56","48,56,56,56,47,56,56,56,56,56,56,56,56,56,56,56,47,56,57,56","56,56,56,56,56,48,56,56,48,56,56,48,56,56,57,56,56,56,56,56","56,56,56,56,56,56,60,57,56,56,56,56,56,56,56,56,56,56,56,56","58,56,56,56,56,56,56,56,56,56,60,56,56,56,56,56,56,56,57,57","56,60,59,56,48,56,56,56,56,59,56,56,56,56,56,56,56,56,56,56","56,56,56,56,59,57,58,56,56,56,56,57,56,56,56,47,58,56,56,48","59,58,56,56,56,56,56,47,56,56,56,56,56,56,57,60,47,56,56,59","56,58,56,47,56,56,59,47,56,56,57,56,47,56,56,56,56,57,56,56","2,2,2,2,2,2,2,2,3,56,56,56,56,56,56,58,56,56,47,56","13,13,13,13,13,13,13,13,14,56,56,56,56,60,56,59,56,56,56,56","13,13,46,13,13,13,13,13,14,59,56,56,56,56,59,60,56,56,56,58","24,24,24,24,24,18,13,13,14,56,56,56,56,56,56,56,48,56,56,56","56,56,56,56,47,12,13,13,28,2,2,3,56,60,56,56,56,59,56,48","56,60,58,60,1,29,13,13,13,13,13,28,2,3,56,56,47,56,47,56","1,2,2,2,29,13,13,13,13,13,13,13,13,28,2,2,3,56,56,56","29,13,13,46,13,13,13,13,13,13,13,13,13,13,13,13,28,2,2,2","13,13,46,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13","13,13,13,13,13,46,13,13,13,13,13,13,13,13,13,13,13,45,13,13","13,13,13,13,13,13,13,78,79,79,79,79,79,79,79,79,79,80,13,78","13,13,13,78,79,79,79,106,90,90,90,90,90,90,90,90,90,105,79,106","79,79,79,106,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90","90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90"],"Details":["0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","687,0,0,680,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,409,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,409,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,409,0,0,0,0,0,0,0,0,0,0,0,0,0,0,680,0,684","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,683,0,0","0,682,0,0,0,0,682,0,0,683,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,682,0,0,0,0,0,0","0,0,0,0,0,0,687,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,683,0,0,0,0,0,0,0,0,0,0,0,0,0,0","408,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,683,0,0,0,0,0,0","0,0,680,0,0,0,0,0,0,0,0,0,0,0,0,0,0,687,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,411,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,687,684,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,687,0,0,0,685,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,680","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"],"Decor":["0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","184,185,170,171,168,169,168,169,184,185,170,171,168,169,168,169,168,169,182,183","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,182,183,0,0,0,0,0,0,0,0,0,0,0,0,627,628,629","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,184,185,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,170,171,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,624,625,626,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,244","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","169,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,960,961,0,0,0,958,959,0","0,0,0,0,0,1304,1305,1305,1306,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,1332,1333,1333,1334,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,1332,1333,1333,1334,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,1332,1333,1333,1334,0,0,0,0,0,0,0,0,0,0,0","2204,2205,2206,2207,0,1332,1333,1333,1334,0,0,0,0,0,0,0,0,0,0,0","2209,2210,2211,2212,0,1332,1333,1333,1334,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,1332,1333,1333,1334,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,1332,1333,1333,1334,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,1360,1361,1361,1362,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"],"Above":["160,161,146,147,144,145,144,145,160,161,146,147,144,145,144,145,144,145,158,159","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,579,580,581","0,0,0,158,159,0,0,0,0,0,0,0,0,0,0,0,0,603,604,605","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,160,161,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,146,147,0,0,0,0,0,0,0,0,0,0,0,576,577,578,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,600,601,602,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,196","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,220","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","145,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,940,941,0,0,0,938,939,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0","0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"]}};
+        /** Today's village as one letter per tile (g grass, s sand, w sea, f farm field, t trees and fences, d dock). */
+        const BASE = ["gggggggggggggggggggggggggggggggggggggggggggggggg", "tttttttttttttttttttttttttttttttttttttttttttttttt", "gggggggggggggggggggggggggggggggggggggggggggggggg", "ttgttttttttttttttttttgggggggggggggggggggggggggtt", "gggtfffffffffffffffftggggggggggggggggggggggggggg", "ttgtfffffffffffffffftggggttggggggggggggtttggggtt", "gggtfffffffffffffffftggggggggggggggggggggggggggg", "ttgtfffffffffffffffftgggggggggggggggggggggggggtt", "gggtfffffffffffffffftggggggggggggggggggggggggggg", "ttgtfffffffffffffffftggggggggggggttgggggggggggtt", "gggtfffffffffffffffftggggggggggggggggggggggggggg", "ttgttttttttssttttttttgggggggggggggggggggggggggtt", "ggggggggggssssgggggggggttggggggggggggggggggggggg", "ttggggggggssssggggggggggggggggggggggtttgggggggtt", "gggttgggggssssgggttggggggggggggggggggggggggggggg", "ttggggggggsssssssssssssssssssssggggggggggttttgtt", "ggggggggggsssssssssssssssssssssggggggggggggggggg", "ttggggttggsssssssssssssssssssssggggggggggggggggs", "sgggggggggsssssssssssssssssssssgggggggggggggggss", "ssgggggggggggggggggggggggggsssssssgggggggggggsss", "ssssgggggggssssssggggttgggssssssssssggggggggsssw", "wsssssgggssssssssssssgsssssssssssssssssgggssssww", "wwssssssssssssssssssssssssssssssssssssssssssswww", "wwwwsssssssssttssssssssssssssssssssssssssssswwww", "wwwwwwssssssssssssssssssssssssssssttsssttswwwwww", "wwwwwwwttsssssssssssttsssssssddwwwwwwwwwswwwwwww", "wwwwwwwwwwwwwwwwssssssssswwddddwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwddwwwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwddddwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwddddwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwddddwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwddddwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwddddwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwddddwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"];
+
+        // ---------- images ----------
+        const SRC = {
+          house: NA + "Backgrounds/Tilesets/TilesetHouse.png",
+          stand: CU + "seed-stand.png",
+          crate: CU + "shipping-crate.png",
+          marlow: NA + "Actor/Character/OldMan3/SpriteSheet.png",
+          pip: NA + "Actor/Character/Woman/SpriteSheet.png",
+          juno: NA + "Actor/Character/Boy/SpriteSheet.png",
+          heart: NA + "Ui/Emote/emote27.png",
+        };
+        REGION.tilesets.forEach((t, i) => (SRC["ts" + i] = t.img));
+        const images = {};
+        await Promise.all(
+          Object.entries(SRC).map(
+            ([name, src]) =>
+              new Promise((resolve) => {
+                const im = new Image();
+                im.onload = () => {
+                  images[name] = im;
+                  resolve();
+                };
+                im.onerror = () => {
+                  console.warn("Couldn't load", src);
+                  resolve();
+                };
+                im.src = src;
+              }),
+          ),
+        );
+        const layers = {};
+        for (const [name, rows] of Object.entries(REGION.layers)) layers[name] = rows.map((r) => r.split(",").map(Number));
+
+        function tileSource(gid) {
+          let best = -1;
+          REGION.tilesets.forEach((t, i) => {
+            if (t.first <= gid) best = i;
+          });
+          const im = images["ts" + best];
+          if (best < 0 || !im) return null;
+          const t = REGION.tilesets[best];
+          const i = gid - t.first;
+          return { im, sx: (i % t.cols) * T, sy: Math.floor(i / t.cols) * T };
+        }
+
+        function setup(canvas, W, H) {
+          const dpr = Math.min(2, window.devicePixelRatio || 1);
+          canvas.width = Math.round(W * dpr);
+          canvas.height = Math.round(H * dpr);
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          const ctx = canvas.getContext("2d");
+          ctx.scale(dpr, dpr);
+          ctx.imageSmoothingEnabled = false;
+          return ctx;
+        }
+
+        // ---------- placeholder pixel art (the real sprites get drawn in tools/sprites/) ----------
+        const K = "#141b1b";
+        const LIGHTHOUSE = [
+          "......kkkk......",
+          ".....kRrrRk.....",
+          "....kRrrrrRk....",
+          "...kkkkkkkkkk...",
+          "...kGyyyyyyGk...",
+          "...kGyyyyyyGk...",
+          "...kGyyyyyyGk...",
+          "..kkkkkkkkkkkk..",
+          "..kddddddddddk..",
+          "..kkkkkkkkkkkk..",
+          "...kwwwwwwwWk...",
+          "...kwwwwwwwWk...",
+          "...krrrrrrrRk...",
+          "...krrrrrrrRk...",
+          "...krrrrrrrRk...",
+          "...kwwwwwwwWk...",
+          "...kwwkkwwwWk...",
+          "...kwwkkwwwWk...",
+          "...kwwwwwwwWk...",
+          "..kwwwwwwwwwWk..",
+          "..krrrrrrrrrRk..",
+          "..krrrrrrrrrRk..",
+          "..krrrrrrrrrRk..",
+          "..kwwwwwwwwwWk..",
+          "..kwwwwwwwwwWk..",
+          "..kwwwwwwwwwWk..",
+          ".kwwwwwwwwwwwWk.",
+          ".krrrrrrrrrrrRk.",
+          ".krrrrrrrrrrrRk.",
+          ".krrrrrrrrrrrRk.",
+          ".kwwwwwkkkwwwWk.",
+          ".kwwwwkbbbkwwWk.",
+          ".kwwwwkbbbkwwWk.",
+          "kSssssSkkkSsssSk",
+          "kSSSSSSSSSSSSSSk",
+          ".kkkkkkkkkkkkkk.",
+        ];
+        const SCAFFOLD_ROWS = [8, 9, 10, 11, 12, 13];
+        const LH_COLORS = (lit) => ({
+          k: K,
+          R: "#8e3a2f",
+          r: "#d0503f",
+          y: lit ? "#ffe48a" : "#33485a",
+          G: lit ? "#f2b84b" : "#22303c",
+          d: "#5b4636",
+          w: "#f4efe2",
+          W: "#c9c2b0",
+          b: "#7a4b2a",
+          s: "#9aa0a0",
+          S: "#6b7272",
+        });
+        const DRIFTWOOD = [
+          "................",
+          "................",
+          "................",
+          "..........kk....",
+          "........kkTTk...",
+          "......kkTTTTk...",
+          "....kkTTTtTk....",
+          "...kTTTtTTk.....",
+          "..kTTtTTTk......",
+          "..kTTTTkk.......",
+          "...kkkk.........",
+          "................",
+        ];
+        const BRANCH = [
+          "................",
+          "..........k.....",
+          ".........kBk..k.",
+          "..........kBkkBk",
+          "...k.......kBBk.",
+          "..kBk.....kBk...",
+          "...kBk...kBk....",
+          "....kBkkkBk.....",
+          ".....kBBBk......",
+          "......kBk.......",
+          ".....kBk........",
+          "....kBk.........",
+          "...kBk..........",
+          "....k...........",
+        ];
+        const STONE = [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "......kkkk......",
+          "....kkssssk.....",
+          "...kssssssSk....",
+          "..kssssSssSSk...",
+          "..kSssSSSSSSk...",
+          "...kSSSSSSkk....",
+          "....kkkkkk......",
+        ];
+        const MAT_COLORS = { k: K, T: "#b98a5a", t: "#8b6440", B: "#7a5232", s: "#a7adb0", S: "#737b80" };
+        const SPRITES = {
+          lighthouse: { grid: LIGHTHOUSE, colors: LH_COLORS },
+          driftwood: { grid: DRIFTWOOD, colors: () => MAT_COLORS },
+          branch: { grid: BRANCH, colors: () => MAT_COLORS },
+          stone: { grid: STONE, colors: () => MAT_COLORS },
+        };
+
+        function paintGrid(ctx, grid, colors, x, y, k, opts = {}) {
+          grid.forEach((row, j) => {
+            [...row].forEach((ch, i) => {
+              if (ch === ".") return;
+              ctx.fillStyle = colors[ch] ?? "#f0f";
+              ctx.fillRect(x + i * k, y + j * k, k, k);
+            });
+          });
+          if (opts.scaffold) {
+            ctx.fillStyle = "#8a5a32";
+            for (const j of opts.scaffold) {
+              ctx.fillRect(x + 1 * k, y + j * k, 1 * k, k);
+              ctx.fillRect(x + 14 * k, y + j * k, 1 * k, k);
+            }
+            ctx.fillRect(x + 1 * k, y + 9 * k, 14 * k, k);
+            ctx.fillRect(x + 1 * k, y + 13 * k, 14 * k, k);
+          }
+        }
+
+        /** A placeholder sprite as a little canvas, k times its size. */
+        function pix(kind, k, opts = {}) {
+          const s = SPRITES[kind];
+          const w = s.grid[0].length;
+          const h = s.grid.length;
+          return `<canvas class="pix" data-kind="${kind}" data-k="${k}" data-lit="${opts.lit ? 1 : 0}" data-scaffold="${opts.scaffold ? 1 : 0}" width="${w * k}" height="${h * k}" style="width:${w * k}px;height:${h * k}px"></canvas>`;
+        }
+        function paintPix(root) {
+          root.querySelectorAll("canvas.pix").forEach((c) => {
+            const s = SPRITES[c.dataset.kind];
+            const k = Number(c.dataset.k);
+            const ctx = c.getContext("2d");
+            paintGrid(ctx, s.grid, s.colors(c.dataset.lit === "1"), 0, 0, k, { scaffold: c.dataset.scaffold === "1" ? SCAFFOLD_ROWS : null });
+          });
+        }
+
+        /** The Village Board, 2 × 2 tiles, with `notes` papers pinned on. */
+        function drawBoard(ctx, x, y, z, notes) {
+          const px = (dx, dy, w, h, c) => {
+            ctx.fillStyle = c;
+            ctx.fillRect(x + dx * z, y + dy * z, w * z, h * z);
+          };
+          px(5, 16, 3, 16, K);
+          px(6, 16, 1, 15, "#8a5a32");
+          px(24, 16, 3, 16, K);
+          px(25, 16, 1, 15, "#8a5a32");
+          px(1, 4, 30, 18, K);
+          px(2, 5, 28, 16, "#a8693a");
+          px(3, 6, 26, 14, "#d9a066");
+          px(3, 18, 26, 2, "#c58b52");
+          px(0, 1, 32, 4, K);
+          px(1, 2, 30, 2, "#7a4b2a");
+          const spots = [
+            [5, 8],
+            [13, 9],
+            [21, 7],
+          ];
+          for (let i = 0; i < notes; i++) {
+            const [nx, ny] = spots[i];
+            px(nx, ny, 7, 9, K);
+            px(nx + 1, ny + 1, 5, 7, "#fff3d6");
+            px(nx + 1, ny + 3, 4, 1, "#c9b48a");
+            px(nx + 1, ny + 5, 3, 1, "#c9b48a");
+            px(nx + 3, ny, 1, 1, "#e8765f");
+          }
+        }
+
+        function nameTag(ctx, x, y, text) {
+          ctx.font = "bold 12px system-ui, sans-serif";
+          const w = ctx.measureText(text).width + 10;
+          ctx.fillStyle = "rgba(0,0,0,0.45)";
+          ctx.beginPath();
+          ctx.roundRect(x - w / 2, y - 16, w, 16, 6);
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.textAlign = "center";
+          ctx.fillText(text, x, y - 4);
+          ctx.textAlign = "start";
+        }
+
+        /**
+         * The market from the real map, at a whole-number zoom, camera on `look` (tile units). People are
+         * { who, c, r, facing, name }. Returns a function giving a tile's screen position.
+         */
+        function drawMarket(canvas, W, H, zoom, o) {
+          const ctx = setup(canvas, W, H);
+          const camX = Math.round(o.look.c * T - W / zoom / 2);
+          const camY = Math.round(o.look.r * T - H / zoom / 2);
+          const sx = (wx) => Math.round((wx - camX) * zoom);
+          const sy = (wy) => Math.round((wy - camY) * zoom);
+          ctx.fillStyle = o.bg ?? "#3b5f2c";
+          ctx.fillRect(0, 0, W, H);
+          const layer = (name) =>
+            layers[name].forEach((row, j) =>
+              row.forEach((gid, i) => {
+                if (!gid) return;
+                const s = tileSource(gid);
+                if (s) ctx.drawImage(s.im, s.sx, s.sy, T, T, sx((REGION.c0 + i) * T), sy((REGION.r0 + j) * T), T * zoom, T * zoom);
+              }),
+            );
+          ["Ground", "Details", "Decor"].forEach(layer);
+          const blit = (img, x, y, w, h, wx, wy) => {
+            if (images[img]) ctx.drawImage(images[img], x, y, w, h, sx(wx), sy(wy), w * zoom, h * zoom);
+          };
+          blit("house", 0, 0, 64, 48, 28 * T, 3 * T);
+          blit("house", 128, 0, 64, 48, 34 * T, 3 * T);
+          blit("house", 304, 0, 64, 48, 26 * T, 12 * T);
+          blit("stand", 0, 0, 32, 32, 31 * T, 14 * T);
+          blit("crate", 0, 0, 32, 32, 29 * T, 26 * T);
+          drawBoard(ctx, sx(34 * T), sy(14 * T), zoom, o.notes ?? 1);
+          if (o.lighthouse) paintGrid(ctx, LIGHTHOUSE, LH_COLORS(o.lighthouse.lit), sx(o.lighthouse.c * T), sy(o.lighthouse.r * T), zoom);
+          const FACING = { down: 0, up: 1, left: 2, right: 3 };
+          const people = [...(o.people || [])].sort((a, b) => a.r - b.r);
+          for (const p of people) blit(p.who, FACING[p.facing || "down"] * T, 0, T, T, p.c * T, p.r * T - 4);
+          layer("Above");
+          for (const p of people) if (p.name) nameTag(ctx, sx(p.c * T + 8), sy(p.r * T - 6), p.name);
+          if (o.tint) {
+            ctx.fillStyle = o.tint;
+            ctx.fillRect(0, 0, W, H);
+          }
+          if (o.after) o.after(ctx, sx, sy, zoom);
+          return (c, r) => ({ x: sx(c * T), y: sy(r * T), size: T * zoom });
+        }
+
+        // ---------- icons for the HUD and cards ----------
+        const img = (src, w, h = w, cls = "px") => `<img class="${cls}" src="${src}" width="${w}" height="${h}" alt="">`;
+        const spr = (src, sw, sh, x, y, w, h, k) =>
+          `<span class="spr" style="width:${w * k}px;height:${h * k}px;background-image:url('${src}');background-size:${sw * k}px ${sh * k}px;background-position:-${x * k}px -${y * k}px"></span>`;
+        const CROP_ROW = { radish: 0, carrot: 1, samphire: 2, potato: 3, strawberry: 4, pumpkin: 5 };
+        const FISH = { sardine: 0, mackerel: 1, sea_bream: 3, squid: 7, moonfish: 11 };
+        const FACES = {
+          marlow: NA + "Actor/Character/OldMan3/Faceset.png",
+          pip: NA + "Actor/Character/Woman/Faceset.png",
+          juno: NA + "Actor/Character/Boy/Faceset.png",
+        };
+        const I = {
+          crop: (c, k = 2) => spr(CU + "crops.png", 112, 96, 5 * T, CROP_ROW[c] * T, T, T, k),
+          seeds: (c, k = 2) => spr(CU + "crops.png", 112, 96, 6 * T, CROP_ROW[c] * T, T, T, k),
+          fish: (f, k = 2) => spr(CU + "fish.png", 192, 16, FISH[f] * T, 0, T, T, k),
+          find: (frame, k = 2) => spr(CU + "beach-items.png", 128, 16, frame * T, 0, T, T, k),
+          bug: (row, k = 2) => spr(CU + "bugs.png", 80, 96, 4 * T, row * T, T, T, k),
+          rod: (k = 2) => spr(CU + "fishing.png", 48, 16, 0, 0, T, T, k),
+          hoe: (k = 2) => img(NA + "Items/Tool/Hoe.png", 16 * k),
+          can: (k = 2) => img(NA + "Items/Tool/WateringCan.png", 16 * k),
+          bag: (k = 2) => img(NA + "Items/Object/Bag.png", 16 * k),
+          coin: (k = 2) => img(NA + "Items/Treasure/GoldCoin.png", 7 * k),
+          ui: (frame, k = 2) => spr(CU + "ui-icons.png", 112, 16, frame * T, 0, T, T, k),
+          emote: (frame) => spr(CU + "emotes.png", 28, 13, frame * 14, 0, 14, 13, 2),
+          face: (who, size = 32, cls = "face") => img(FACES[who], size, size, cls),
+          bed: (k = 1) => spr(NA + "Backgrounds/Tilesets/tileset_bed.png", 224, 192, 80, 48, 16, 32, k),
+          sunflower: (k = 2) => spr(NA + "Backgrounds/Tilesets/TilesetNature.png", 384, 336, 0, 176, 16, 16, k),
+          bookshelf: (k = 1) => spr(NA + "Backgrounds/Tilesets/TilesetElement.png", 256, 240, 48, 112, 16, 32, k),
+          pot: (k = 2) => spr(NA + "Backgrounds/Tilesets/TilesetElement.png", 256, 240, 64, 16, 16, 16, k),
+          bench: (k = 1) => spr(NA + "Backgrounds/Tilesets/tileset_camp.png", 368, 144, 0, 112, 32, 16, k),
+          shop: (k = 1) => spr(NA + "Backgrounds/Tilesets/TilesetHouse.png", 528, 368, 256, 0, 48, 48, k),
+          cottage: (k = 1) => spr(NA + "Backgrounds/Tilesets/TilesetHouse.png", 528, 368, 0, 0, 64, 48, k),
+        };
+        const ring = (who) => `<span class="ring">${img(FACES[who], 38)}</span>`;
+        const minis = (...who) => who.map((w) => img(FACES[w], 22, 22, "mini")).join("");
+
+        // ---------- the HUD (positions from the Milestone 2 plan, upright phone) ----------
+        const L = { W: 390, H: 844, zoom: 2, safe: { t: 47, b: 34 }, slot: 42, gap: 3 };
+        const P = (() => {
+          const M = 14;
+          const hotW = 8 * L.slot + 7 * L.gap;
+          const hot = { x: Math.round((L.W - hotW) / 2), y: L.H - L.safe.b - 8 - L.slot };
+          const right = L.W - M;
+          const top = L.safe.t + 8;
+          const act = { x: right - 76, y: hot.y - 12 - 76 };
+          return {
+            hot,
+            act,
+            emotes: [
+              { x: act.x - 12 - 46 - 8 - 46, y: act.y + 30 },
+              { x: act.x - 12 - 46, y: act.y + 30 },
+            ],
+            bag: { x: hot.x, y: act.y + 24 },
+            clock: { x: M, y: top },
+            look: { x: right - 46, y: top },
+            music: { x: right - 46 - 10 - 46, y: top },
+            book: { x: right - 46 - 2 * (10 + 46), y: top },
+            toast: { x: L.W / 2, y: act.y - 30 },
+          };
+        })();
+        const at = (p, extra = "") => `style="left:${p.x}px;top:${p.y}px;${extra}"`;
+        const HOTBAR = [
+          { icon: I.hoe() },
+          { icon: I.can() },
+          { icon: I.rod() },
+          { icon: I.seeds("radish"), n: 6 },
+          { icon: pix("driftwood", 2), n: 7, want: true },
+          { icon: pix("branch", 2), n: 4, want: true },
+          { icon: I.fish("sardine"), n: 3, want: true },
+          { icon: I.find(0), n: 2 },
+        ];
+
+        function hud(h = {}) {
+          const c = { day: 12, time: "9:40 am", coins: "1,240", ...(h.clock || {}) };
+          let out = `<div class="clock" ${at(P.clock)}>${c.moon ? "☾" : "☀"} Day ${c.day} · ${c.time}<div class="coins">${I.coin()} ${c.coins}</div></div>`;
+          out += `<div class="round" ${at(P.book)}>${I.ui(5)}</div>`;
+          out += `<div class="round" ${at(P.music)}>${I.ui(0)}</div>`;
+          out += `<div class="round" ${at(P.look)}>${I.face("pip")}${h.dot ? '<span class="dot"></span>' : ""}</div>`;
+          if (h.controls === false) return out;
+          out += `<div class="round" ${at(P.emotes[0])}>${I.emote(0)}</div><div class="round" ${at(P.emotes[1])}>${I.emote(1)}</div>`;
+          out += `<div class="bagbtn" ${at(P.bag)}>${I.bag()}</div>`;
+          if (h.action) out += `<div class="action" ${at(P.act)}>${h.action.icon}<span class="tag">${h.action.word}</span></div>`;
+          out += `<div class="hotbar" ${at(P.hot, `gap:${L.gap}px`)}>`;
+          HOTBAR.forEach((s, i) => {
+            out += `<div class="slot${i === (h.sel ?? 4) ? " sel" : ""}" style="width:${L.slot}px;height:${L.slot}px">${s.icon}${s.n ? `<span class="n">${s.n}</span>` : ""}${s.want && h.wants ? '<span class="want"></span>' : ""}</div>`;
+          });
+          out += `</div>`;
+          if (h.toast) out += `<div class="toast" ${at(P.toast)}>${h.toast}</div>`;
+          return out;
+        }
+
+        // ---------- phones ----------
+        function phone(id, cfg) {
+          const fig = document.getElementById(id);
+          fig.innerHTML = `<div class="scale" style="--z:${cfg.z ?? 0.55}"><div class="device"><div class="screen" style="width:${L.W}px;height:${L.H}px"><canvas class="world"></canvas><div class="hud"></div></div></div></div>${cfg.caption ? `<figcaption>${cfg.caption}</figcaption>` : ""}`;
+          const tileAt = drawMarket(fig.querySelector("canvas.world"), L.W, L.H, L.zoom, cfg.world);
+          const layer = fig.querySelector(".hud");
+          layer.innerHTML = (cfg.hud !== null ? hud(cfg.hud || {}) : "") + (cfg.extra ? cfg.extra(tileAt) : "") + (cfg.card ?? "");
+          const screen = fig.querySelector(".screen");
+          screen.insertAdjacentHTML(
+            "beforeend",
+            `<div class="island" style="left:${L.W / 2 - 62}px;top:11px;width:124px;height:36px"></div><div class="homebar" style="left:${L.W / 2 - 67}px;bottom:8px;width:134px;height:5px"></div>`,
+          );
+          paintPix(fig);
+          fig.querySelector(".scale").addEventListener("click", (e) => e.currentTarget.classList.toggle("big"));
+        }
+        const callout = (n, x, y) => `<span class="num" style="position:absolute;left:${x}px;top:${y}px;z-index:12">${n}</span>`;
+
+        const MARKET = { look: { c: 34, r: 17.5 } };
+        const MARLOW = { who: "marlow", c: 36, r: 15, facing: "left" };
+        const PIP_AT_BOARD = { who: "pip", c: 34, r: 16, facing: "up", name: "Pip" };
+        const JUNO_ON_PATH = { who: "juno", c: 30, r: 19, facing: "up", name: "Juno" };
+
+        // 1. At the board
+        phone("m1", {
+          world: { ...MARKET, notes: 1, people: [MARLOW, PIP_AT_BOARD, JUNO_ON_PATH] },
+          hud: { action: { icon: pix("driftwood", 3), word: "Give 7" }, toast: "Driftwood · wanted on the board", wants: true, dot: false },
+          extra: (tileAt) => {
+            const b = tileAt(34, 14);
+            const m = tileAt(36, 15);
+            return callout(1, b.x - 26, b.y + 6) + callout(2, m.x + m.size + 2, m.y - 4) + callout(3, P.act.x - 26, P.act.y - 6) + callout(4, P.hot.x + 4 * (L.slot + L.gap) + 4, P.hot.y - 34);
+          },
+          caption:
+            "<b>1. At the board.</b> <span class='num'>1</span> The Village Board, one note pinned per open project. <span class='num'>2</span> Marlow by day (the pack's OldMan3); facing him, Action says Talk. <span class='num'>3</span> Holding driftwood a project needs: <b>Give 7</b>, one tap. <span class='num'>4</span> A small dot marks hotbar items the board wants.",
+        });
+
+        const dim = (card, cls = "") => `<div class="overlay ${cls}">${card}</div>`;
+
+        // 2. The board card
+        phone("m2", {
+          world: { ...MARKET, notes: 1, people: [MARLOW, PIP_AT_BOARD] },
+          hud: { controls: false },
+          card: dim(`<div class="card">
+              <div class="card-head">${ring("marlow")}<h3 class="grow">The Village Board</h3><span class="xbtn">×</span></div>
+              <div class="tabs"><span class="tab on">Village</span><span class="tab">Your home</span></div>
+              <div class="says">“The light first, I think. Boats like to know where home is.” <span class="sig">— M.</span></div>
+              <div class="label">Now</div>
+              <div class="proj"><span class="pic">${pix("lighthouse", 1, { scaffold: true })}</span>
+                <div class="grow"><b>Light the lighthouse</b><small>Step 2 of 3 · Mend the stairs</small>
+                  <div class="bar"><i style="width:58%"></i></div>
+                  <div class="helpers">${minis("pip", "juno")}<small>helping</small></div></div>
+                <span class="chev">›</span></div>
+              <div class="label">Coming later</div>
+              <div class="proj later"><span class="pic"><span class="sil">${I.shop(1)}</span></span>
+                <div class="grow"><b>Something on the boardwalk</b><small>“Mrs Penhallow’s old shop…”</small></div></div>
+              <div class="proj later"><span class="pic" style="font-size:26px;font-weight:900;color:#c9b48a">?</span>
+                <div class="grow"><b>A bridge, past the rocks</b><small>Later</small></div></div>
+              <div class="label">Finished</div>
+              <p class="quiet">Nothing yet. The lighthouse will be the first.</p>
+              <div class="btn soft wide">Marlow’s notes (3)</div>
+            </div>`),
+          caption:
+            "<b>2. The board card.</b> Marlow’s line for what’s open now, one project at a time, the next ones as silhouettes, the finished ones with their day, and every note he’s written. The second tab is your home (10).",
+        });
+
+        // 3. The project card
+        const need = (icon, name, have, of, sub, give) => `<div class="need${have >= of ? " done" : ""}">
+            <span class="ic">${icon}</span>
+            <div class="grow"><b>${name}</b><small>${sub}</small></div>
+            <span class="count">${have} / ${of}</span>
+            ${have >= of ? '<span class="tick">✓</span>' : give ? `<span class="btn small">${give}</span>` : ""}</div>`;
+        phone("m3", {
+          world: { ...MARKET, notes: 1, people: [MARLOW, PIP_AT_BOARD] },
+          hud: { controls: false },
+          card: dim(`<div class="card">
+              <div class="card-head"><span class="xbtn">‹</span><h3 class="grow">Light the lighthouse</h3><span class="xbtn">×</span></div>
+              <div class="stephead"><span class="pic" style="width:60px;height:76px">${pix("lighthouse", 2, { scaffold: true })}</span>
+                <div class="grow"><div class="dots">●●○</div><b>Step 2 of 3 · Mend the stairs</b>
+                <small>“Ninety-two steps, and half of them rotten. Bring me some fish and I’ll work all day.”</small></div></div>
+              ${need(pix("driftwood", 2), "Driftwood", 9, 12, "You have 6", "Give 3")}
+              ${need(pix("branch", 2), "Branches", 8, 8, "All in", "")}
+              ${need(I.fish("sardine"), "Any fish", 2, 5, "You have 4 · cheapest first", "Give 3")}
+              ${need(I.coin(3), "Coins", 150, 600, "Wallet 1,240", "Give 450")}
+              <div class="btn wide">Give everything I can</div>
+              <div class="helpers" style="margin-top:10px">Helping:&nbsp;&nbsp;${minis("pip", "juno")}</div>
+              <div class="label">Next · Light the lamp</div>
+              <div class="nextline"><span class="q">${I.find(5, 1)}2 Sea Glass</span><span class="q">${I.find(0, 1)}4 beach finds</span><span class="q">${I.crop("radish", 1)}6 crops</span><span class="q">${I.coin(1)}900</span></div>
+              <div class="label">When it’s done</div>
+              <ul class="opens"><li>The light shines every night</li><li>Fish bite at the point after dark</li><li>Climb up for the view</li></ul>
+            </div>`),
+          caption:
+            "<b>3. A project card.</b> Each need: how many are in, what you have, and <b>Give</b> (as many as you have, up to what’s left). “Any fish” gives the cheapest first. Coins come from the shared wallet. The next step is shown so slow crops can be planted ahead.",
+        });
+
+        // 4. Marlow's first note
+        phone("m4", {
+          world: { ...MARKET, notes: 1, people: [MARLOW, { ...PIP_AT_BOARD, c: 35, r: 16.4, facing: "right" }] },
+          hud: { controls: false },
+          card: dim(`<div class="card note">
+              <div class="note-head"><span class="facebox">${img(FACES.marlow, 38)}</span><div><b style="font-size:18px">Marlow</b><small>kept the lighthouse on the point</small></div></div>
+              <p class="letter">Well, hello! I’m Marlow. I kept the lighthouse on the point, back when this was a busy little harbour. It’s been dark for years.</p>
+              <p class="letter">I’ve pinned some plans up on the board by the seed stand, if you two fancy waking the old place up.</p>
+              <span class="sig">— M.</span>
+              <div class="btnrow"><span class="btn soft">Later</span><span class="btn">Let’s have a look</span></div>
+            </div>`),
+          caption:
+            "<b>4. Marlow’s note.</b> His first, shown once to each of you the first time you open the game after he arrives. The same paper card for every note and for Talk. Short: two or three sentences, signed “— M.”",
+        });
+
+        // 5. A step's cheer at the top of both screens
+        const confetti = (cx, cy) => {
+          const colors = ["#e8765f", "#ffd36b", "#7ab3d1", "#8fbf5a", "#f4efe2"];
+          let out = "";
+          for (let i = 0; i < 22; i++) {
+            const a = (i / 22) * Math.PI * 2;
+            const d = 26 + ((i * 37) % 30);
+            out += `<span class="confetti" style="left:${Math.round(cx + Math.cos(a) * d)}px;top:${Math.round(cy + Math.sin(a) * d * 0.8)}px;background:${colors[i % colors.length]};transform:rotate(${i * 23}deg)"></span>`;
+          }
+          return out;
+        };
+        phone("m5", {
+          world: { ...MARKET, notes: 1, people: [MARLOW, { who: "juno", c: 35, r: 16, facing: "up", name: "Juno" }, { who: "pip", c: 32, r: 17, facing: "right", name: "Pip" }] },
+          hud: { action: { icon: pix("branch", 3), word: "Give 2" }, sel: 5 },
+          extra: (tileAt) => {
+            const j = tileAt(35, 16);
+            const b = tileAt(34, 14);
+            return (
+              confetti(j.x + 12, j.y - 30) +
+              `<span style="left:${j.x + 2}px;top:${j.y - 52}px">${I.emote(1)}</span>` +
+              `<span class="float" style="left:${b.x + 32}px;top:${b.y - 34}px">+2</span>`
+            );
+          },
+          card: `<div class="overlay top"><div class="card cheer">${ring("marlow")}<div class="grow"><div class="t">That’s everything for the stairs!</div><small>Juno brought the last of it. Marlow will see to them tonight.</small></div></div></div>`,
+          caption:
+            "<b>5. The cheer.</b> When a step’s last thing goes in, this card comes up at the top of <b>both</b> screens with the jingle, confetti and a heart over the giver, as for a book discovery. It doesn’t stop play.",
+        });
+
+        // 6. The morning card with the village line
+        phone("m6", {
+          world: { look: { c: 32, r: 13.5 }, notes: 1, people: [{ who: "pip", c: 29, r: 6, facing: "down" }, { who: "juno", c: 35, r: 6, facing: "down" }] },
+          hud: { controls: false, clock: { day: 13, time: "6:00 am", coins: "1,360" } },
+          card: dim(`<div class="card morning">
+              <h3 class="center">Good morning! Day 13</h3>
+              <p class="center">4 crops grew overnight. 2 are ready to pick.</p>
+              <div class="label">In the village</div>
+              <div class="vline"><span class="pic" style="width:44px;height:60px">${pix("lighthouse", 1, { scaffold: true })}</span>
+                <div class="grow"><b>The lighthouse stairs are mended.</b><small>“Ninety-two steps and not a creak in them.”</small></div>
+                <span class="btn small soft">Look</span></div>
+              <p style="margin-top:10px">Something washed up on the beach! ${I.find(1, 1)} ${I.find(5, 1)} ${pix("driftwood", 1)} ${pix("driftwood", 1)}</p>
+              <div class="label">The crate sold</div>
+              <div class="sale"><span>Sardine 6 × 20</span><b>120</b></div>
+              <div class="earned">+120 coins, now 1,360</div>
+              <div class="btn wide">Let’s go</div>
+            </div>`),
+          caption:
+            "<b>6. The morning after.</b> What was built overnight gets its own lines, each with <b>Look</b>, which glides the camera there and back. Driftwood shows with the beach finds.",
+        });
+
+        // 7. The opening card, at dusk
+        phone("m7", {
+          world: {
+            look: { c: 34, r: 33 },
+            bg: "#62c0dc",
+            notes: 1,
+            lighthouse: { c: 37, r: 22.6, lit: true },
+            people: [
+              { who: "pip", c: 32, r: 24, facing: "right" },
+              { who: "juno", c: 33, r: 24.3, facing: "right" },
+            ],
+            tint: "rgba(16, 26, 70, 0.55)",
+            after: (ctx, sx, sy, z) => {
+              const lx = sx(37 * T) + 8 * z;
+              const ly = sy(22.6 * T) + 5 * z;
+              ctx.save();
+              ctx.globalCompositeOperation = "lighter";
+              for (const [r, a] of [
+                [110, 0.08],
+                [70, 0.1],
+                [36, 0.14],
+              ]) {
+                ctx.fillStyle = `rgba(255, 214, 120, ${a})`;
+                ctx.beginPath();
+                ctx.arc(lx, ly, r, 0, Math.PI * 2);
+                ctx.fill();
+              }
+              for (const [spread, a] of [
+                [0.2, 0.1],
+                [0.12, 0.12],
+              ]) {
+                ctx.fillStyle = `rgba(255, 230, 150, ${a})`;
+                ctx.beginPath();
+                ctx.moveTo(lx, ly);
+                const ang = Math.PI * 0.86;
+                ctx.lineTo(lx + Math.cos(ang - spread) * 700, ly + Math.sin(ang - spread) * 700);
+                ctx.lineTo(lx + Math.cos(ang + spread) * 700, ly + Math.sin(ang + spread) * 700);
+                ctx.closePath();
+                ctx.fill();
+              }
+              ctx.restore();
+            },
+          },
+          hud: { controls: false, clock: { day: 16, time: "6:00 pm", coins: "2,980", moon: true } },
+          card: dim(
+            `<div class="card opening">
+              <div class="bunting"></div>
+              <div class="hero">${pix("lighthouse", 3, { lit: true })}</div>
+              <h3 class="center">The lighthouse is lit!</h3>
+              <p class="letter center" style="margin:6px 0 2px">“There she is. Every boat from here to the horizon can see we’re home.”</p>
+              <p class="center" style="margin:0"><span class="sig">— M.</span></p>
+              <div class="label">New</div>
+              <div class="newline"><span class="ic">${I.fish("moonfish")}</span>Fish bite at the point after dark</div>
+              <div class="newline"><span class="ic">${pix("lighthouse", 1, { lit: true })}</span>Climb the lighthouse for the view</div>
+              <div class="newline"><span class="ic">${I.bench(1)}</span>Porches for your cottages, on the board</div>
+              <div class="btnrow"><span class="btn soft">OK</span><span class="btn">Let’s go see</span></div>
+            </div>`,
+            "bottom",
+          ),
+          caption:
+            "<b>7. A project opens.</b> After the morning card (or, for the lighthouse, at dusk when the lamp comes on): bunting, Marlow’s note, what’s new, and <b>Let’s go see</b>. The lighthouse and its beam are placeholders, drawn by the dock here; in the game it stands out on the point.",
+        });
+
+        // 8. You: skills
+        const skill = (icon, name, lv, title, pct, today, next) => `<div class="skill"><span class="ic">${icon}</span>
+            <div class="grow"><div class="top"><b>${name}<span class="today">${today}</span></b><span class="lv">Level ${lv}</span></div>
+            <div class="bar green"><i style="width:${pct}%"></i></div><small>${title ? title + " · " : ""}${next}</small></div></div>`;
+        phone("m8", {
+          world: { ...MARKET, people: [MARLOW, PIP_AT_BOARD] },
+          hud: { controls: false, dot: true },
+          card: dim(`<div class="card">
+              <div class="card-head">${ring("pip")}<div class="grow"><h3>Pip</h3><small>Keen Angler</small></div><span class="xbtn">×</span></div>
+              <div class="tabs"><span class="tab on">Skills</span><span class="tab">Badges</span><span class="tab off">Wardrobe</span></div>
+              ${skill(I.crop("carrot"), "Farming", 4, "Keen Gardener", 62, "+12 today", "Next: <b>Seed saver</b>, 1 in 6 picks gives a seed back")}
+              ${skill(I.rod(), "Fishing", 6, "", 28, "+48 today", "Next: <b>Lucky line</b>, rare fish bite a bit more often")}
+              ${skill(I.find(0), "Foraging", 3, "", 74, "+20 today", "Next: a title and a shell wreath for the house")}
+              <div class="label">Your perks</div>
+              <ul class="perks">
+                <li><b>Plant and water.</b> Planting waters the tile too.</li>
+                <li><b>A little extra.</b> 1 in 10 picks gives one more.</li>
+                <li><b>Quick bites.</b> Bites come 15% sooner.</li>
+                <li><b>Big ones.</b> Fish come a little bigger.</li>
+                <li><b>Bright eyes.</b> Finds glint more often.</li>
+              </ul>
+              <div class="btn soft wide">Change name or look</div>
+            </div>`),
+          caption:
+            "<b>8. You: skills.</b> Behind your own face, top right (the gold dot says something’s new). A bar per skill, the next perk, and “+48 today”, but no numbers flying about while you play. Personal; never compared.",
+        });
+
+        // 9. You: badges, with a level-up card on top
+        const medal = (icon, name, opts = {}) =>
+          `<div class="badge${opts.no ? " no" : ""}${opts.sel ? " sel" : ""}"><div class="medal">${opts.no ? "?" : icon}</div>${opts.no ? opts.hint : name}</div>`;
+        phone("m9", {
+          world: { ...MARKET, people: [MARLOW, PIP_AT_BOARD] },
+          hud: { controls: false, dot: false },
+          card:
+            dim(`<div class="card">
+              <div class="card-head">${ring("pip")}<div class="grow"><h3>Pip</h3><small>9 of 27 badges</small></div><span class="xbtn">×</span></div>
+              <div class="tabs"><span class="tab">Skills</span><span class="tab on">Badges</span><span class="tab off">Wardrobe</span></div>
+              <div class="badges">
+                ${medal(I.fish("sardine"), "First Catch")}
+                ${medal(I.fish("mackerel"), "Angler")}
+                ${medal(I.fish("moonfish"), "Night Owl", { sel: true })}
+                ${medal(I.crop("radish"), "First Harvest")}
+                ${medal(pix("lighthouse", 1, { lit: true }), "Lamplighter")}
+                ${medal(pix("driftwood", 2), "Helping Hand")}
+                ${medal(I.emote(1), "Side by Side")}
+                ${medal(I.cottage(0.5), "Moved In")}
+                ${medal(I.fish("sea_bream"), "Record Breaker")}
+                ${medal("", "", { no: true, hint: "Every bug" })}
+                ${medal("", "", { no: true, hint: "100 crops" })}
+                ${medal("", "", { no: true, hint: "A porch" })}
+              </div>
+              <div class="info">${I.fish("moonfish")}<div class="grow"><b>Night Owl</b><small>A fish after 10 pm. Earned on day 11.</small></div></div>
+            </div>`) +
+            `<div class="overlay over"><div class="card cheer" style="width:min(100%,330px)">${I.rod(2)}<div class="grow"><div class="t">Fishing level 6</div><small>Big ones: fish come a little bigger.</small></div></div></div>`,
+          caption:
+            "<b>9. You: badges</b>, with a level-up card on top: only on your own screen, for 3 seconds. Badges not yet earned are silhouettes with a hint, like the book. Village badges (Lamplighter) go to everyone.",
+        });
+
+        // 10. Your home tab
+        const up = (icon, name, sub, right, opts = {}) =>
+          `<div class="proj${opts.later ? " later" : ""}"><span class="pic">${opts.later ? `<span class="sil">${icon}</span>` : icon}</span><div class="grow"><b>${name}</b><small>${sub}</small>${opts.bar ? `<div class="bar"><i style="width:${opts.bar}%"></i></div>` : ""}</div>${right}</div>`;
+        phone("m10", {
+          world: { ...MARKET, notes: 2, people: [MARLOW, PIP_AT_BOARD] },
+          hud: { controls: false },
+          card: dim(`<div class="card">
+              <div class="card-head">${ring("marlow")}<h3 class="grow">The Village Board</h3><span class="xbtn">×</span></div>
+              <div class="tabs"><span class="tab">Village</span><span class="tab on">Your home</span></div>
+              <div class="says">“A porch! Somewhere to sit and watch the boats come in.” <span class="sig">— M.</span></div>
+              <div class="label">Pip’s cottage</div>
+              ${up(I.bench(1), "A porch", `${pix("driftwood", 1)} 12 · ${pix("branch", 1)} 8 · 2,000 coins`, '<span class="chev">›</span>', { bar: 40 })}
+              ${up(I.sunflower(2), "A garden", "After the garden shop", "", { later: true })}
+              ${up(I.bed(1), "A bedroom", "After the bridge", "", { later: true })}
+              ${up(I.pot(2), "A kitchen", "After the café", "", { later: true })}
+              <div class="label">Juno’s cottage</div>
+              ${up(I.bench(1), "A porch", "Built on day 15", '<span class="tick">✓</span>')}
+              <p class="quiet" style="margin-top:8px">Either of you can help build either house.</p>
+            </div>`),
+          caption:
+            "<b>10. Your home.</b> House upgrades are one-step projects per cottage, given at the board and built overnight. Each opens as the village does (stone for rooms comes from the cove).",
+        });
+
+        // ---------- 11. the finished village (SVG) ----------
+        const S = 10;
+        const COLS = 80;
+        const ROWS = 36;
+        const FILL = { g: "#9bbf4a", s: "#ecd39b", w: "#6cc3dc", f: "#c9a467", t: "#4f7d3c", d: "#c98a4a", c: "#8d8578", k: "#a9a39a", b: "#b07a46" };
+        function eastTile(c, r) {
+          if (r === 1) return "t";
+          if (r === 0) return "g";
+          if (c === 79 && r < 10) return "t";
+          if (c >= 66 && c <= 68 && r >= 12) return r === 20 || r === 21 ? "b" : "w";
+          if (c >= 69 && r >= 10 && r <= 12) return "c";
+          if (c >= 69 && r >= 13) return r >= 31 || (r >= 28 && (c < 71 || c > 77)) ? "w" : r >= 24 ? "s" : (c + r) % 7 === 0 ? "k" : "s";
+          if (c >= 58 && c <= 65 && r >= 18) {
+            if (r >= 31 && (c < 60 || c > 63)) return "w";
+            if (r >= 34) return "w";
+            return r >= 24 ? "k" : "s";
+          }
+          if (r >= 21) return "w";
+          if (r >= 18) return "s";
+          return "g";
+        }
+        let tiles = "";
+        for (let r = 0; r < ROWS; r++) {
+          let run = null;
+          const flush = (end) => {
+            if (run) tiles += `<rect x="${run.c * S}" y="${r * S}" width="${(end - run.c) * S}" height="${S}" fill="${FILL[run.k]}"/>`;
+          };
+          for (let c = 0; c < COLS; c++) {
+            // Milestone 6 opens the old east edge's line of trees (columns 46–47) onto the new land.
+            const old = c < 48 ? BASE[r][c] : null;
+            const k = old === null ? eastTile(c, r) : c >= 46 && r >= 2 && r <= 17 && old === "t" ? "g" : old;
+            if (!run || run.k !== k) {
+              flush(c);
+              run = { c, k };
+            }
+          }
+          flush(COLS);
+        }
+        const PHASE = { 6: "#e8765f", 7: "#d9a400", 8: "#5f9e3a", 9: "#2f86b5", 10: "#c0662a", 11: "#8a5bb5", 12: "#178a7a" };
+        const box = (c, r, w, h, m, label, opts = {}) => {
+          const x = c * S;
+          const y = r * S;
+          const col = m ? PHASE[m] : "#5d5348";
+          const dash = opts.dash ? ' stroke-dasharray="5 4"' : "";
+          const fill = opts.fill === false ? "none" : `${col}33`;
+          const lx = opts.lx ?? x + (w * S) / 2;
+          const ly = opts.ly ?? y - 4;
+          return `<rect x="${x}" y="${y}" width="${w * S}" height="${h * S}" rx="3" fill="${fill}" stroke="${col}" stroke-width="2.5"${dash}/>` + (label ? `<text x="${lx}" y="${ly}" text-anchor="${opts.anchor ?? "middle"}" fill="${opts.ink ?? "#1d2f3b"}">${label}</text>` : "");
+        };
+        let marks = "";
+        // today's places
+        marks += box(4, 4, 16, 7, 0, "Farm field", { fill: false, ly: 4 * S + 40 + 6 });
+        marks += box(6, 12, 3, 3, 0, "Tent", { fill: false, ly: 15 * S + 12 });
+        marks += box(26, 12, 4, 3, 0, "Store", { fill: false, ly: 12 * S - 4 });
+        marks += box(31, 14, 2, 2, 0, "", { fill: false });
+        marks += box(28, 3, 4, 3, 0, "Cottages", { fill: false, lx: 33 * S, ly: 3 * S - 4 });
+        marks += box(34, 3, 4, 3, 0, "", { fill: false });
+        marks += box(27, 25, 4, 9, 0, "Dock", { fill: false, lx: 25 * S, ly: 31 * S, anchor: "end" });
+        // milestone 6
+        marks += box(34, 14, 2, 2, 6, "Board", { lx: 35 * S, ly: 16 * S + 12 });
+        marks += box(57, 17, 2, 3, 6, "Brambles", { dash: true, lx: 58 * S, ly: 20 * S + 12 });
+        marks += box(61, 26, 3, 6, 6, "Lighthouse", { lx: 62.5 * S, ly: 26 * S - 4 });
+        marks += box(57, 32, 10, 4, 6, "Night fishing", { dash: true, ly: 36 * S - 3, fill: false });
+        marks += box(40, 2, 6, 10, 6, "Branches fall", { dash: true, fill: false, ly: 2 * S + 14 });
+        // milestone 7
+        marks += box(28, 6, 4, 1, 7, "Porches", { lx: 33 * S, ly: 8 * S + 8 });
+        marks += box(34, 6, 4, 1, 7, "");
+        // milestone 8
+        marks += box(31, 19, 27, 2, 8, "Boardwalk", { lx: 44 * S, ly: 23 * S + 2 });
+        marks += box(38, 15, 4, 3, 8, "Garden shop", { ly: 15 * S - 4 });
+        marks += box(32, 3, 2, 3, 8, "");
+        marks += box(38, 3, 2, 3, 8, "Gardens", { lx: 39 * S, ly: 7 * S + 8 });
+        // milestone 9
+        marks += box(66, 20, 3, 2, 9, "Bridge", { lx: 67.5 * S, ly: 19 * S - 2 });
+        marks += box(69, 13, 11, 18, 9, "Hidden cove", { lx: 74.5 * S, ly: 17 * S });
+        marks += box(71, 22, 1, 1, 9, "") + box(74, 20, 1, 1, 9, "") + box(76, 24, 1, 1, 9, "") + box(72, 26, 1, 1, 9, "Rock pools", { lx: 74.5 * S, ly: 29 * S });
+        // milestone 10, 11
+        marks += box(45, 15, 4, 3, 10, "Café", { ly: 15 * S - 4 });
+        marks += box(52, 15, 4, 3, 11, "Tailor’s", { ly: 15 * S - 4 });
+        // milestone 12
+        marks += box(48, 2, 13, 10, 12, "Orchard", { ly: 7 * S + 4 });
+        marks += box(62, 3, 6, 5, 12, "Greenhouse", { ly: 9 * S + 6 });
+        const svg = `<svg viewBox="0 0 ${COLS * S} ${ROWS * S}" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" font-size="11" font-weight="700">
+            <rect width="${COLS * S}" height="${ROWS * S}" fill="${FILL.w}"/><g shape-rendering="crispEdges">${tiles}</g>
+            <line x1="${48 * S}" y1="0" x2="${48 * S}" y2="${ROWS * S}" stroke="#1d2f3b" stroke-width="1.5" stroke-dasharray="3 5" opacity="0.6"/>
+            <text x="${48 * S + 6}" y="12" fill="#fff" font-weight="600">new columns 48–79 →</text>
+            ${marks}</svg>`;
+        const legend = Object.entries({ 6: "6 · The keeper and the lighthouse", 7: "7 · Skills, badges and porches", 8: "8 · The garden shop", 9: "9 · The bridge and the cove", 10: "10 · The café", 11: "11 · The tailor’s", 12: "12 · The orchard and greenhouse" })
+          .map(([m, t]) => `<span><i style="background:${PHASE[m]}"></i>${t}</span>`)
+          .join("");
+        document.getElementById("map").innerHTML = `<div class="mapwrap">${svg}</div><div class="legend">${legend}<span><i style="background:#5d5348"></i>Today</span></div><figcaption>Rows 0–35 (the village; the rooms stay below it, and new rooms go in the free space there). Positions are rough: they get fitted in Tiled in each milestone. Growing east only means no saved tile ever moves.</figcaption>`;
+      })();
+    </script>
+  </body>
+</html>

@@ -50,6 +50,57 @@ Every milestone ends with something playable. Tick items off as they land.
 - [x] Bugs and butterflies (by time of day; fireflies after dark)
 - [x] Collection book (shared, with first-discovery celebrations on both screens), and a fish tank at the store
 
+## Restoring the village (Milestones 6–12)
+
+Planned in [docs/plans/progression.md](plans/progression.md), with mockups in
+[progression-mockups.html](plans/progression-mockups.html). Each milestone is playable on its own; numbers and order
+are suggestions until the plan's open questions are answered.
+
+## Milestone 6: The keeper and the lighthouse
+
+- [ ] Rules: projects in steps, giving, building overnight, built names and the map as of today, Marlow's day (save v4)
+- [ ] The map grows east: the point, the lighthouse, the board's spot, brambles, a broken bridge to tease the cove
+- [ ] Driftwood on the beach and branches under the trees each morning, and the storm when Marlow arrives
+- [ ] Marlow (Talk, his notes), the Village Board, Give from the hotbar, the board and project cards
+- [ ] Light the lighthouse in three steps: the cheer on both screens, building overnight, the morning's village lines, the opening card at dusk, the glow every night
+- [ ] Night fishing at the point (three fish) and the view from the top
+
+## Milestone 7: Skills, badges and porches
+
+- [ ] Farming, fishing and foraging levels with small perks, on the You card behind your face (save v5)
+- [ ] Badges, with silhouettes for the ones still to earn
+- [ ] The board's Your home tab and the porch upgrade
+
+## Milestone 8: The garden shop and the seasons
+
+- [ ] The boardwalk and the garden shop project
+- [ ] Ten new crops and gentle seasons (save v6)
+- [ ] Tool upgrades: big and sprinkling cans, wide hoe, good rod, bug net, shell basket
+- [ ] The garden upgrade for houses
+
+## Milestone 9: The bridge and the cove
+
+- [ ] The bridge project and the hidden cove (save v7)
+- [ ] Rock pools and their book page, cove fish and shells, stone among the rocks
+- [ ] Beach decorations at the store, and the bedroom upgrade
+
+## Milestone 10: The café and the workbench
+
+- [ ] The café project; cooking and small treats (save v8)
+- [ ] Making things from materials at Marlow's workbench
+- [ ] The kitchen upgrade
+
+## Milestone 11: The tailor's
+
+- [ ] The tailor's project; hats, dyes and new looks; the Wardrobe (save v9)
+- [ ] Wallpaper and floors for your rooms, a roomier bag, the loft upgrade
+
+## Milestone 12: The orchard and the greenhouse
+
+- [ ] The orchard project and six fruit trees (save v10)
+- [ ] The greenhouse project: any seed in any season
+- [ ] Marlow's last note (for now)
+
 ## Later
 
-Seasons, weather, day/night, cooking, animals, villagers, more music, festivals.
+Weather, day/night lighting, animals, villagers, more music, festivals, a museum for the collection.
